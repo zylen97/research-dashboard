@@ -1,0 +1,262 @@
+import React, { useState, useMemo } from 'react';
+import {
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  DatePicker,
+  Typography,
+  Table,
+} from 'antd';
+import {
+  PlusOutlined,
+  ProjectOutlined,
+} from '@ant-design/icons';
+import { useQuery } from '@tanstack/react-query';
+import { researchApi } from '../services/api';
+import { ResearchProject, ResearchProjectCreate } from '../types';
+import { 
+  StatisticsCards, 
+  createProjectColumns,
+  useProjectData, 
+  useProjectActions 
+} from '../components/research-dashboard';
+import dayjs from 'dayjs';
+
+const { Title } = Typography;
+const { TextArea } = Input;
+
+const ResearchDashboard: React.FC = () => {
+  // 表单和模态框状态
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingProject, setEditingProject] = useState<ResearchProject | null>(null);
+  const [selectedProject, setSelectedProject] = useState<ResearchProject | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+  const [form] = Form.useForm();
+
+  // 使用自定义钩子管理数据和操作
+  const {
+    sortedProjects,
+    collaborators,
+    isLoading,
+    getProjectTodoStatus,
+    updateLocalTodoStatus,
+    revertLocalTodoStatus,
+  } = useProjectData();
+
+  const {
+    createProjectMutation,
+    updateProjectMutation,
+    handleDeleteProject,
+    handleToggleTodo,
+    isCreating,
+    isUpdating,
+  } = useProjectActions({
+    getProjectTodoStatus,
+    updateLocalTodoStatus,
+    revertLocalTodoStatus,
+  });
+
+
+  // 处理表单提交
+  const handleSubmit = async (values: any) => {
+    const projectData: ResearchProjectCreate = {
+      ...values,
+      expected_completion: values.expected_completion?.format('YYYY-MM-DD'),
+    };
+
+    if (editingProject) {
+      updateProjectMutation.mutate({ id: editingProject.id, data: projectData });
+    } else {
+      createProjectMutation.mutate(projectData);
+    }
+    
+    // 成功后关闭模态框
+    setIsModalVisible(false);
+    setEditingProject(null);
+    form.resetFields();
+  };
+
+  // 处理编辑
+  const handleEdit = (project: ResearchProject) => {
+    setEditingProject(project);
+    form.setFieldsValue({
+      ...project,
+      expected_completion: project.expected_completion ? dayjs(project.expected_completion) : undefined,
+      collaborator_ids: project.collaborators.map(c => c.id),
+    });
+    setIsModalVisible(true);
+  };
+
+  // 处理交流日志查看
+  const handleViewLogs = (project: ResearchProject) => {
+    setSelectedProject(project);
+    // TODO: 实现交流日志查看功能
+  };
+
+  // 表格列配置
+  const columns = createProjectColumns({
+    actions: {
+      onEdit: handleEdit,
+      onDelete: handleDeleteProject,
+      onViewLogs: handleViewLogs,
+      onToggleTodo: handleToggleTodo,
+    },
+    getProjectTodoStatus,
+    currentPage,
+    pageSize,
+  });
+
+  return (
+    <div>
+      {/* 待办项目行样式 */}
+      <style>{`
+        .todo-project-row {
+          background-color: #fffbf0 !important;
+          border-left: 3px solid #faad14 !important;
+        }
+        .todo-project-row:hover {
+          background-color: #fff7e6 !important;
+        }
+      `}</style>
+
+      {/* 页面标题和操作按钮 */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        marginBottom: 24 
+      }}>
+        <Title level={2} style={{ margin: 0 }}>
+          <ProjectOutlined style={{ marginRight: 8 }} />
+          研究看板
+        </Title>
+        <Button 
+          type="primary" 
+          icon={<PlusOutlined />}
+          onClick={() => {
+            setEditingProject(null);
+            form.resetFields();
+            setIsModalVisible(true);
+          }}
+        >
+          新建项目
+        </Button>
+      </div>
+
+      {/* 统计卡片 */}
+      <StatisticsCards 
+        projects={sortedProjects} 
+        getProjectTodoStatus={getProjectTodoStatus} 
+      />
+
+      {/* 项目列表 */}
+      <Table
+        dataSource={sortedProjects}
+        columns={columns}
+        rowKey="id"
+        loading={isLoading}
+        onChange={(pagination) => {
+          setCurrentPage(pagination.current || 1);
+          setPageSize(pagination.pageSize || 20);
+        }}
+        pagination={{
+          current: currentPage,
+          pageSize: pageSize,
+          pageSizeOptions: ['10', '20', '50', '100'],
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+        }}
+        scroll={{ x: 1200 }}
+        rowClassName={(record: ResearchProject) => 
+          getProjectTodoStatus(record).is_todo ? 'todo-project-row' : ''
+        }
+      />
+
+      {/* 创建/编辑项目模态框 */}
+      <Modal
+        title={editingProject ? '编辑项目' : '新建项目'}
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          setEditingProject(null);
+          form.resetFields();
+        }}
+        onOk={() => form.submit()}
+        confirmLoading={isCreating || isUpdating}
+        width={600}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
+          <Form.Item
+            name="title"
+            label="项目标题"
+            rules={[{ required: true, message: '请输入项目标题' }]}
+          >
+            <Input placeholder="请输入项目标题" />
+          </Form.Item>
+
+          <Form.Item
+            name="idea_description"
+            label="项目描述"
+            rules={[{ required: true, message: '请输入项目描述' }]}
+          >
+            <TextArea 
+              rows={4} 
+              placeholder="请详细描述项目的核心idea和目标"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="status"
+            label="项目状态"
+            initialValue="active"
+          >
+            <Select>
+              <Select.Option value="active">进行中</Select.Option>
+              <Select.Option value="paused">暂停</Select.Option>
+              <Select.Option value="completed">已完成</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="expected_completion"
+            label="预计完成时间"
+          >
+            <DatePicker style={{ width: '100%' }} />
+          </Form.Item>
+
+          <Form.Item
+            name="collaborator_ids"
+            label="合作者"
+          >
+            <Select
+              mode="multiple"
+              placeholder="选择合作者"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {collaborators.map((collaborator) => (
+                <Select.Option key={collaborator.id} value={collaborator.id}>
+                  {collaborator.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* TODO: 交流日志相关模态框将在后续步骤中拆分 */}
+    </div>
+  );
+};
+
+export default ResearchDashboard;
