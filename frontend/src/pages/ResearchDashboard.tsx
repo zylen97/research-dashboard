@@ -133,7 +133,7 @@ const ResearchDashboard: React.FC = () => {
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button 
             icon={<ReloadOutlined />}
-            onClick={refetch}
+            onClick={() => refetch()}
             loading={isLoading}
             title="刷新数据"
           >

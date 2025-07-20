@@ -499,7 +499,7 @@ const CollaboratorManagement: React.FC = () => {
           </Upload>
           <Button 
             icon={<ReloadOutlined />}
-            onClick={refetch}
+            onClick={() => refetch()}
             loading={isLoading}
             title="刷新数据"
           >
