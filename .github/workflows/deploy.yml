@@ -42,6 +42,10 @@ jobs:
               rm -f research_dashboard.db
               echo "✅ 旧数据库已备份并删除"
             fi
+            
+            echo "📊 初始化数据库和用户..."
+            python3 init_db.py
+            
             cd ..
             
             echo "🔄 重启后端服务..."
