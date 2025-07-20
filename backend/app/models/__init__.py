@@ -9,6 +9,8 @@ from .database import (
     Literature, 
     Idea, 
     CommunicationLog,
+    AuditLog,
+    User,
     project_collaborators
 )
 
@@ -43,6 +45,16 @@ from .schemas import (
     CommunicationLogUpdate,
     CommunicationLog as CommunicationLogSchema,
     
+    # User schemas
+    UserBase,
+    UserCreate,
+    UserUpdate,
+    UserLogin,
+    User as UserSchema,
+    
+    # Auth schemas
+    Token,
+    
     # Utility schemas
     FileUploadResponse,
     ValidationRequest,
@@ -51,12 +63,14 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "Literature", "Idea", "CommunicationLog",
+    "Collaborator", "ResearchProject", "Literature", "Idea", "CommunicationLog", "AuditLog", "User",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
     "LiteratureBase", "LiteratureCreate", "LiteratureUpdate", "LiteratureSchema",
     "IdeaBase", "IdeaCreate", "IdeaUpdate", "IdeaSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",
+    "UserBase", "UserCreate", "UserUpdate", "UserLogin", "UserSchema",
+    "Token",
     "FileUploadResponse", "ValidationRequest", "ValidationResult"
 ]

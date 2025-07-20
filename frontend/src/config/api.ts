@@ -40,10 +40,7 @@ export const API_ENDPOINTS = {
   AUTH: {
     LOGIN: '/api/auth/login',
     REGISTER: '/api/auth/register',
-    CREATE_TEAM: '/api/auth/create-team',
-    JOIN_TEAM: '/api/auth/join-team',
     ME: '/api/auth/me',
-    TEAM_MEMBERS: '/api/auth/team/members',
   },
   // 研究项目
   RESEARCH: {

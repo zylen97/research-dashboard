@@ -221,35 +221,6 @@ class User(UserBase):
     class Config:
         from_attributes = True
 
-# Team schemas
-class TeamBase(BaseModel):
-    name: str = Field(..., max_length=100)
-    description: Optional[str] = None
-    max_members: int = Field(default=10, ge=2, le=50)
-
-class TeamCreate(TeamBase):
-    pass
-
-class TeamUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
-    description: Optional[str] = None
-    max_members: Optional[int] = Field(None, ge=2, le=50)
-    is_active: Optional[bool] = None
-
-class TeamJoin(BaseModel):
-    invite_code: str = Field(..., max_length=20)
-
-class Team(TeamBase):
-    id: int
-    invite_code: str
-    is_active: bool
-    creator_id: int
-    created_at: datetime
-    updated_at: datetime
-    creator: Optional[User] = None
-    
-    class Config:
-        from_attributes = True
 
 # Auth response schemas
 class Token(BaseModel):
@@ -257,9 +228,3 @@ class Token(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: User
-    team: Team
-
-class TeamMember(BaseModel):
-    user: User
-    role: str
-    joined_at: datetime

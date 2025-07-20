@@ -153,13 +153,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/openapi.json",
             "/api/auth/login",
             "/api/auth/register", 
-            "/api/auth/join-team"
         }
     
     async def dispatch(self, request: Request, call_next):
         """验证JWT token"""
         from app.utils.auth import verify_token
-        from app.models.database import get_db, User, Team
+        from app.models.database import get_db, User
         
         # 检查是否为公开路径
         if request.url.path in self.public_paths:
@@ -183,31 +182,28 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 content={"detail": "Invalid or expired token"}
             )
         
-        # 获取用户和团队信息
+        # 获取用户信息
         user_id = payload.get("user_id")
-        team_id = payload.get("team_id")
         
-        if not user_id or not team_id:
+        if not user_id:
             return JSONResponse(
                 status_code=401,
                 content={"detail": "Invalid token payload"}
             )
         
-        # 验证用户和团队是否仍然有效
+        # 验证用户是否仍然有效
         db = next(get_db())
         try:
             user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
-            team = db.query(Team).filter(Team.id == team_id, Team.is_active == True).first()
             
-            if not user or not team:
+            if not user:
                 return JSONResponse(
                     status_code=401,
-                    content={"detail": "User or team not found or inactive"}
+                    content={"detail": "User not found or inactive"}
                 )
             
-            # 将用户和团队信息添加到请求状态中
+            # 将用户信息添加到请求状态中
             request.state.current_user = user
-            request.state.current_team = team
             
         finally:
             db.close()

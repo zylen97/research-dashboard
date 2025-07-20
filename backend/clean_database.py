@@ -51,18 +51,13 @@ def clean_database():
     Base.metadata.create_all(bind=engine)
     logger.info("数据库表结构已创建")
     
-    # 4. 验证表结构（确保没有team_id）
+    # 4. 验证表结构
     logger.info("步骤 4: 验证表结构")
     with engine.connect() as conn:
         # 检查collaborators表的结构
         result = conn.execute(text("PRAGMA table_info(collaborators)"))
         columns = [row[1] for row in result]
-        
-        if 'team_id' in columns:
-            logger.error("错误：collaborators表仍包含team_id字段！")
-            return False
-        else:
-            logger.info("✓ collaborators表结构正确（无team_id）")
+        logger.info(f"✓ collaborators表包含字段: {columns}")
     
     # 5. 初始化用户数据
     logger.info("步骤 5: 初始化四个用户账号")
