@@ -20,7 +20,9 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
         "http://45.149.156.216",
-        "https://45.149.156.216"
+        "http://45.149.156.216:3001",
+        "https://45.149.156.216",
+        "https://45.149.156.216:3001"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
