@@ -1,92 +1,54 @@
 # Research Dashboard
 
-A modern, full-stack research management platform built with React and FastAPI.
+A modern research project management system with built-in authentication and collaboration features.
 
-## 🎯 Features
+## 🚀 Features
 
-### Core Functionality
-- **Project Management**: Create, edit, and track research projects with comprehensive details
-- **Collaborator Management**: Manage team members, track participation, and organize groups
-- **Communication Logs**: Record and track project communications with timeline view
-- **Literature Discovery**: AI-powered literature search and management
-- **Idea Management**: Centralized idea pool with priority tracking and development stages
+### Authentication & Security
+- **Pre-configured Users**: 4 built-in users (zl, zz, yq, dz) with secure authentication
+- **JWT Token System**: Secure session management with automatic expiration
+- **Enhanced Security**: CORS protection, rate limiting, input validation
+- **Secure API**: All endpoints protected with authentication middleware
+
+### Research Management
+- **Project Dashboard**: Create and manage research projects with progress tracking
+- **Todo System**: Mark projects as todo items for quick access
+- **Collaborator Management**: Organize team members and research groups
+- **Communication Logs**: Track all project-related communications
+- **Real-time Updates**: Instant data synchronization across all users
+
+### Literature & Ideas
+- **Literature Discovery**: Import and manage research papers
+- **AI Validation**: Validate literature relevance with AI assistance
+- **Idea Pool**: Centralized idea management with priority tracking
+- **Knowledge Graph**: Convert validated literature into actionable ideas
 
 ### Modern UI/UX
-- **Dark/Light Theme**: Toggle between modern light and dark themes with persistent settings
-- **Responsive Design**: Optimized for desktop, tablet, and mobile devices
-- **Smooth Animations**: Professional micro-interactions and transitions
-- **Intuitive Interface**: Clean, modern design with excellent usability
+- **Responsive Design**: Works seamlessly on desktop and mobile
+- **Clean Interface**: Intuitive design with Ant Design components
+- **Smart Tables**: Sortable, filterable, and searchable data views
+- **Real-time Feedback**: Loading states and error handling
 
-### Security & Performance
-- **Enhanced Security**: CORS protection, input validation, SQL injection prevention, rate limiting
-- **Type Safety**: Comprehensive TypeScript coverage with strict mode
-- **Component Architecture**: Modular, reusable components with custom hooks
-- **Performance Optimized**: Efficient data loading, caching, and error handling
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js 16+ and npm
-- Python 3.8+
-- Git
-
-### Super Fast Setup (3 Steps)
-
-```bash
-# 1. Clone and setup
-git clone https://github.com/zylen97/research-dashboard.git
-cd research-dashboard
-./setup.sh
-
-# 2. Start services
-./run.sh
-
-# 3. Visit http://localhost:3001
-```
-
-### Startup Options
-
-| Script | Mode | Use Case | Features |
-|--------|------|----------|----------|
-| `./run.sh` | Foreground | Development | ✅ Simple & fast<br>✅ Real-time logs<br>❌ Stops when terminal closes |
-| `./start.sh` | Background | Production | ✅ Background running<br>✅ Process management<br>✅ Log files<br>✅ Auto-restart |
-
-### Access Points
-- **Frontend**: http://localhost:3001
-- **Backend API**: http://localhost:8080
-- **API Documentation**: http://localhost:8080/docs
-
-### Manual Setup (Alternative)
-
-**Backend:**
-```bash
-cd backend
-pip install -r requirements.txt
-python main.py
-```
-
-**Frontend:**
-```bash
-cd frontend
-npm install
-npm start
-```
-
-## 🏗️ Tech Stack
+## 🛠️ Tech Stack
 
 ### Frontend
 - **React 18** with TypeScript
-- **Ant Design** for UI components
-- **React Query** for data fetching and caching
-- **React Router** for navigation
-- **Custom Theme System** with dark/light mode support
+- **Ant Design 5** for UI components
+- **React Context** for state management
+- **Axios** for API communication
 
 ### Backend
-- **FastAPI** with Python
-- **SQLAlchemy** ORM for database operations
+- **FastAPI** (Python 3.10+)
+- **SQLAlchemy** ORM
 - **SQLite** database
-- **Pydantic** for data validation
-- **Security Middleware** for enhanced protection
+- **JWT** authentication
+- **Pydantic** validation
+
+### Deployment
+- **GitHub Actions** for CI/CD
+- **Nginx** reverse proxy
+- **Systemd** service management
+- **Automated deployment** to VPS
 
 ## 📁 Project Structure
 
@@ -95,143 +57,168 @@ research-dashboard/
 ├── frontend/                 # React TypeScript frontend
 │   ├── src/
 │   │   ├── components/      # Reusable UI components
-│   │   │   ├── research-dashboard/  # Dashboard components
-│   │   │   └── ThemeToggle.tsx      # Theme switching
 │   │   ├── pages/           # Page components
 │   │   ├── services/        # API services
-│   │   ├── theme/           # Theme system
-│   │   ├── types/           # TypeScript types
-│   │   ├── styles/          # Global styles and animations
-│   │   └── utils/           # Utility functions
-├── backend/                  # FastAPI Python backend
+│   │   ├── contexts/        # React contexts
+│   │   └── types/           # TypeScript definitions
+│   └── package.json
+├── backend/                  # FastAPI backend
 │   ├── app/
 │   │   ├── models/          # Database models
-│   │   ├── routes/          # API routes
-│   │   ├── services/        # Business logic
-│   │   ├── utils/           # Utility functions
-│   │   │   └── security_validators.py  # Security validation
+│   │   ├── routes/          # API endpoints
+│   │   ├── utils/           # Utilities
 │   │   └── middleware/      # Security middleware
+│   ├── main.py             # Application entry
 │   └── requirements.txt
-├── setup.sh                 # 📦 Environment setup
-├── run.sh                   # 🚀 Quick start script
-├── start.sh                 # ⚡ Production start
-├── stop.sh                  # 🛑 Stop services
-├── logs/                    # 📋 Log files
-└── pids/                    # 🔍 Process IDs
+├── deployment/              # Deployment configurations
+│   ├── nginx.conf          # Nginx configuration
+│   └── research-backend.service  # Systemd service
+├── .github/workflows/       # GitHub Actions
+└── run.sh                  # Local development script
 ```
 
-## 🎨 Key Features Deep Dive
+## 🚀 Quick Start
 
-### Theme System
-- **Seamless Switching**: Light/dark mode with instant toggle
-- **Persistent Settings**: Theme preference saved locally
-- **Modern Design**: Contemporary color schemes and typography
-- **Accessibility**: High contrast and readable interfaces
+### Prerequisites
+- Python 3.8+
+- Node.js 16+
+- Git
 
-### Component Architecture
-- **Modular Design**: ResearchDashboard split from 1000+ lines to 200 lines
-- **Custom Hooks**: `useProjectData` and `useProjectActions` for state management
-- **Reusable Components**: StatisticsCards, ThemeToggle, and table columns
-- **Type Safety**: Comprehensive TypeScript coverage with strict mode
-
-### Security Implementation
-- **Input Sanitization**: XSS prevention and data cleaning
-- **API Protection**: Rate limiting and request validation  
-- **Secure Headers**: Enhanced security middleware
-- **Data Validation**: Multi-layer validation with Pydantic and custom validators
-
-## 📊 Performance
-
-Optimized to handle:
-- **1000+** research projects
-- **10,000+** literature entries
-- **Unlimited** collaborators and ideas
-- **Real-time** data updates and caching
-
-## 🔧 Development Scripts
+### Local Development
 
 ```bash
-./setup.sh      # Install dependencies and setup environment
-./run.sh        # Quick start for development (foreground)
-./start.sh      # Start all services in background
-./stop.sh       # Stop all services gracefully
+# Clone repository
+git clone https://github.com/zylen97/research-dashboard.git
+cd research-dashboard
+
+# Setup and run
+./setup.sh  # Install dependencies
+./run.sh    # Start both frontend and backend
+```
+
+### Access
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8080
+- API Docs: http://localhost:8080/docs
+
+### Default Users
+| Username | Password | Description |
+|----------|----------|-------------|
+| zl       | 123      | User 1      |
+| zz       | 123      | User 2      |
+| yq       | 123      | User 3      |
+| dz       | 123      | User 4      |
+
+## 🌐 Production Deployment
+
+### Automated Deployment
+Every push to `main` branch automatically deploys to VPS via GitHub Actions.
+
+### Manual Deployment
+```bash
+git push origin main  # Triggers automatic deployment
+```
+
+### Server Configuration
+- **OS**: Ubuntu 20.04+
+- **Web Server**: Nginx
+- **Process Manager**: Systemd
+- **Database**: SQLite (auto-backed up)
+
+## 📊 API Endpoints
+
+### Authentication
+- `POST /api/auth/login` - User login
+- `GET /api/auth/me` - Get current user
+
+### Research Projects
+- `GET /api/research` - List all projects
+- `POST /api/research` - Create project
+- `PUT /api/research/{id}` - Update project
+- `DELETE /api/research/{id}` - Delete project
+- `GET /api/research/{id}/logs` - Get communication logs
+
+### Collaborators
+- `GET /api/collaborators` - List collaborators
+- `POST /api/collaborators` - Add collaborator
+- `PUT /api/collaborators/{id}` - Update collaborator
+- `DELETE /api/collaborators/{id}` - Delete collaborator
+
+### Literature & Ideas
+- `GET /api/literature` - List literature
+- `POST /api/literature` - Add literature
+- `POST /api/literature/validate` - AI validation
+- `GET /api/ideas` - List ideas
+- `POST /api/ideas` - Create idea
+
+## 🔧 Development
+
+### Backend Development
+```bash
+cd backend
+pip install -r requirements.txt
+python main.py  # Runs on http://localhost:8080
+```
+
+### Frontend Development
+```bash
+cd frontend
+npm install
+npm start  # Runs on http://localhost:3000
+```
+
+### Database Management
+```bash
+cd backend
+python init_db.py  # Initialize database with default users
 ```
 
 ## 🐛 Troubleshooting
 
-### Port Issues
+### Port Already in Use
 ```bash
-# Check port usage
+# Check what's using the ports
+lsof -i :3000
 lsof -i :8080
-lsof -i :3001
 
-# Force stop
-./stop.sh
+# Kill processes if needed
+kill -9 <PID>
 ```
 
-### Dependency Issues
+### Database Issues
 ```bash
-# Reinstall dependencies
-./setup.sh
-
-# Manual install
-cd backend && pip install -r requirements.txt
-cd frontend && npm install
+# Reset database
+cd backend
+rm research_dashboard.db
+python init_db.py
 ```
 
-### Service Issues
-```bash
-# Check logs
-tail -f logs/backend.log
-tail -f logs/frontend.log
-
-# Restart services
-./stop.sh && ./start.sh
-```
-
-## 📝 API Documentation
-
-The comprehensive API provides endpoints for:
-
-- **Research Projects**: CRUD operations, status management, todo tracking
-- **Collaborators**: Team member management, group organization, soft delete
-- **Communication Logs**: Project communication tracking with simplified workflow
-- **Literature**: Research paper management and AI-powered search
-- **Ideas**: Idea pool management with priority tracking
-- **Validation**: Data integrity and relationship checking
-
-Full interactive API documentation: http://localhost:8080/docs
-
-## 🔄 Recent Optimizations
-
-- **Enhanced Security**: Implemented comprehensive security middleware and data validation
-- **UI Modernization**: Added dark/light theme system with smooth animations
-- **Code Architecture**: Refactored from monolithic to modular component structure
-- **Performance**: Optimized data loading and caching strategies
-- **Type Safety**: Configured strict TypeScript mode for enhanced code quality
-- **Database**: Implemented soft delete for collaborators and cascade delete for projects
+### Deployment Issues
+- Check GitHub Actions logs
+- SSH to server and check systemd logs:
+  ```bash
+  sudo journalctl -u research-backend -f
+  ```
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+2. Create feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open Pull Request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.
 
 ## 🙏 Acknowledgments
 
-- Built with modern web technologies for optimal performance
-- Designed with user experience and security as top priorities
-- Developed following industry best practices and standards
+- Built with modern web technologies
+- Designed for research collaboration
+- Automated deployment for easy maintenance
 
 ---
-
-**Note**: This project has been comprehensively optimized with modern UI/UX, enhanced security, professional code architecture, and industry-standard development practices.
 
 🤖 Generated with [Claude Code](https://claude.ai/code)
 
