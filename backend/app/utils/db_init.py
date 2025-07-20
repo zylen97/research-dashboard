@@ -2,8 +2,9 @@
 数据库初始化工具
 """
 import logging
-from ..models.database import create_tables, engine, SessionLocal
+from ..models.database import create_tables, engine, SessionLocal, User
 from ..models import Collaborator, ResearchProject, Literature, Idea, CommunicationLog
+from ..utils.auth import get_password_hash
 
 # 配置日志
 logging.basicConfig(
@@ -17,6 +18,68 @@ def init_database():
     logger.info("Creating database tables")
     create_tables()
     logger.info("Database tables created successfully")
+
+def init_users():
+    """初始化用户账号"""
+    db = SessionLocal()
+    
+    try:
+        # 四个用户的信息
+        users_data = [
+            {
+                "username": "user1",
+                "email": "user1@example.com",
+                "display_name": "用户一",
+                "password": "password123"
+            },
+            {
+                "username": "user2", 
+                "email": "user2@example.com",
+                "display_name": "用户二",
+                "password": "password123"
+            },
+            {
+                "username": "user3",
+                "email": "user3@example.com", 
+                "display_name": "用户三",
+                "password": "password123"
+            },
+            {
+                "username": "user4",
+                "email": "user4@example.com",
+                "display_name": "用户四", 
+                "password": "password123"
+            }
+        ]
+        
+        # 检查并创建用户
+        for user_data in users_data:
+            existing_user = db.query(User).filter(
+                (User.username == user_data["username"]) | 
+                (User.email == user_data["email"])
+            ).first()
+            
+            if not existing_user:
+                new_user = User(
+                    username=user_data["username"],
+                    email=user_data["email"],
+                    display_name=user_data["display_name"],
+                    password_hash=get_password_hash(user_data["password"]),
+                    is_active=True
+                )
+                db.add(new_user)
+                logger.info(f"Created user: {user_data['username']}")
+            else:
+                logger.info(f"User already exists: {user_data['username']}")
+        
+        db.commit()
+        logger.info("User initialization completed")
+        
+    except Exception as e:
+        logger.error(f"Error initializing users: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
 def create_sample_data():
     """创建示例数据"""

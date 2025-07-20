@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import research, collaborators, literature, ideas, validation, audit, auth
-from app.utils.db_init import init_database, create_sample_data
+from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 
 app = FastAPI(
@@ -56,6 +56,7 @@ async def root():
 async def startup_event():
     """应用启动时初始化数据库"""
     init_database()
+    init_users()  # 初始化用户账号
     # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
 
 if __name__ == "__main__":
