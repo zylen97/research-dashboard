@@ -60,7 +60,14 @@ jobs:
           if [ "$FRONTEND_CHANGED" -gt 0 ]; then
             echo "⚛️ 检测到前端更改，重新构建..."
             cd frontend
+            echo "🧹 清理缓存..."
+            rm -rf build node_modules/.cache
+            echo "📦 安装依赖..."
+            npm install
+            echo "🔨 构建前端..."
             npm run build
+            echo "📋 复制文件到Web目录..."
+            rm -rf /var/www/html/*
             cp -r build/* /var/www/html/
             cd ..
           fi
