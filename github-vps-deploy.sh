@@ -70,7 +70,7 @@ cd /var/www/research-dashboard/frontend
 npm install
 
 # 创建生产环境配置
-echo "REACT_APP_API_URL=http://62.106.70.2" > .env.production
+echo "REACT_APP_API_URL=http://45.149.156.216" > .env.production
 
 # 构建前端
 npm run build
@@ -84,7 +84,7 @@ echo "🌐 配置Nginx..."
 cat > /etc/nginx/sites-available/research-dashboard << 'EOF'
 server {
     listen 80;
-    server_name 62.106.70.2 _;
+    server_name 45.149.156.216 _;
     
     root /var/www/html;
     index index.html;
@@ -236,7 +236,7 @@ chmod +x /root/auto-backup.sh
 echo ""
 echo "🎉 部署完成！"
 echo "========================================"
-echo "🌐 访问地址: http://62.106.70.2"
+echo "🌐 访问地址: http://45.149.156.216"
 echo "📱 手机也可以访问同样的地址"
 echo ""
 echo "📋 常用管理命令："
@@ -261,4 +261,4 @@ echo "🧪 测试访问..."
 curl -s -o /dev/null -w "HTTP状态码: %{http_code}\n" http://localhost:80/ || echo "❌ 无法访问本地服务"
 
 echo ""
-echo "🎯 下一步：在浏览器打开 http://62.106.70.2 开始使用！"
+echo "🎯 下一步：在浏览器打开 http://45.149.156.216 开始使用！"
