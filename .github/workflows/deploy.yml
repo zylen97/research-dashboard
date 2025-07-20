@@ -25,12 +25,24 @@ jobs:
           echo "🔧 配置 Git 安全目录..."
           git config --global --add safe.directory /var/www/research-dashboard
           
-          echo "📥 拉取最新代码..."
-          git pull origin main
+          echo "📥 强制更新到最新代码..."
+          git fetch --all
+          git reset --hard origin/main
+          git clean -fd
+          
+          echo "🔍 显示最新提交..."
+          git log --oneline -3
+          
+          echo "🔄 始终更新Nginx配置..."
+          sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
+          sudo nginx -t && sudo systemctl reload nginx
           
           echo "🔍 检查更改..."
           BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
           FRONTEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "frontend/" || echo "0")
+          
+          # 添加强制重建标志检查
+          FORCE_REBUILD=$(git diff HEAD~1 --name-only | grep -c "FORCE_REBUILD\|force-rebuild" || echo "0")
           
           if [ "$BACKEND_CHANGED" -gt 0 ]; then
             echo "🐍 检测到后端更改..."
@@ -57,8 +69,8 @@ jobs:
             echo "✅ 后端服务已重启"
           fi
           
-          if [ "$FRONTEND_CHANGED" -gt 0 ]; then
-            echo "⚛️ 检测到前端更改，重新构建..."
+          if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$FORCE_REBUILD" -gt 0 ]; then
+            echo "⚛️ 检测到前端更改或强制重建标志，重新构建..."
             cd frontend
             echo "🧹 清理缓存..."
             rm -rf build node_modules/.cache
@@ -66,18 +78,18 @@ jobs:
             npm install
             echo "🔨 构建前端..."
             npm run build
-            echo "📋 复制文件到Web目录..."
-            rm -rf /var/www/html/*
-            cp -r build/* /var/www/html/
+            echo "📋 清空并复制文件到Web目录..."
+            sudo rm -rf /var/www/html/*
+            sudo cp -r build/* /var/www/html/
+            sudo chown -R www-data:www-data /var/www/html/
             cd ..
+            echo "✅ 前端部署完成"
+          else
+            echo "📌 前端无更改，跳过构建"
           fi
           
-          echo "🔧 更新Nginx配置..."
-          sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
-          echo "✅ Nginx配置已更新"
-          
-          echo "🔄 重新加载Nginx..."
-          sudo nginx -t && sudo systemctl reload nginx
+          echo "🔄 最终重新加载Nginx..."
+          sudo systemctl reload nginx
           
           echo "🔍 检查服务状态..."
           systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
