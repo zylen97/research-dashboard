@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 from datetime import datetime
 
@@ -191,3 +191,75 @@ class ValidationResult(BaseModel):
     status: str
     score: Optional[float]
     reason: str
+
+# User schemas
+class UserBase(BaseModel):
+    username: str = Field(..., max_length=50)
+    email: EmailStr
+    display_name: str = Field(..., max_length=100)
+    avatar_url: Optional[str] = Field(None, max_length=500)
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=6, max_length=50)
+
+class UserUpdate(BaseModel):
+    display_name: Optional[str] = Field(None, max_length=100)
+    avatar_url: Optional[str] = Field(None, max_length=500)
+    is_active: Optional[bool] = None
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+class User(UserBase):
+    id: int
+    is_active: bool
+    created_at: datetime
+    updated_at: datetime
+    last_login: Optional[datetime] = None
+    
+    class Config:
+        from_attributes = True
+
+# Team schemas
+class TeamBase(BaseModel):
+    name: str = Field(..., max_length=100)
+    description: Optional[str] = None
+    max_members: int = Field(default=10, ge=2, le=50)
+
+class TeamCreate(TeamBase):
+    pass
+
+class TeamUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100)
+    description: Optional[str] = None
+    max_members: Optional[int] = Field(None, ge=2, le=50)
+    is_active: Optional[bool] = None
+
+class TeamJoin(BaseModel):
+    invite_code: str = Field(..., max_length=20)
+
+class Team(TeamBase):
+    id: int
+    invite_code: str
+    is_active: bool
+    creator_id: int
+    created_at: datetime
+    updated_at: datetime
+    creator: Optional[User] = None
+    
+    class Config:
+        from_attributes = True
+
+# Auth response schemas
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+    user: User
+    team: Team
+
+class TeamMember(BaseModel):
+    user: User
+    role: str
+    joined_at: datetime

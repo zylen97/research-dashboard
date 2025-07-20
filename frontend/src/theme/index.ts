@@ -81,9 +81,10 @@ export const lightTheme = {
     borderRadiusLG: 12,
     borderRadiusSM: 6,
     
-    // 阴影
-    boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
-    boxShadowSecondary: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+    // 阴影 - 增强视觉层次
+    boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+    boxShadowSecondary: '0 4px 12px 0 rgba(0, 0, 0, 0.08), 0 2px 6px 0 rgba(0, 0, 0, 0.04)',
+    boxShadowTertiary: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
     
     // 字体
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -96,23 +97,57 @@ export const lightTheme = {
     },
     Card: {
       borderRadiusLG: 12,
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+      paddingSM: 12,
+      paddingLG: 20,
     },
     Button: {
       borderRadius: 8,
       fontWeight: 500,
+      controlHeight: 36,
+      primaryShadow: '0 2px 0 rgba(5, 145, 255, 0.1)',
+      defaultBorderColor: colors.gray[200],
+      defaultShadow: 'none',
     },
     Table: {
       borderRadius: 8,
       headerBg: colors.gray[50],
+      headerSplitColor: colors.gray[200],
+      rowHoverBg: colors.gray[50],
+      fontSize: 13,
     },
     Modal: {
-      borderRadiusLG: 12,
+      borderRadiusLG: 16,
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      contentBg: '#ffffff',
+      headerBg: '#ffffff',
     },
     Input: {
       borderRadius: 8,
+      activeBorderColor: colors.primary[500],
+      hoverBorderColor: colors.primary[400],
+      controlHeight: 36,
     },
     Select: {
       borderRadius: 8,
+      controlHeight: 36,
+    },
+    Tag: {
+      borderRadiusSM: 6,
+      fontSize: 12,
+    },
+    Statistic: {
+      titleFontSize: 13,
+      contentFontSize: 20,
+    },
+    Menu: {
+      itemBorderRadius: 8,
+      itemMarginInline: 4,
+      itemHeight: 40,
+    },
+    Dropdown: {
+      borderRadiusLG: 8,
+      boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05)',
     },
   },
 };
@@ -161,23 +196,57 @@ export const darkTheme = {
     },
     Card: {
       borderRadiusLG: 12,
+      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.1)',
+      paddingSM: 12,
+      paddingLG: 20,
     },
     Button: {
       borderRadius: 8,
       fontWeight: 500,
+      controlHeight: 36,
+      primaryShadow: '0 2px 0 rgba(5, 145, 255, 0.2)',
+      defaultBorderColor: colors.gray[700],
+      defaultShadow: 'none',
     },
     Table: {
       borderRadius: 8,
       headerBg: '#262626',
+      headerSplitColor: colors.gray[700],
+      rowHoverBg: '#262626',
+      fontSize: 13,
     },
     Modal: {
-      borderRadiusLG: 12,
+      borderRadiusLG: 16,
+      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
+      contentBg: '#1f1f1f',
+      headerBg: '#1f1f1f',
     },
     Input: {
       borderRadius: 8,
+      activeBorderColor: colors.primary[400],
+      hoverBorderColor: colors.primary[300],
+      controlHeight: 36,
     },
     Select: {
       borderRadius: 8,
+      controlHeight: 36,
+    },
+    Tag: {
+      borderRadiusSM: 6,
+      fontSize: 12,
+    },
+    Statistic: {
+      titleFontSize: 13,
+      contentFontSize: 20,
+    },
+    Menu: {
+      itemBorderRadius: 8,
+      itemMarginInline: 4,
+      itemHeight: 40,
+    },
+    Dropdown: {
+      borderRadiusLG: 8,
+      boxShadow: '0 6px 16px 0 rgba(0, 0, 0, 0.2), 0 3px 6px -4px rgba(0, 0, 0, 0.3), 0 9px 28px 8px rgba(0, 0, 0, 0.15)',
     },
   },
 };

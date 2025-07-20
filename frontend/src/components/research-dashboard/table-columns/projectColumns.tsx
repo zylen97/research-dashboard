@@ -1,6 +1,4 @@
 import { Button, Tag, Space, Typography } from 'antd';
-
-const { Text } = Typography;
 import { 
   EditOutlined, 
   DeleteOutlined, 
@@ -8,6 +6,8 @@ import {
   FlagOutlined 
 } from '@ant-design/icons';
 import { ResearchProject } from '../../../types';
+
+const { Text } = Typography;
 
 export interface ProjectTableActions {
   onEdit: (project: ResearchProject) => void;
@@ -72,11 +72,14 @@ export const createProjectColumns = ({
   getProjectTodoStatus,
   currentPage,
   pageSize
-}: ProjectColumnProps) => [
+}: ProjectColumnProps) => {
+  const isMobile = window.innerWidth < 768;
+  
+  return [
   {
     title: '序号',
     key: 'index',
-    width: 60,
+    width: 50,
     fixed: 'left' as const,
     render: (_: any, __: any, index: number) => {
       return (currentPage - 1) * pageSize + index + 1;
@@ -86,7 +89,7 @@ export const createProjectColumns = ({
     title: '项目名称',
     dataIndex: 'title',
     key: 'title',
-    width: 200,
+    width: 180,
     ellipsis: true,
     render: (title: string, project: ResearchProject) => {
       const todoStatus = getProjectTodoStatus(project);
@@ -98,11 +101,11 @@ export const createProjectColumns = ({
       );
     },
   },
-  {
+  ...(isMobile ? [] : [{
     title: '项目描述',
     dataIndex: 'idea_description',
     key: 'idea_description',
-    width: 300,
+    width: 250,
     ellipsis: { showTitle: false },
     render: (description: string) => (
       <Text
@@ -112,7 +115,7 @@ export const createProjectColumns = ({
         {description}
       </Text>
     ),
-  },
+  }]),
   {
     title: '状态',
     dataIndex: 'status',
@@ -132,11 +135,11 @@ export const createProjectColumns = ({
     ],
     onFilter: (value: any, record: ResearchProject) => record.status === value,
   },
-  {
+  ...(isMobile ? [] : [{
     title: '合作者',
     dataIndex: 'collaborators',
     key: 'collaborators',
-    width: 200,
+    width: 180,
     render: (collaborators: any[]) => {
       return (
         <Space wrap>
@@ -165,8 +168,8 @@ export const createProjectColumns = ({
         </Space>
       );
     },
-  },
-  {
+  }]),
+  ...(isMobile ? [] : [{
     title: '交流进度',
     key: 'communication_progress',
     width: 250,
@@ -185,11 +188,11 @@ export const createProjectColumns = ({
         </Text>
       );
     },
-  },
+  }]),
   {
     title: '操作',
     key: 'actions',
-    width: 200,
+    width: 150,
     fixed: 'right' as const,
     render: (_: any, project: ResearchProject) => {
       const todoStatus = getProjectTodoStatus(project);
@@ -228,3 +231,4 @@ export const createProjectColumns = ({
     },
   },
 ];
+};

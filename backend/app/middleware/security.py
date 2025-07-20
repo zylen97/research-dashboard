@@ -138,3 +138,78 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         
         path_lower = path.lower()
         return any(pattern in path_lower for pattern in malicious_patterns)
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    """JWT认证中间件"""
+    
+    def __init__(self, app):
+        super().__init__(app)
+        # 不需要认证的路径
+        self.public_paths = {
+            "/",
+            "/docs", 
+            "/redoc",
+            "/openapi.json",
+            "/api/auth/login",
+            "/api/auth/register", 
+            "/api/auth/join-team"
+        }
+    
+    async def dispatch(self, request: Request, call_next):
+        """验证JWT token"""
+        from app.utils.auth import verify_token
+        from app.models.database import get_db, User, Team
+        
+        # 检查是否为公开路径
+        if request.url.path in self.public_paths:
+            return await call_next(request)
+        
+        # 获取Authorization头
+        authorization = request.headers.get("Authorization")
+        if not authorization or not authorization.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing or invalid authorization header"}
+            )
+        
+        # 提取token
+        token = authorization.replace("Bearer ", "")
+        payload = verify_token(token)
+        
+        if not payload:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid or expired token"}
+            )
+        
+        # 获取用户和团队信息
+        user_id = payload.get("user_id")
+        team_id = payload.get("team_id")
+        
+        if not user_id or not team_id:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Invalid token payload"}
+            )
+        
+        # 验证用户和团队是否仍然有效
+        db = next(get_db())
+        try:
+            user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+            team = db.query(Team).filter(Team.id == team_id, Team.is_active == True).first()
+            
+            if not user or not team:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "User or team not found or inactive"}
+                )
+            
+            # 将用户和团队信息添加到请求状态中
+            request.state.current_user = user
+            request.state.current_team = team
+            
+        finally:
+            db.close()
+        
+        return await call_next(request)

@@ -13,7 +13,6 @@ import {
   Upload,
   Space,
   Descriptions,
-  Popconfirm,
   Table,
   Row,
   Col,
@@ -32,9 +31,9 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collaboratorApi, researchApi } from '../services/api';
-import { Collaborator, CollaboratorCreate, ResearchProject } from '../types';
+import { Collaborator, CollaboratorCreate } from '../types';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const CollaboratorManagement: React.FC = () => {
@@ -207,7 +206,7 @@ const CollaboratorManagement: React.FC = () => {
   // 创建合作者mutation
   const createCollaboratorMutation = useMutation({
     mutationFn: collaboratorApi.createCollaborator,
-    onSuccess: (newCollaborator, variables) => {
+    onSuccess: (newCollaborator) => {
       // 如果新建时选择了小组标记，保存到本地状态
       if (pendingGroupStatus) {
         setLocalGroupMarks(prev => ({
@@ -481,14 +480,9 @@ const CollaboratorManagement: React.FC = () => {
         }
       `}</style>
       {/* 页面标题和操作按钮 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 24 
-      }}>
+      <div className="page-header">
         <div>
-          <Title level={2} style={{ margin: 0 }}>
+          <Title level={3} style={{ margin: 0 }}>
             <TeamOutlined style={{ marginRight: 8 }} />
             合作者管理
           </Title>
@@ -518,17 +512,17 @@ const CollaboratorManagement: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={5}>
-          <Card>
+      <Row gutter={12} style={{ marginBottom: 16 }}>
+        <Col xs={12} sm={8} lg={5}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="总合作者" 
               value={collaboratorStats.total} 
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={5}>
-          <Card>
+        <Col xs={12} sm={8} lg={5}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="小组/团队" 
               value={collaboratorStats.groups} 
@@ -536,8 +530,8 @@ const CollaboratorManagement: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={5}>
-          <Card>
+        <Col xs={12} sm={8} lg={5}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="已参与项目" 
               value={collaboratorStats.participating} 
@@ -545,8 +539,8 @@ const CollaboratorManagement: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={5}>
-          <Card>
+        <Col xs={12} sm={8} lg={5}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="未参与项目" 
               value={collaboratorStats.notParticipating} 
@@ -554,8 +548,8 @@ const CollaboratorManagement: React.FC = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={4}>
-          <Card>
+        <Col xs={12} sm={8} lg={4}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="高级合作者" 
               value={collaboratorStats.senior} 
@@ -566,27 +560,29 @@ const CollaboratorManagement: React.FC = () => {
       </Row>
 
       {/* 合作者列表 */}
-      <Table
-        dataSource={sortedCollaborators}
-        rowKey="id"
-        loading={isLoading}
-        onChange={(pagination) => {
-          setCurrentPage(pagination.current || 1);
-          setPageSize(pagination.pageSize || 50);
-        }}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: sortedCollaborators.length,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-        }}
-        scroll={{ x: 1000 }}
-        rowClassName={(record: Collaborator) => 
-          isGroupCollaborator(record) ? 'group-collaborator-row' : ''
-        }
+      <div className="table-container">
+        <Table
+          size="small"
+          dataSource={sortedCollaborators}
+          rowKey="id"
+          loading={isLoading}
+          onChange={(pagination) => {
+            setCurrentPage(pagination.current || 1);
+            setPageSize(pagination.pageSize || 50);
+          }}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: sortedCollaborators.length,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+          }}
+          scroll={{ x: 1000 }}
+          rowClassName={(record: Collaborator) => 
+            isGroupCollaborator(record) ? 'group-collaborator-row' : ''
+          }
         columns={[
           {
             title: '姓名',
@@ -709,6 +705,7 @@ const CollaboratorManagement: React.FC = () => {
           },
         ]}
       />
+      </div>
 
       {/* 创建/编辑合作者模态框 */}
       <Modal

@@ -30,14 +30,14 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
   };
 
   return (
-    <Row gutter={16} style={{ marginBottom: 24 }}>
-      <Col xs={24} sm={12} lg={5}>
-        <Card>
+    <Row gutter={12} style={{ marginBottom: 16 }}>
+      <Col xs={12} sm={8} lg={5}>
+        <Card className="statistics-card hover-shadow">
           <Statistic title="总项目数" value={stats.total} />
         </Card>
       </Col>
-      <Col xs={24} sm={12} lg={5}>
-        <Card>
+      <Col xs={12} sm={8} lg={5}>
+        <Card className="statistics-card hover-shadow">
           <Statistic 
             title="进行中" 
             value={stats.active} 
@@ -45,8 +45,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
           />
         </Card>
       </Col>
-      <Col xs={24} sm={12} lg={5}>
-        <Card>
+      <Col xs={12} sm={8} lg={5}>
+        <Card className="statistics-card hover-shadow">
           <Statistic 
             title="已完成" 
             value={stats.completed} 
@@ -54,8 +54,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
           />
         </Card>
       </Col>
-      <Col xs={24} sm={12} lg={5}>
-        <Card>
+      <Col xs={12} sm={8} lg={5}>
+        <Card className="statistics-card hover-shadow">
           <Statistic 
             title="暂停" 
             value={stats.paused} 
@@ -63,13 +63,13 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
           />
         </Card>
       </Col>
-      <Col xs={24} sm={12} lg={4}>
-        <Card>
+      <Col xs={12} sm={8} lg={4}>
+        <Card className="statistics-card hover-shadow">
           <Statistic 
             title="待办事项" 
             value={stats.todo} 
             valueStyle={{ color: '#ff4d4f' }}
-            prefix={<FlagOutlined />}
+            prefix={<FlagOutlined style={{ fontSize: 14 }} />}
           />
         </Card>
       </Col>

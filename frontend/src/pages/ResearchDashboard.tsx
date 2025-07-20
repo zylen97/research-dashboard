@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Button,
   Modal,
@@ -13,8 +13,6 @@ import {
   PlusOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
-import { researchApi } from '../services/api';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import { 
   StatisticsCards, 
@@ -22,6 +20,7 @@ import {
   useProjectData, 
   useProjectActions 
 } from '../components/research-dashboard';
+import CommunicationLogModal from '../components/CommunicationLogModal';
 import dayjs from 'dayjs';
 
 const { Title } = Typography;
@@ -31,9 +30,10 @@ const ResearchDashboard: React.FC = () => {
   // 表单和模态框状态
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<ResearchProject | null>(null);
+  const [isCommunicationModalVisible, setIsCommunicationModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ResearchProject | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(50);
   const [form] = Form.useForm();
 
   // 使用自定义钩子管理数据和操作
@@ -93,7 +93,7 @@ const ResearchDashboard: React.FC = () => {
   // 处理交流日志查看
   const handleViewLogs = (project: ResearchProject) => {
     setSelectedProject(project);
-    // TODO: 实现交流日志查看功能
+    setIsCommunicationModalVisible(true);
   };
 
   // 表格列配置
@@ -123,13 +123,8 @@ const ResearchDashboard: React.FC = () => {
       `}</style>
 
       {/* 页面标题和操作按钮 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 24 
-      }}>
-        <Title level={2} style={{ margin: 0 }}>
+      <div className="page-header">
+        <Title level={3} style={{ margin: 0 }}>
           <ProjectOutlined style={{ marginRight: 8 }} />
           研究看板
         </Title>
@@ -153,28 +148,31 @@ const ResearchDashboard: React.FC = () => {
       />
 
       {/* 项目列表 */}
-      <Table
-        dataSource={sortedProjects}
-        columns={columns}
-        rowKey="id"
-        loading={isLoading}
-        onChange={(pagination) => {
-          setCurrentPage(pagination.current || 1);
-          setPageSize(pagination.pageSize || 20);
-        }}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          pageSizeOptions: ['10', '20', '50', '100'],
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-        }}
-        scroll={{ x: 1200 }}
-        rowClassName={(record: ResearchProject) => 
-          getProjectTodoStatus(record).is_todo ? 'todo-project-row' : ''
-        }
-      />
+      <div className="table-container">
+        <Table
+          size="small"
+          dataSource={sortedProjects}
+          columns={columns}
+          rowKey="id"
+          loading={isLoading}
+          onChange={(pagination) => {
+            setCurrentPage(pagination.current || 1);
+            setPageSize(pagination.pageSize || 50);
+          }}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            pageSizeOptions: ['10', '20', '50', '100'],
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+          }}
+          scroll={{ x: 1200 }}
+          rowClassName={(record: ResearchProject) => 
+            getProjectTodoStatus(record).is_todo ? 'todo-project-row' : ''
+          }
+        />
+      </div>
 
       {/* 创建/编辑项目模态框 */}
       <Modal
@@ -254,7 +252,19 @@ const ResearchDashboard: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* TODO: 交流日志相关模态框将在后续步骤中拆分 */}
+      {/* 交流日志模态框 */}
+      <CommunicationLogModal
+        visible={isCommunicationModalVisible}
+        project={selectedProject}
+        collaborators={collaborators}
+        onClose={() => {
+          setIsCommunicationModalVisible(false);
+          setSelectedProject(null);
+        }}
+        onUpdate={() => {
+          // 可以在这里刷新项目列表以更新最新交流进度
+        }}
+      />
     </div>
   );
 };

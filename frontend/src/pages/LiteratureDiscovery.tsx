@@ -6,7 +6,6 @@ import {
   Modal,
   Form,
   Input,
-  Select,
   Upload,
   Tag,
   Typography,
@@ -34,7 +33,7 @@ import { literatureApi } from '../services/api';
 import { Literature, LiteratureCreate, ValidationRequest } from '../types';
 import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 
 const LiteratureDiscovery: React.FC = () => {
@@ -159,7 +158,7 @@ const LiteratureDiscovery: React.FC = () => {
   });
 
   // 获取验证状态颜色和图标
-  const getValidationStatus = (status: string, score?: number) => {
+  const getValidationStatus = (status: string) => {
     switch (status) {
       case 'validated':
         return { color: 'success', icon: <CheckCircleOutlined />, text: '已验证' };
@@ -283,7 +282,7 @@ const LiteratureDiscovery: React.FC = () => {
       key: 'validation_status',
       width: 120,
       render: (status: string, record: Literature) => {
-        const statusInfo = getValidationStatus(status, record.validation_score);
+        const statusInfo = getValidationStatus(status);
         return (
           <Tag color={statusInfo.color} icon={statusInfo.icon}>
             {statusInfo.text}
@@ -369,13 +368,8 @@ const LiteratureDiscovery: React.FC = () => {
   return (
     <div>
       {/* 页面标题和操作按钮 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 24 
-      }}>
-        <Title level={2} style={{ margin: 0 }}>
+      <div className="page-header">
+        <Title level={3} style={{ margin: 0 }}>
           <BookOutlined style={{ marginRight: 8 }} />
           Idea发掘系统
         </Title>
@@ -397,47 +391,48 @@ const LiteratureDiscovery: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic title="总文献数" value={stats.total} prefix={<FileTextOutlined />} />
+      <Row gutter={12} style={{ marginBottom: 16 }}>
+        <Col xs={12} sm={8} lg={6}>
+          <Card className="statistics-card hover-shadow">
+            <Statistic title="总文献数" value={stats.total} prefix={<FileTextOutlined style={{ fontSize: 14 }} />} />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={12} sm={8} lg={6}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="已验证" 
               value={stats.validated} 
               valueStyle={{ color: '#52c41a' }}
-              prefix={<CheckCircleOutlined />}
+              prefix={<CheckCircleOutlined style={{ fontSize: 14 }} />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={12} sm={8} lg={6}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="待验证" 
               value={stats.pending} 
               valueStyle={{ color: '#1890ff' }}
-              prefix={<SyncOutlined />}
+              prefix={<SyncOutlined style={{ fontSize: 14 }} />}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={12} sm={8} lg={6}>
+          <Card className="statistics-card hover-shadow">
             <Statistic 
               title="已转换" 
               value={stats.converted} 
               valueStyle={{ color: '#722ed1' }}
-              prefix={<BulbOutlined />}
+              prefix={<BulbOutlined style={{ fontSize: 14 }} />}
             />
           </Card>
         </Col>
       </Row>
 
       {/* 文献表格 */}
-      <Card>
+      <div className="table-container">
         <Table
+          size="small"
           columns={columns}
           dataSource={literature}
           rowKey="id"
@@ -457,7 +452,7 @@ const LiteratureDiscovery: React.FC = () => {
           }}
           scroll={{ x: 1200 }}
         />
-      </Card>
+      </div>
 
       {/* 创建/编辑文献模态框 */}
       <Modal

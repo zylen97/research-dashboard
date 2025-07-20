@@ -247,3 +247,76 @@ export const IDEA_STATUSES = ['pool', 'in_development', 'converted_to_project'] 
 export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'] as const;
 export const IMPACT_LEVELS = ['low', 'medium', 'high'] as const;
+
+// 用户和团队类型
+export interface User {
+  id: number;
+  username: string;
+  email: string;
+  display_name: string;
+  avatar_url?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  last_login?: string;
+}
+
+export interface Team {
+  id: number;
+  name: string;
+  description?: string;
+  invite_code: string;
+  is_active: boolean;
+  max_members: number;
+  creator_id: number;
+  created_at: string;
+  updated_at: string;
+  creator?: User;
+}
+
+export interface UserCreate {
+  username: string;
+  email: string;
+  display_name: string;
+  password: string;
+}
+
+export interface UserLogin {
+  username: string;
+  password: string;
+}
+
+export interface TeamCreateRequest {
+  name: string;
+  description?: string;
+  max_members?: number;
+  username: string;
+  password: string;
+}
+
+export interface TeamJoinRequest {
+  invite_code: string;
+  username: string;
+  password: string;
+}
+
+export interface AuthToken {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: User;
+  team: Team;
+}
+
+export interface AuthContextType {
+  user: User | null;
+  team: Team | null;
+  token: string | null;
+  login: (credentials: UserLogin) => Promise<AuthToken>;
+  logout: () => void;
+  register: (userData: UserCreate) => Promise<void>;
+  createTeam: (teamData: TeamCreateRequest) => Promise<{ invite_code: string }>;
+  joinTeam: (joinData: TeamJoinRequest) => Promise<AuthToken>;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+}

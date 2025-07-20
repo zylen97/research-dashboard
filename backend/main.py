@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import research, collaborators, literature, ideas, validation, audit
+from app.routes import research, collaborators, literature, ideas, validation, audit, auth
 from app.utils.db_init import init_database, create_sample_data
-from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 
 app = FastAPI(
     title="Research Dashboard API", 
@@ -35,8 +35,10 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
+# app.add_middleware(AuthMiddleware)  # 暂时注释掉，等前端准备好再启用
 
 # Include routers
+app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(research.router, prefix="/api/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
 app.include_router(literature.router, prefix="/api/literature", tags=["literature"])

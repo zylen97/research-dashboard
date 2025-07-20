@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import dayjs from 'dayjs';
 import 'dayjs/locale/zh-cn';
 import './styles/animations.css';
+import './styles/global.css';
 import App from './App';
 
 dayjs.locale('zh-cn');

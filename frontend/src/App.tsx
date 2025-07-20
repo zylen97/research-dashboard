@@ -1,29 +1,56 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import ResearchDashboard from './pages/ResearchDashboard';
 import CollaboratorManagement from './pages/CollaboratorManagement';
 import LiteratureDiscovery from './pages/LiteratureDiscovery';
 import IdeaManagement from './pages/IdeaManagement';
+import AuthPage from './pages/AuthPage';
 import { ThemeProvider } from './theme/ThemeContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 
-const { Content } = Layout;
+// 受保护的路由组件
+const ProtectedRoutes: React.FC = () => {
+  const { isAuthenticated, isLoading } = useAuth();
+
+  if (isLoading) {
+    return (
+      <div style={{ 
+        height: '100vh', 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'center' 
+      }}>
+        <div>正在加载...</div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  return (
+    <MainLayout>
+      <Routes>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<ResearchDashboard />} />
+        <Route path="/research" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/collaborators" element={<CollaboratorManagement />} />
+        <Route path="/literature" element={<LiteratureDiscovery />} />
+        <Route path="/ideas" element={<IdeaManagement />} />
+        <Route path="/auth" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </MainLayout>
+  );
+};
 
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <MainLayout>
-        <Content style={{ margin: '24px 16px', padding: 24, minHeight: 280 }}>
-          <Routes>
-            <Route path="/" element={<ResearchDashboard />} />
-            <Route path="/research" element={<ResearchDashboard />} />
-            <Route path="/collaborators" element={<CollaboratorManagement />} />
-            <Route path="/literature" element={<LiteratureDiscovery />} />
-            <Route path="/ideas" element={<IdeaManagement />} />
-          </Routes>
-        </Content>
-      </MainLayout>
+      <AuthProvider>
+        <ProtectedRoutes />
+      </AuthProvider>
     </ThemeProvider>
   );
 };

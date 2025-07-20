@@ -1,0 +1,195 @@
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { message } from 'antd';
+import { 
+  User, 
+  Team, 
+  AuthToken, 
+  AuthContextType, 
+  UserLogin, 
+  UserCreate,
+  TeamCreateRequest,
+  TeamJoinRequest 
+} from '../types';
+import { buildApiUrl, API_ENDPOINTS } from '../config/api';
+
+const AuthContext = createContext<AuthContextType | null>(null);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [team, setTeam] = useState<Team | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 初始化时检查本地存储的token
+  useEffect(() => {
+    const savedToken = localStorage.getItem('auth_token');
+    const savedUser = localStorage.getItem('auth_user');
+    const savedTeam = localStorage.getItem('auth_team');
+
+    if (savedToken && savedUser && savedTeam) {
+      try {
+        setToken(savedToken);
+        setUser(JSON.parse(savedUser));
+        setTeam(JSON.parse(savedTeam));
+      } catch (error) {
+        console.error('解析本地存储的认证信息失败:', error);
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_team');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const saveAuthData = (authToken: AuthToken) => {
+    setToken(authToken.access_token);
+    setUser(authToken.user);
+    setTeam(authToken.team);
+    
+    localStorage.setItem('auth_token', authToken.access_token);
+    localStorage.setItem('auth_user', JSON.stringify(authToken.user));
+    localStorage.setItem('auth_team', JSON.stringify(authToken.team));
+  };
+
+  const clearAuthData = () => {
+    setToken(null);
+    setUser(null);
+    setTeam(null);
+    
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_team');
+  };
+
+  const login = async (credentials: UserLogin): Promise<AuthToken> => {
+    try {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.LOGIN), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(credentials),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '登录失败');
+      }
+
+      const authToken: AuthToken = await response.json();
+      saveAuthData(authToken);
+      message.success('登录成功');
+      return authToken;
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '登录失败');
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    clearAuthData();
+    message.success('已退出登录');
+  };
+
+  const register = async (userData: UserCreate): Promise<void> => {
+    try {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.REGISTER), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(userData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '注册失败');
+      }
+
+      message.success('注册成功，请登录');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '注册失败');
+      throw error;
+    }
+  };
+
+  const createTeam = async (teamData: TeamCreateRequest): Promise<{ invite_code: string }> => {
+    try {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.CREATE_TEAM), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(teamData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '创建团队失败');
+      }
+
+      const result = await response.json();
+      message.success(`团队创建成功！邀请码：${result.invite_code}`);
+      return { invite_code: result.invite_code };
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '创建团队失败');
+      throw error;
+    }
+  };
+
+  const joinTeam = async (joinData: TeamJoinRequest): Promise<AuthToken> => {
+    try {
+      const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.JOIN_TEAM), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(joinData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || '加入团队失败');
+      }
+
+      const authToken: AuthToken = await response.json();
+      saveAuthData(authToken);
+      message.success('成功加入团队');
+      return authToken;
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '加入团队失败');
+      throw error;
+    }
+  };
+
+  const value: AuthContextType = {
+    user,
+    team,
+    token,
+    login,
+    logout,
+    register,
+    createTeam,
+    joinTeam,
+    isAuthenticated: !!token && !!user && !!team,
+    isLoading,
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = (): AuthContextType => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth必须在AuthProvider内部使用');
+  }
+  return context;
+};

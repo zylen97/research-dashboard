@@ -50,10 +50,12 @@ const IdeaManagement: React.FC = () => {
   // 获取idea数据
   const { data: ideas = [], isLoading } = useQuery({
     queryKey: ['ideas', statusFilter, priorityFilter],
-    queryFn: () => ideaApi.getIdeas({
-      status_filter: statusFilter || undefined,
-      priority_filter: priorityFilter || undefined,
-    }),
+    queryFn: () => {
+      const params: any = {};
+      if (statusFilter) params.status_filter = statusFilter;
+      if (priorityFilter) params.priority_filter = priorityFilter;
+      return ideaApi.getIdeas(params);
+    },
   });
 
   // 获取统计数据
@@ -214,7 +216,7 @@ const IdeaManagement: React.FC = () => {
       medium: { stars: 2, color: '#fa8c16' },
       hard: { stars: 3, color: '#f5222d' },
     };
-    return levels[level || 'medium'];
+    return levels[level || 'medium'] || levels['medium'];
   };
 
   // 过滤ideas
@@ -243,13 +245,8 @@ const IdeaManagement: React.FC = () => {
   return (
     <div>
       {/* 页面标题和操作按钮 */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center', 
-        marginBottom: 24 
-      }}>
-        <Title level={2} style={{ margin: 0 }}>
+      <div className="page-header">
+        <Title level={3} style={{ margin: 0 }}>
           <BulbOutlined style={{ marginRight: 8 }} />
           Idea管理
         </Title>
@@ -268,39 +265,39 @@ const IdeaManagement: React.FC = () => {
 
       {/* 统计卡片 */}
       {summary && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
+        <Row gutter={12} style={{ marginBottom: 16 }}>
+          <Col xs={12} sm={8} lg={6}>
+            <Card className="statistics-card hover-shadow">
               <Statistic 
                 title="总Ideas" 
                 value={summary.total_ideas} 
-                prefix={<BulbOutlined />}
+                prefix={<BulbOutlined style={{ fontSize: 14 }} />}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
+          <Col xs={12} sm={8} lg={6}>
+            <Card className="statistics-card hover-shadow">
               <Statistic 
                 title="待开发" 
-                value={summary.status_breakdown.pool || 0} 
+                value={summary.status_breakdown['pool'] || 0} 
                 valueStyle={{ color: '#1890ff' }}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
+          <Col xs={12} sm={8} lg={6}>
+            <Card className="statistics-card hover-shadow">
               <Statistic 
                 title="开发中" 
-                value={summary.status_breakdown.in_development || 0} 
+                value={summary.status_breakdown['in_development'] || 0} 
                 valueStyle={{ color: '#fa8c16' }}
               />
             </Card>
           </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card>
+          <Col xs={12} sm={8} lg={6}>
+            <Card className="statistics-card hover-shadow">
               <Statistic 
                 title="已转换" 
-                value={summary.status_breakdown.converted_to_project || 0} 
+                value={summary.status_breakdown['converted_to_project'] || 0} 
                 valueStyle={{ color: '#52c41a' }}
               />
             </Card>
@@ -309,7 +306,7 @@ const IdeaManagement: React.FC = () => {
       )}
 
       {/* 搜索和筛选栏 */}
-      <Card style={{ marginBottom: 24 }}>
+      <div className="filter-bar">
         <Row gutter={16} align="middle">
           <Col xs={24} sm={12} lg={8}>
             <Search
@@ -352,11 +349,13 @@ const IdeaManagement: React.FC = () => {
             </Text>
           </Col>
         </Row>
-      </Card>
+      </div>
 
       {/* Ideas列表 */}
-      <Table
-        dataSource={sortedIdeas}
+      <div className="table-container">
+        <Table
+          size="small"
+          dataSource={sortedIdeas}
         rowKey="id"
         loading={isLoading}
         pagination={{
@@ -425,6 +424,7 @@ const IdeaManagement: React.FC = () => {
             render: (level: string) => {
               if (!level) return '-';
               const difficultyDisplay = getDifficultyDisplay(level);
+              if (!difficultyDisplay) return '-';
               return (
                 <Tooltip title={level}>
                   <Rate 
@@ -561,6 +561,7 @@ const IdeaManagement: React.FC = () => {
           },
         ]}
       />
+      </div>
 
       {/* 创建/编辑Idea模态框 */}
       <Modal
