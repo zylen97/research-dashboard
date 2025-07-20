@@ -55,47 +55,7 @@ jobs:
               cd backend
               
               # 只更新用户，不删除数据
-              python3 -c "
-import sys
-sys.path.append('.')
-from app.models.database import SessionLocal, User, create_tables
-from app.utils.auth import get_password_hash
-
-# 确保表存在
-create_tables()
-
-db = SessionLocal()
-
-# 新用户配置
-new_users = [
-    {'username': 'zl', 'email': 'zl@example.com', 'display_name': 'ZL', 'password': '123'},
-    {'username': 'zz', 'email': 'zz@example.com', 'display_name': 'ZZ', 'password': '123'},
-    {'username': 'yq', 'email': 'yq@example.com', 'display_name': 'YQ', 'password': '123'},
-    {'username': 'dz', 'email': 'dz@example.com', 'display_name': 'DZ', 'password': '123'}
-]
-
-# 更新或创建用户
-for user_data in new_users:
-    user = db.query(User).filter(User.username == user_data['username']).first()
-    if user:
-        # 更新现有用户密码
-        user.password_hash = get_password_hash(user_data['password'])
-        print(f'Updated password for {user.username}')
-    else:
-        # 创建新用户
-        user = User(
-            username=user_data['username'],
-            email=user_data['email'],
-            display_name=user_data['display_name'],
-            password_hash=get_password_hash(user_data['password'])
-        )
-        db.add(user)
-        print(f'Created new user: {user.username}')
-
-db.commit()
-db.close()
-print('✅ 用户更新完成')
-"
+              python3 fix_users_now.py || echo "用户更新脚本不存在，跳过"
             else
               echo "🗄️ 备份数据库..."
               cd backend
