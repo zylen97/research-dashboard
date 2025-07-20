@@ -18,7 +18,9 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:3001", 
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:3001"
+        "http://127.0.0.1:3001",
+        "http://45.149.156.216",
+        "https://45.149.156.216"
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH"],
@@ -54,7 +56,7 @@ async def root():
 async def startup_event():
     """应用启动时初始化数据库"""
     init_database()
-    create_sample_data()
+    # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
 
 if __name__ == "__main__":
     import uvicorn
