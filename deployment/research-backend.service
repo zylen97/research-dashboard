@@ -1,0 +1,29 @@
+[Unit]
+Description=Research Dashboard Backend Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/var/www/research-dashboard/backend
+Environment="PATH=/usr/bin:/usr/local/bin"
+Environment="PYTHONPATH=/var/www/research-dashboard/backend"
+
+# Start command
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Output to journal
+StandardOutput=journal
+StandardError=journal
+
+# Security settings (optional, uncomment if needed)
+# NoNewPrivileges=true
+# PrivateTmp=true
+# ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
