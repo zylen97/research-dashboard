@@ -103,6 +103,9 @@ dist
 *.backup.*
 backend/research_dashboard.db.backup*
 backend/research_dashboard.db.backup_*
+backend/backups/local/
+!backend/backups/.gitkeep
+!backend/backups/README.md
 
 # Python
 __pycache__/

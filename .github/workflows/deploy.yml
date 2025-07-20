@@ -33,8 +33,24 @@ jobs:
           FRONTEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "frontend/" || echo "0")
           
           if [ "$BACKEND_CHANGED" -gt 0 ]; then
-            echo "🐍 检测到后端更改，重启后端服务..."
+            echo "🐍 检测到后端更改..."
+            
+            echo "🗄️ 备份并重建数据库..."
+            cd backend
+            if [ -f research_dashboard.db ]; then
+              cp research_dashboard.db research_dashboard.db.backup_$(date +%Y%m%d_%H%M%S)
+              rm -f research_dashboard.db
+              echo "✅ 旧数据库已备份并删除"
+            fi
+            cd ..
+            
+            echo "🔄 重启后端服务..."
             systemctl restart research-backend
+            
+            echo "⏳ 等待服务启动..."
+            sleep 5
+            
+            echo "✅ 后端服务已重启"
           fi
           
           if [ "$FRONTEND_CHANGED" -gt 0 ]; then
