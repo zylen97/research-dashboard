@@ -73,12 +73,8 @@ jobs:
           fi
           
           echo "🔧 更新Nginx配置..."
-          if [ -f deployment/nginx-fixed.conf ]; then
-            sudo cp deployment/nginx-fixed.conf /etc/nginx/sites-available/research-dashboard
-            echo "✅ Nginx配置已更新"
-          else
-            sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
-          fi
+          sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
+          echo "✅ Nginx配置已更新"
           
           echo "🔄 重新加载Nginx..."
           sudo nginx -t && sudo systemctl reload nginx
