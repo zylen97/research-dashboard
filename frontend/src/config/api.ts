@@ -13,9 +13,12 @@ const getApiBaseUrl = (): string => {
     return 'http://localhost:8080';
   }
 
-  // 3. 生产环境默认使用相对路径（适用于同域部署）
-  console.log('生产环境，使用相对路径API');
-  return '';
+  // 3. 生产环境使用当前域名+端口（通过Nginx代理）
+  const currentHost = window.location.host;
+  const protocol = window.location.protocol;
+  const apiUrl = `${protocol}//${currentHost}`;
+  console.log('生产环境，使用当前域名API:', apiUrl);
+  return apiUrl;
 };
 
 // 导出API配置
