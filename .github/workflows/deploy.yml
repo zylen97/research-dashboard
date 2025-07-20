@@ -1,0 +1,51 @@
+name: 🚀 自动部署到VPS
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📤 开始部署
+      run: echo "开始自动部署到VPS..."
+    
+    - name: 🚀 部署到VPS
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        password: ${{ secrets.VPS_PASSWORD }}
+        script: |
+          echo "🔄 开始自动部署..."
+          cd /var/www/research-dashboard
+          
+          echo "📥 拉取最新代码..."
+          git pull origin main
+          
+          echo "🔍 检查更改..."
+          BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
+          FRONTEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "frontend/" || echo "0")
+          
+          if [ "$BACKEND_CHANGED" -gt 0 ]; then
+            echo "🐍 检测到后端更改，重启后端服务..."
+            systemctl restart research-backend
+          fi
+          
+          if [ "$FRONTEND_CHANGED" -gt 0 ]; then
+            echo "⚛️ 检测到前端更改，重新构建..."
+            cd frontend
+            npm run build
+            cp -r build/* /var/www/html/
+            cd ..
+          fi
+          
+          echo "🔍 检查服务状态..."
+          systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
+          systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
+          
+          echo "🎉 自动部署完成！"
+          echo "📅 部署时间: $(date)"
+          echo "🌐 访问地址: http://45.149.156.216"
