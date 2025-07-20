@@ -1,4 +1,4 @@
-// API配置管理
+// API配置管理 - 强制使用3001端口
 const getApiBaseUrl = (): string => {
   // 1. 优先使用环境变量
   const envApiUrl = process.env['REACT_APP_API_URL'];
@@ -13,11 +13,9 @@ const getApiBaseUrl = (): string => {
     return 'http://localhost:8080';
   }
 
-  // 3. 生产环境使用当前域名+端口（通过Nginx代理）
-  const currentHost = window.location.host;
-  const protocol = window.location.protocol;
-  const apiUrl = `${protocol}//${currentHost}`;
-  console.log('生产环境，使用当前域名API:', apiUrl);
+  // 3. 生产环境强制使用3001端口
+  const apiUrl = 'http://45.149.156.216:3001';
+  console.log('生产环境，强制使用3001端口API:', apiUrl);
   return apiUrl;
 };
 
