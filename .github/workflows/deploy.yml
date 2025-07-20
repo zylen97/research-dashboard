@@ -72,6 +72,17 @@ jobs:
             cd ..
           fi
           
+          echo "🔧 更新Nginx配置..."
+          if [ -f deployment/nginx-fixed.conf ]; then
+            sudo cp deployment/nginx-fixed.conf /etc/nginx/sites-available/research-dashboard
+            echo "✅ Nginx配置已更新"
+          else
+            sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
+          fi
+          
+          echo "🔄 重新加载Nginx..."
+          sudo nginx -t && sudo systemctl reload nginx
+          
           echo "🔍 检查服务状态..."
           systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
           systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
