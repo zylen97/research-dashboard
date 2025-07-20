@@ -105,9 +105,9 @@ jobs:
           systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
           systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
           
-          echo "🔍 运行502错误诊断脚本..."
-          chmod +x debug-502.sh
-          bash debug-502.sh
+          echo "🚑 运行紧急修复脚本..."
+          chmod +x emergency-fix.sh
+          bash emergency-fix.sh
           
           echo "🎉 自动部署完成！"
           echo "📅 部署时间: $(date)"
