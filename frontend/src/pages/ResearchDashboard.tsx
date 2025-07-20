@@ -12,6 +12,7 @@ import {
 import {
   PlusOutlined,
   ProjectOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import { 
@@ -128,17 +129,27 @@ const ResearchDashboard: React.FC = () => {
           <ProjectOutlined style={{ marginRight: 8 }} />
           研究看板
         </Title>
-        <Button 
-          type="primary" 
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingProject(null);
-            form.resetFields();
-            setIsModalVisible(true);
-          }}
-        >
-          新建项目
-        </Button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button 
+            icon={<ReloadOutlined />}
+            onClick={refetch}
+            loading={isLoading}
+            title="刷新数据"
+          >
+            刷新
+          </Button>
+          <Button 
+            type="primary" 
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingProject(null);
+              form.resetFields();
+              setIsModalVisible(true);
+            }}
+          >
+            新建项目
+          </Button>
+        </div>
       </div>
 
       {/* 统计卡片 */}

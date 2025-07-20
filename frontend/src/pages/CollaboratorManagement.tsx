@@ -28,6 +28,7 @@ import {
   UploadOutlined,
   TeamOutlined,
   EyeOutlined,
+  ReloadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collaboratorApi, researchApi } from '../services/api';
@@ -496,6 +497,14 @@ const CollaboratorManagement: React.FC = () => {
               导入Excel
             </Button>
           </Upload>
+          <Button 
+            icon={<ReloadOutlined />}
+            onClick={refetch}
+            loading={isLoading}
+            title="刷新数据"
+          >
+            刷新
+          </Button>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
