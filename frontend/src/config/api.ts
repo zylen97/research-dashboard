@@ -15,6 +15,10 @@ const getApiBaseUrl = (): string => {
 
   // 3. 生产环境使用相对路径（通过Nginx代理）
   console.log('生产环境，使用相对路径API');
+  // 如果当前页面在3001端口，确保API也使用3001端口
+  if (window.location.port === '3001') {
+    return window.location.origin;
+  }
   return '';
 };
 
