@@ -105,9 +105,9 @@ jobs:
           systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
           systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
           
-          echo "🔧 运行温和恢复脚本..."
-          chmod +x gentle-recovery.sh
-          bash gentle-recovery.sh
+          echo "🔍 运行简单诊断脚本..."
+          chmod +x simple-diagnosis.sh
+          bash simple-diagnosis.sh
           
           echo "🎉 自动部署完成！"
           echo "📅 部署时间: $(date)"
