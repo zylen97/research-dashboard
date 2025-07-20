@@ -17,7 +17,7 @@ jobs:
       with:
         host: 45.149.156.216
         username: root
-        password: ${{ secrets.VPS_PASSWORD }}
+        key: ${{ secrets.VPS_SSH_KEY }}
         script: |
           echo "🔄 开始自动部署..."
           cd /var/www/research-dashboard
