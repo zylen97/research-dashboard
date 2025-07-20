@@ -28,9 +28,9 @@ const LoginForm: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <Title level={3} style={{ margin: 0 }}>
           <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-          研究看板登录
+          科研管理系统
         </Title>
-        <Text type="secondary">登录到您的协作平台</Text>
+        <Text type="secondary">登录到您的团队协作平台 - 自动部署测试</Text>
       </div>
       
       <Form
