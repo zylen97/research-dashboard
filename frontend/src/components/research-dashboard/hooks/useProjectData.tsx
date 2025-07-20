@@ -25,13 +25,13 @@ export const useProjectData = () => {
   }, [localTodoMarks]);
 
   // 获取研究项目数据
-  const { data: projects = [], isLoading: isProjectsLoading } = useQuery({
+  const { data: projects = [], isLoading: isProjectsLoading, refetch: refetchProjects } = useQuery({
     queryKey: ['research-projects'],
     queryFn: () => researchApi.getProjects(),
   });
 
   // 获取合作者数据（用于下拉选择）
-  const { data: collaborators = [], isLoading: isCollaboratorsLoading } = useQuery({
+  const { data: collaborators = [], isLoading: isCollaboratorsLoading, refetch: refetchCollaborators } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getCollaborators(),
   });
@@ -95,6 +95,11 @@ export const useProjectData = () => {
     }));
   };
 
+  // 统一的刷新函数
+  const refetch = async () => {
+    await Promise.all([refetchProjects(), refetchCollaborators()]);
+  };
+
   return {
     // 数据
     projects,
@@ -111,5 +116,6 @@ export const useProjectData = () => {
     getProjectTodoStatus,
     updateLocalTodoStatus,
     revertLocalTodoStatus,
+    refetch,
   };
 };

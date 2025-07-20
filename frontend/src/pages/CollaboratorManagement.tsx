@@ -109,7 +109,7 @@ const CollaboratorManagement: React.FC = () => {
   };
 
   // 获取合作者数据
-  const { data: collaborators = [], isLoading } = useQuery({
+  const { data: collaborators = [], isLoading, refetch } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getCollaborators(),
   });

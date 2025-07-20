@@ -45,6 +45,7 @@ const ResearchDashboard: React.FC = () => {
     getProjectTodoStatus,
     updateLocalTodoStatus,
     revertLocalTodoStatus,
+    refetch,
   } = useProjectData();
 
   const {

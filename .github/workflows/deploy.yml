@@ -33,8 +33,9 @@ jobs:
           echo "🔍 显示最新提交..."
           git log --oneline -3
           
-          echo "🔄 始终更新Nginx配置..."
-          sudo cp deployment/nginx.conf /etc/nginx/sites-available/research-dashboard
+          echo "🔄 始终更新Nginx配置（端口3001）..."
+          sudo cp deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
+          sudo ln -sf /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/
           sudo nginx -t && sudo systemctl reload nginx
           
           echo "🔍 检查更改..."
@@ -104,4 +105,4 @@ jobs:
           
           echo "🎉 自动部署完成！"
           echo "📅 部署时间: $(date)"
-          echo "🌐 访问地址: http://45.149.156.216"
+          echo "🌐 访问地址: http://45.149.156.216:3001"
