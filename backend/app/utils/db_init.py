@@ -27,28 +27,28 @@ def init_users():
         # 四个用户的信息
         users_data = [
             {
-                "username": "user1",
-                "email": "user1@example.com",
-                "display_name": "用户一",
-                "password": "password123"
+                "username": "zl",
+                "email": "zl@example.com",
+                "display_name": "ZL",
+                "password": "123"
             },
             {
-                "username": "user2", 
-                "email": "user2@example.com",
-                "display_name": "用户二",
-                "password": "password123"
+                "username": "zz", 
+                "email": "zz@example.com",
+                "display_name": "ZZ",
+                "password": "123"
             },
             {
-                "username": "user3",
-                "email": "user3@example.com", 
-                "display_name": "用户三",
-                "password": "password123"
+                "username": "yq",
+                "email": "yq@example.com", 
+                "display_name": "YQ",
+                "password": "123"
             },
             {
-                "username": "user4",
-                "email": "user4@example.com",
-                "display_name": "用户四", 
-                "password": "password123"
+                "username": "dz",
+                "email": "dz@example.com",
+                "display_name": "DZ", 
+                "password": "123"
             }
         ]
         
