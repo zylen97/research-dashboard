@@ -6,58 +6,15 @@ from pydantic import BaseModel, Field
 from typing import Optional
 from app.models.database import get_db, User
 from app.models.schemas import (
-    UserCreate, UserLogin, 
+    UserLogin, 
     Token, User as UserSchema
 )
 from app.utils.auth import (
-    authenticate_user, create_user,
+    authenticate_user,
     create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
 router = APIRouter()
-
-@router.post("/register", response_model=dict)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """用户注册"""
-    try:
-        # 检查用户名和邮箱是否已存在
-        existing_user = db.query(User).filter(
-            (User.username == user_data.username) | (User.email == user_data.email)
-        ).first()
-        
-        if existing_user:
-            if existing_user.username == user_data.username:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Username already registered"
-                )
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Email already registered"
-                )
-        
-        # 创建用户
-        user = create_user(
-            db=db,
-            username=user_data.username,
-            email=user_data.email,
-            display_name=user_data.display_name,
-            password=user_data.password
-        )
-        
-        return {
-            "message": "User registered successfully",
-            "user_id": user.id,
-            "username": user.username
-        }
-        
-    except IntegrityError:
-        db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Username or email already exists"
-        )
 
 @router.post("/login", response_model=Token)
 async def login(user_credentials: UserLogin, db: Session = Depends(get_db)):

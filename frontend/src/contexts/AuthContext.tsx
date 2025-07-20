@@ -4,8 +4,7 @@ import {
   User, 
   AuthToken, 
   AuthContextType, 
-  UserLogin, 
-  UserCreate
+  UserLogin
 } from '../types';
 import { buildApiUrl, API_ENDPOINTS } from '../config/api';
 
@@ -84,34 +83,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     message.success('已退出登录');
   };
 
-  const register = async (userData: UserCreate): Promise<void> => {
-    try {
-      const response = await fetch(buildApiUrl(API_ENDPOINTS.AUTH.REGISTER), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(userData),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || '注册失败');
-      }
-
-      message.success('注册成功，请登录');
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '注册失败');
-      throw error;
-    }
-  };
-
   const value: AuthContextType = {
     user,
     token,
     login,
     logout,
-    register,
     isAuthenticated: !!token && !!user,
     isLoading,
   };

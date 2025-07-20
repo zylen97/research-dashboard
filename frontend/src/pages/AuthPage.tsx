@@ -1,34 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout, Row, Col } from 'antd';
 import LoginForm from '../components/auth/LoginForm';
-import RegisterForm from '../components/auth/RegisterForm';
 
 const { Content } = Layout;
 
-type AuthMode = 'login' | 'register';
-
 const AuthPage: React.FC = () => {
-  const [authMode, setAuthMode] = useState<AuthMode>('login');
-
-  const renderAuthForm = () => {
-    switch (authMode) {
-      case 'login':
-        return (
-          <LoginForm
-            onSwitchToRegister={() => setAuthMode('register')}
-          />
-        );
-      case 'register':
-        return (
-          <RegisterForm
-            onSwitchToLogin={() => setAuthMode('login')}
-          />
-        );
-      default:
-        return null;
-    }
-  };
-
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Content 
@@ -42,7 +18,7 @@ const AuthPage: React.FC = () => {
       >
         <Row justify="center" style={{ width: '100%' }}>
           <Col xs={24} sm={20} md={12} lg={10} xl={8}>
-            {renderAuthForm()}
+            <LoginForm />
           </Col>
         </Row>
       </Content>

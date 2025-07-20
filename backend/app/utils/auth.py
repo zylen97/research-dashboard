@@ -54,22 +54,3 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
     
     return user
 
-
-def create_user(db: Session, username: str, email: str, display_name: str, password: str) -> User:
-    """创建用户"""
-    hashed_password = get_password_hash(password)
-    
-    user = User(
-        username=username,
-        email=email,
-        display_name=display_name,
-        password_hash=hashed_password
-    )
-    
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    return user
-
-
-

@@ -262,12 +262,6 @@ export interface User {
 }
 
 
-export interface UserCreate {
-  username: string;
-  email: string;
-  display_name: string;
-  password: string;
-}
 
 export interface UserLogin {
   username: string;
@@ -287,7 +281,6 @@ export interface AuthContextType {
   token: string | null;
   login: (credentials: UserLogin) => Promise<AuthToken>;
   logout: () => void;
-  register: (userData: UserCreate) => Promise<void>;
   isAuthenticated: boolean;
   isLoading: boolean;
 }

@@ -39,7 +39,6 @@ export const API_ENDPOINTS = {
   // 认证相关
   AUTH: {
     LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
     ME: '/api/auth/me',
   },
   // 研究项目

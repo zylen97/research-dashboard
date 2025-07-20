@@ -27,7 +27,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [mobileView, setMobileView] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, team, logout } = useAuth();
+  const { user, logout } = useAuth();
   const {
     token: { colorBgContainer },
   } = theme.useToken();
@@ -227,11 +227,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 {!mobileView && (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                     <span style={{ fontSize: '14px', fontWeight: 500 }}>{user?.display_name}</span>
-                    {team && (
-                      <span style={{ fontSize: '12px', color: '#666', lineHeight: 1 }}>
-                        {team.name}
-                      </span>
-                    )}
+                    <span style={{ fontSize: '12px', color: '#666', lineHeight: 1 }}>
+                      {user?.email}
+                    </span>
                   </div>
                 )}
               </div>

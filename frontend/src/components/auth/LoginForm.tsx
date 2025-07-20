@@ -1,17 +1,12 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, Typography, Space, Divider } from 'antd';
-import { UserOutlined, LockOutlined, TeamOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, Typography, Divider } from 'antd';
+import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { UserLogin } from '../../types';
 
 const { Title, Text } = Typography;
 
-interface LoginFormProps {
-  onSwitchToRegister: () => void;
-  onSwitchToJoinTeam: () => void;
-}
-
-const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToJoinTeam }) => {
+const LoginForm: React.FC = () => {
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [form] = Form.useForm();
@@ -32,10 +27,10 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToJoi
     <Card className="auth-card" style={{ width: 400, margin: '0 auto' }}>
       <div style={{ textAlign: 'center', marginBottom: 24 }}>
         <Title level={3} style={{ margin: 0 }}>
-          <TeamOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+          <UserOutlined style={{ marginRight: 8, color: '#1890ff' }} />
           研究看板登录
         </Title>
-        <Text type="secondary">登录到您的团队协作平台</Text>
+        <Text type="secondary">登录到您的协作平台</Text>
       </div>
       
       <Form
@@ -86,17 +81,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ onSwitchToRegister, onSwitchToJoi
           </Button>
         </Form.Item>
       </Form>
-
-      <Divider>其他选项</Divider>
-
-      <Space direction="vertical" style={{ width: '100%' }} size="small">
-        <Button type="link" onClick={onSwitchToRegister} block>
-          还没有账号？立即注册
-        </Button>
-        <Button type="link" onClick={onSwitchToJoinTeam} block>
-          有邀请码？加入团队
-        </Button>
-      </Space>
     </Card>
   );
 };
