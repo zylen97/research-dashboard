@@ -22,6 +22,9 @@ jobs:
           echo "🔄 开始自动部署..."
           cd /var/www/research-dashboard
           
+          echo "🔧 配置 Git 安全目录..."
+          git config --global --add safe.directory /var/www/research-dashboard
+          
           echo "📥 拉取最新代码..."
           git pull origin main
           
