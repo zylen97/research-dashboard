@@ -219,6 +219,12 @@ class Team(Base):
 def create_tables():
     Base.metadata.create_all(bind=engine)
 
+# Initialize database (alias for create_tables for compatibility)
+def init_db():
+    """初始化数据库，创建所有表"""
+    Base.metadata.create_all(bind=engine)
+    print("✅ 数据库表创建完成")
+
 # Database dependency
 def get_db():
     db = SessionLocal()
