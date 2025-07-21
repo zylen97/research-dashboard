@@ -7,10 +7,12 @@ from datetime import datetime
 import tempfile
 import gzip
 from pathlib import Path
+from sqlalchemy.orm import Session
 
 from ..utils.backup_manager import BackupManager
-from ..models.database import get_current_user
-from ..models.schemas import User
+from ..models.database import get_db, User
+from ..utils.auth import get_current_user
+from ..models.schemas import User as UserSchema
 
 router = APIRouter()
 
