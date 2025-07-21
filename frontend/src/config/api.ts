@@ -88,7 +88,6 @@ export const logApiConfig = () => {
   console.group('📡 API配置信息');
   console.log('基础地址:', API_CONFIG.BASE_URL);
   console.log('环境:', process.env['NODE_ENV']);
-  console.log('环境变量API地址:', process.env['REACT_APP_API_URL'] || '未设置');
   console.log('超时时间:', API_CONFIG.TIMEOUT);
   console.groupEnd();
 };
