@@ -3,7 +3,7 @@ from typing import Optional, Union
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
-from app.models.database import User
+from app.models.database import User, get_db
 from app.models.schemas import User as UserSchema
 from app.core.config import settings
 
@@ -61,7 +61,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 security = HTTPBearer()
 
-async def verify_token_and_get_user(token: str, db: Session) -> User:
+def verify_token_and_get_user(token: str, db: Session) -> User:
     """验证token并获取用户"""
     payload = verify_token(token)
     
@@ -88,13 +88,9 @@ async def verify_token_and_get_user(token: str, db: Session) -> User:
     
     return user
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(lambda: next(get_db()))
 ) -> User:
     """获取当前登录用户"""
-    from app.models.database import get_db
-    db = next(get_db())
-    try:
-        return await verify_token_and_get_user(credentials.credentials, db)
-    finally:
-        db.close()
+    return verify_token_and_get_user(credentials.credentials, db)
