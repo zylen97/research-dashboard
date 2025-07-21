@@ -1,8 +1,14 @@
 // API配置管理 - 动态版本
 const getApiBaseUrl = (): string => {
-  // 1. 优先使用环境变量
+  // 1. 优先使用环境变量（但要确保有端口号）
   const envApiUrl = process.env['REACT_APP_API_URL'];
   if (envApiUrl) {
+    // 如果环境变量没有端口号，且是生产环境，加上3001端口
+    if (!envApiUrl.includes(':3001') && process.env['NODE_ENV'] === 'production') {
+      const fixedUrl = envApiUrl.replace(/\/$/, '') + ':3001';
+      console.log('修正环境变量API地址:', fixedUrl);
+      return fixedUrl;
+    }
     console.log('使用环境变量API地址:', envApiUrl);
     return envApiUrl;
   }
