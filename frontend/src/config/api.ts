@@ -1,27 +1,14 @@
-// API配置管理 - 动态版本
+// API配置管理 - 自适应版本
 const getApiBaseUrl = (): string => {
-  // 1. 优先使用环境变量（但要确保有端口号）
-  const envApiUrl = process.env['REACT_APP_API_URL'];
-  if (envApiUrl) {
-    // 如果环境变量没有端口号，且是生产环境，加上3001端口
-    if (!envApiUrl.includes(':3001') && process.env['NODE_ENV'] === 'production') {
-      const fixedUrl = envApiUrl.replace(/\/$/, '') + ':3001';
-      console.log('修正环境变量API地址:', fixedUrl);
-      return fixedUrl;
-    }
-    console.log('使用环境变量API地址:', envApiUrl);
-    return envApiUrl;
-  }
-
-  // 2. 检查是否在开发环境
+  // 1. 开发环境使用本地后端
   if (process.env['NODE_ENV'] === 'development') {
     console.log('开发环境，使用本地API');
     return 'http://localhost:8080';
   }
 
-  // 3. 生产环境使用相对路径（通过Nginx代理）
-  console.log('生产环境，使用相对路径API');
-  // 在生产环境始终使用当前origin，这样能确保端口一致
+  // 2. 生产环境始终使用当前origin
+  // 这样能自动适应任何部署场景：80、443、3000、3001等任何端口
+  console.log('生产环境，使用当前origin:', window.location.origin);
   return window.location.origin;
 };
 
