@@ -324,7 +324,7 @@ const CollaboratorManagement: React.FC = () => {
   const handleDelete = async (collaborator: Collaborator) => {
     try {
       // 先检查依赖关系
-      const response = await fetch(`http://localhost:8080/api/validation/collaborator/${collaborator.id}/dependencies`);
+      const response = await fetch(`${window.location.origin}/api/validation/collaborator/${collaborator.id}/dependencies`);
       const data = await response.json();
       
       if (!data.valid) {
@@ -416,7 +416,7 @@ const CollaboratorManagement: React.FC = () => {
         onOk: () => {
           if (deleteTypeRef.current === 'hard') {
             // 硬删除：添加force参数
-            fetch(`http://localhost:8080/api/collaborators/${collaborator.id}?force=true`, {
+            fetch(`${window.location.origin}/api/collaborators/${collaborator.id}?force=true`, {
               method: 'DELETE',
             }).then(response => {
               if (response.ok) {

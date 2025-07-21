@@ -10,14 +10,12 @@ import {
 } from '../types';
 
 // API基础配置
-const API_BASE_URL = process.env['REACT_APP_API_URL'] || 'http://localhost:8080';
+import { API_CONFIG } from '../config/api';
 
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: API_CONFIG.HEADERS,
 });
 
 // 请求拦截器
