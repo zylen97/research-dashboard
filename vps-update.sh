@@ -1,9 +1,18 @@
 #!/bin/bash
 
 # VPS更新脚本 - 在VPS上运行此脚本来更新到最新版本
-# 用法: ./vps-update.sh
+# 用法: ./vps-update.sh [选项]
+# 选项: 
+#   --force-build  强制重新构建前端（即使没有检测到更改）
 
 set -e
+
+# 检查参数
+FORCE_BUILD=false
+if [ "$1" = "--force-build" ]; then
+    FORCE_BUILD=true
+    echo "强制构建模式已启用"
+fi
 
 # 颜色定义
 RED='\033[0;31m'
@@ -34,8 +43,23 @@ echo -e "${YELLOW}当前版本信息：${NC}"
 CURRENT_COMMIT=$(git rev-parse --short HEAD)
 echo "Git提交: $CURRENT_COMMIT"
 if [ -f "$WEB_DIR/index.html" ]; then
-    CURRENT_VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" $WEB_DIR/static/js/main.*.js 2>/dev/null | head -1 || echo "版本未知")
+    # 尝试多种方式获取版本号
+    CURRENT_VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" $WEB_DIR/static/js/main.*.js 2>/dev/null | head -1 || echo "")
+    if [ -z "$CURRENT_VERSION" ]; then
+        # 尝试更宽泛的匹配
+        CURRENT_VERSION=$(grep -o "v[0-9]\.[0-9]" $WEB_DIR/static/js/main.*.js 2>/dev/null | head -1 || echo "版本未知")
+    fi
     echo "网站版本: $CURRENT_VERSION"
+    
+    # 显示文件信息用于调试
+    if [ -f "$WEB_DIR/static/js/main."*.js ]; then
+        JS_FILE=$(ls -1 $WEB_DIR/static/js/main.*.js | head -1)
+        echo "JS文件: $(basename $JS_FILE)"
+        echo "文件大小: $(ls -lh $JS_FILE | awk '{print $5}')"
+        echo "修改时间: $(stat -c %y $JS_FILE | cut -d' ' -f1-2)"
+    fi
+else
+    echo -e "${RED}警告：网站目录不存在或为空${NC}"
 fi
 echo ""
 
@@ -52,16 +76,21 @@ git log --oneline -1
 echo ""
 
 # 5. 检查是否需要更新前端
-if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ]; then
+if [ "$CURRENT_COMMIT" = "$NEW_COMMIT" ] && [ "$FORCE_BUILD" = false ]; then
     echo -e "${YELLOW}已经是最新版本，无需更新${NC}"
+    echo "提示：使用 ./vps-update.sh --force-build 强制重新构建"
     exit 0
 fi
 
 # 检查前端是否有更改
 FRONTEND_CHANGED=$(git diff $CURRENT_COMMIT..$NEW_COMMIT --name-only | grep -c "frontend/" || echo "0")
 
-if [ "$FRONTEND_CHANGED" -gt 0 ]; then
-    echo -e "${YELLOW}检测到前端更改，开始构建...${NC}"
+if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$FORCE_BUILD" = true ]; then
+    if [ "$FORCE_BUILD" = true ]; then
+        echo -e "${YELLOW}强制构建前端...${NC}"
+    else
+        echo -e "${YELLOW}检测到前端更改，开始构建...${NC}"
+    fi
     
     # 6. 备份当前版本
     echo -e "${BLUE}备份当前版本...${NC}"
@@ -76,38 +105,99 @@ if [ "$FRONTEND_CHANGED" -gt 0 ]; then
     echo -e "${YELLOW}构建前端应用...${NC}"
     cd frontend
     
-    # 安装依赖（如果package.json有更新）
-    if git diff $CURRENT_COMMIT..$NEW_COMMIT --name-only | grep -q "frontend/package.json"; then
-        echo "检测到package.json更改，安装依赖..."
-        npm ci
+    # 清理旧的构建和缓存
+    echo "清理旧构建..."
+    rm -rf build
+    rm -rf node_modules/.cache
+    
+    # 设置Node内存限制（防止VPS内存不足）
+    export NODE_OPTIONS="--max-old-space-size=1024"
+    echo "设置Node内存限制: $NODE_OPTIONS"
+    
+    # 安装依赖（如果package.json有更新或node_modules不存在）
+    if [ ! -d "node_modules" ] || git diff $CURRENT_COMMIT..$NEW_COMMIT --name-only | grep -q "frontend/package.json"; then
+        echo "安装依赖..."
+        # 先尝试 npm ci，失败则用 npm install
+        npm ci || npm install
+        if [ $? -ne 0 ]; then
+            echo -e "${RED}依赖安装失败！${NC}"
+            exit 1
+        fi
     fi
     
     # 构建
+    echo "开始构建..."
     npm run build
     
     if [ ! -d "build" ]; then
         echo -e "${RED}构建失败！${NC}"
-        exit 1
+        echo "尝试清理并重新构建..."
+        rm -rf node_modules
+        npm install
+        npm run build
+        
+        if [ ! -d "build" ]; then
+            echo -e "${RED}重试后仍然构建失败！${NC}"
+            exit 1
+        fi
+    fi
+    
+    # 验证构建版本
+    BUILD_VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" build/static/js/main.*.js 2>/dev/null | head -1 || echo "")
+    if [ -z "$BUILD_VERSION" ]; then
+        echo -e "${RED}警告：无法在构建文件中找到版本信息${NC}"
+    else
+        echo -e "${GREEN}构建版本: $BUILD_VERSION${NC}"
     fi
     
     # 8. 部署新版本（蓝绿部署）
     echo -e "${YELLOW}部署新版本...${NC}"
     
+    # 确保构建目录存在并包含文件
+    if [ ! -d "build" ] || [ -z "$(ls -A build)" ]; then
+        echo -e "${RED}错误：构建目录为空或不存在${NC}"
+        exit 1
+    fi
+    
+    # 显示构建文件信息
+    echo "构建目录内容："
+    ls -la build/
+    echo ""
+    
     # 准备新版本目录
+    echo "准备新版本..."
     rm -rf $WEB_DIR.new
     cp -r build $WEB_DIR.new
     
+    # 验证复制是否成功
+    if [ ! -d "$WEB_DIR.new" ] || [ -z "$(ls -A $WEB_DIR.new)" ]; then
+        echo -e "${RED}错误：复制构建文件失败${NC}"
+        exit 1
+    fi
+    
     # 快速切换
+    echo "切换到新版本..."
     if [ -d "$WEB_DIR" ]; then
+        rm -rf $WEB_DIR.old
         mv $WEB_DIR $WEB_DIR.old
     fi
     mv $WEB_DIR.new $WEB_DIR
     
     # 设置权限
+    echo "设置文件权限..."
     chown -R www-data:www-data $WEB_DIR
+    chmod -R 755 $WEB_DIR
     
     # 清理旧版本
     rm -rf $WEB_DIR.old
+    
+    # 验证部署
+    DEPLOYED_VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" $WEB_DIR/static/js/main.*.js 2>/dev/null | head -1 || echo "")
+    if [ -n "$DEPLOYED_VERSION" ]; then
+        echo -e "${GREEN}✅ 成功部署: $DEPLOYED_VERSION${NC}"
+    else
+        echo -e "${YELLOW}警告：无法验证部署版本${NC}"
+    fi
     
     cd ..
     

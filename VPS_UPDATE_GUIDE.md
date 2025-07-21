@@ -9,6 +9,15 @@ cd /var/www/research-dashboard
 ./vps-update.sh
 ```
 
+## 强制重新构建
+
+如果网站版本没有更新（比如显示旧版本），使用强制构建：
+
+```bash
+cd /var/www/research-dashboard
+./vps-update.sh --force-build
+```
+
 ## 功能说明
 
 这个脚本会自动：
