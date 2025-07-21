@@ -29,32 +29,13 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
+import { ApiResponse, BackupStatsResponse, BackupItem } from '../types';
 
 const { Title, Text } = Typography;
 
-interface BackupItem {
-  id: string;
-  name: string;
-  size: number;
-  sizeFormatted: string;
-  created: string;
-  createdFormatted: string;
-  details?: string;
-}
-
-interface BackupStats {
-  total_backups: number;
-  total_size: number;
-  newest_backup: BackupItem | null;
-  oldest_backup: BackupItem | null;
-  average_size: number;
-  max_backups: number;
-  current_environment: string;
-}
-
 const DatabaseBackup: React.FC = () => {
   const [backups, setBackups] = useState<BackupItem[]>([]);
-  const [stats, setStats] = useState<BackupStats | null>(null);
+  const [stats, setStats] = useState<BackupStatsResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -63,7 +44,7 @@ const DatabaseBackup: React.FC = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const response: any = await api.get('/api/backup/list');
+      const response = await api.get<ApiResponse<BackupItem[]>>('/api/backup/list');
       if (response.success) {
         setBackups(response.data);
       }
@@ -78,7 +59,7 @@ const DatabaseBackup: React.FC = () => {
   // 获取备份统计
   const fetchStats = async () => {
     try {
-      const response: any = await api.get('/api/backup/stats');
+      const response = await api.get<ApiResponse<BackupStatsResponse>>('/api/backup/stats');
       if (response.success) {
         setStats(response.data);
       }
@@ -107,7 +88,7 @@ const DatabaseBackup: React.FC = () => {
         const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
         setCreating(true);
         try {
-          const response: any = await api.post('/api/backup/create', null, {
+          const response = await api.post<ApiResponse<BackupItem>>('/api/backup/create', null, {
             params: { reason }
           });
           if (response.success) {
@@ -129,7 +110,7 @@ const DatabaseBackup: React.FC = () => {
   const handleRestore = async (backupId: string) => {
     setRestoring(backupId);
     try {
-      const response: any = await api.post(`/api/backup/restore/${backupId}`);
+      const response = await api.post<ApiResponse<{ message: string }>>(`/api/backup/restore/${backupId}`);
       if (response.success) {
         message.success('数据库恢复成功');
         // 可能需要刷新整个应用
@@ -148,7 +129,7 @@ const DatabaseBackup: React.FC = () => {
   // 删除备份
   const handleDelete = async (backupId: string) => {
     try {
-      const response: any = await api.delete(`/api/backup/${backupId}`);
+      const response = await api.delete<ApiResponse<{ message: string }>>(`/api/backup/${backupId}`);
       if (response.success) {
         message.success('备份删除成功');
         fetchBackups();
@@ -163,7 +144,7 @@ const DatabaseBackup: React.FC = () => {
   // 下载备份
   const handleDownload = async (backupId: string, backupName: string) => {
     try {
-      const response: any = await api.get(`/api/backup/download/${backupId}`, {
+      const response = await api.get(`/api/backup/download/${backupId}`, {
         responseType: 'blob'
       });
       

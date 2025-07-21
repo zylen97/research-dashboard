@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
   Card,
   Button,
@@ -115,7 +115,7 @@ const CollaboratorManagement: React.FC = () => {
   });
 
   // 临时识别小组的函数（后端支持is_group字段前使用）
-  const isGroupCollaborator = (collaborator: Collaborator) => {
+  const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
     // 1. 优先使用本地标记状态
     if (localGroupMarks[collaborator.id] !== undefined) {
       return localGroupMarks[collaborator.id];
@@ -136,7 +136,7 @@ const CollaboratorManagement: React.FC = () => {
       collaborator.name.includes(indicator) || 
       (collaborator.class_name && collaborator.class_name.includes(indicator))
     );
-  };
+  }, [localGroupMarks]);
 
   // 排序合作者：小组 > 高级合作者 > 女生 > 男生
   const sortedCollaborators = useMemo(() => {
@@ -159,7 +159,7 @@ const CollaboratorManagement: React.FC = () => {
       // 4. 同性别或都不是女生时，按名字排序
       return a.name.localeCompare(b.name);
     });
-  }, [collaborators]);
+  }, [collaborators, isGroupCollaborator]);
 
   // 获取研究项目数据用于分析合作者参与状态
   const { data: projects = [] } = useQuery({
@@ -202,7 +202,7 @@ const CollaboratorManagement: React.FC = () => {
       senior,
       groups,
     };
-  }, [sortedCollaborators, collaboratorParticipationStatus]);
+  }, [sortedCollaborators, collaboratorParticipationStatus, isGroupCollaborator]);
 
   // 创建合作者mutation
   const createCollaboratorMutation = useMutation({

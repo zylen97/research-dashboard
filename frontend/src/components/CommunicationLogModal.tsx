@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Modal,
   Table,
@@ -20,6 +20,14 @@ import {
 import { ResearchProject, CommunicationLog, CommunicationLogCreate, Collaborator } from '../types';
 import { researchApi } from '../services/api';
 import dayjs from 'dayjs';
+
+interface CommunicationFormValues {
+  title: string;
+  content?: string;
+  outcomes?: string;
+  action_items?: string;
+  communication_date?: any;
+}
 
 const { TextArea } = Input;
 
@@ -45,7 +53,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
   const [form] = Form.useForm();
 
   // 获取交流日志
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     if (!project) return;
     
     setLoading(true);
@@ -58,16 +66,16 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [project]);
 
   useEffect(() => {
     if (visible && project) {
       fetchLogs();
     }
-  }, [visible, project]);
+  }, [visible, project, fetchLogs]);
 
   // 处理提交
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: CommunicationFormValues) => {
     if (!project) return;
 
     const logData: CommunicationLogCreate = {

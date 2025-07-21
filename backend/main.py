@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 from app.routes import research, collaborators, literature, ideas, validation, audit, auth, backup
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
@@ -10,11 +11,31 @@ import logging
 logging.basicConfig(**settings.get_log_config())
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时执行
+    logger.info(f"🚀 正在启动研究看板 API - 环境: {settings.ENVIRONMENT}")
+    logger.info(f"📁 数据库路径: {settings.DATABASE_URL}")
+    logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
+    
+    init_database()
+    init_users()  # 初始化用户账号
+    # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
+    
+    logger.info(f"✅ 应用启动成功！监听地址: {settings.HOST}:{settings.PORT}")
+    
+    yield  # 应用运行期间
+    
+    # 关闭时执行（如果需要）
+    logger.info("👋 正在关闭应用...")
+
 app = FastAPI(
     title="Research Dashboard API", 
     version="1.0.0",
     docs_url="/docs" if settings.IS_DEVELOPMENT else None,  # 生产环境隐藏文档
-    redoc_url="/redoc" if settings.IS_DEVELOPMENT else None
+    redoc_url="/redoc" if settings.IS_DEVELOPMENT else None,
+    lifespan=lifespan
 )
 
 # CORS middleware - 使用配置
@@ -51,19 +72,6 @@ app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
 @app.get("/")
 async def root():
     return {"message": "Research Dashboard API"}
-
-@app.on_event("startup")
-async def startup_event():
-    """应用启动时初始化数据库"""
-    logger.info(f"🚀 正在启动研究看板 API - 环境: {settings.ENVIRONMENT}")
-    logger.info(f"📁 数据库路径: {settings.DATABASE_URL}")
-    logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
-    
-    init_database()
-    init_users()  # 初始化用户账号
-    # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
-    
-    logger.info(f"✅ 应用启动成功！监听地址: {settings.HOST}:{settings.PORT}")
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { researchApi, collaboratorApi } from '../../../services/api';
 import { ResearchProject } from '../../../types';
@@ -37,7 +37,7 @@ export const useProjectData = () => {
   });
 
   // 获取项目的待办状态
-  const getProjectTodoStatus = (project: ResearchProject): TodoStatus => {
+  const getProjectTodoStatus = useCallback((project: ResearchProject): TodoStatus => {
     // 1. 优先使用本地标记状态
     const localMark = localTodoMarks[project.id];
     if (localMark !== undefined) {
@@ -54,7 +54,7 @@ export const useProjectData = () => {
     
     // 3. 默认不是待办状态
     return { is_todo: false, todo_marked_at: '' };
-  };
+  }, [localTodoMarks]);
 
   // 按待办状态排序项目：待办项目置顶
   const sortedProjects = useMemo(() => {
@@ -77,7 +77,7 @@ export const useProjectData = () => {
       // 3. 都不是待办项目时，按创建时间倒序
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [projects, localTodoMarks]);
+  }, [projects, localTodoMarks, getProjectTodoStatus]);
 
   // 更新本地待办状态
   const updateLocalTodoStatus = (projectId: number, todoStatus: TodoStatus) => {

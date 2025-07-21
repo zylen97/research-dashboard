@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """速率限制中间件"""
     
-    def __init__(self, app, calls: int = 60, period: int = 60):
+    def __init__(self, app, calls: int = 60, period: int = 60, max_clients: int = 10000):
         """
         初始化速率限制中间件
         
@@ -18,19 +18,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             app: FastAPI应用实例
             calls: 时间窗口内允许的请求次数
             period: 时间窗口（秒）
+            max_clients: 最大缓存客户端数量
         """
         super().__init__(app)
         self.calls = calls
         self.period = period
+        self.max_clients = max_clients
         self.client_requests: Dict[str, List[float]] = {}
+        self.last_cleanup = time.time()
     
     async def dispatch(self, request: Request, call_next):
         """处理请求，应用速率限制"""
         client_ip = self.get_client_ip(request)
         current_time = time.time()
         
+        # 定期清理所有过期记录（每分钟一次）
+        if current_time - self.last_cleanup > 60:
+            self._cleanup_expired_records(current_time)
+            self.last_cleanup = current_time
+        
         # 获取或初始化客户端请求记录
         if client_ip not in self.client_requests:
+            # 检查是否超过最大客户端数量
+            if len(self.client_requests) >= self.max_clients:
+                self._cleanup_expired_records(current_time, force=True)
             self.client_requests[client_ip] = []
         
         # 清理过期的请求记录
@@ -55,6 +66,39 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         
         response = await call_next(request)
         return response
+    
+    def _cleanup_expired_records(self, current_time: float, force: bool = False):
+        """清理过期的请求记录"""
+        if force:
+            # 强制清理：删除最老的一半客户端
+            sorted_clients = sorted(
+                self.client_requests.items(),
+                key=lambda x: max(x[1]) if x[1] else 0
+            )
+            half = len(sorted_clients) // 2
+            for client_ip, _ in sorted_clients[:half]:
+                del self.client_requests[client_ip]
+            logger.info(f"Force cleaned {half} client records")
+        else:
+            # 常规清理：删除所有请求都过期的客户端
+            expired_clients = []
+            for client_ip, requests in self.client_requests.items():
+                # 清理过期请求
+                valid_requests = [
+                    req_time for req_time in requests
+                    if current_time - req_time < self.period
+                ]
+                if not valid_requests:
+                    expired_clients.append(client_ip)
+                else:
+                    self.client_requests[client_ip] = valid_requests
+            
+            # 删除没有有效请求的客户端
+            for client_ip in expired_clients:
+                del self.client_requests[client_ip]
+            
+            if expired_clients:
+                logger.debug(f"Cleaned up {len(expired_clients)} expired client records")
     
     def get_client_ip(self, request: Request) -> str:
         """获取客户端IP地址"""

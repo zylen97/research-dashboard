@@ -248,6 +248,9 @@ export const PRIORITIES = ['low', 'medium', 'high'] as const;
 export const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'] as const;
 export const IMPACT_LEVELS = ['low', 'medium', 'high'] as const;
 
+// 导出API相关类型
+export * from './api';
+
 // 用户类型
 export interface User {
   id: number;
