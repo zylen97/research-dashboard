@@ -17,8 +17,13 @@ echo -e "${BLUE}=== 一键部署脚本 ===${NC}"
 echo -e "${YELLOW}1. 构建前端...${NC}"
 cd frontend
 
-# 清理并构建
+# 清理所有缓存和旧构建
+echo "清理旧构建和缓存..."
 rm -rf build
+rm -rf node_modules/.cache
+rm -f build.tar.gz
+
+# 构建
 npm run build
 
 if [ ! -d "build" ]; then
@@ -32,7 +37,7 @@ rm -f build.tar.gz
 tar -czf build.tar.gz build/
 
 # 获取版本号
-VERSION=$(grep -o "v[0-9]\.[0-9]" build/static/js/main.*.js 2>/dev/null | head -1 || echo "未知")
+VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" build/static/js/main.*.js 2>/dev/null | head -1 | sed 's/Research Dashboard //' || echo "未知")
 SIZE=$(ls -lh build.tar.gz | awk '{print $5}')
 echo -e "${GREEN}✅ 构建版本: $VERSION (大小: $SIZE)${NC}"
 
