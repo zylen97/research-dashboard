@@ -1,4 +1,4 @@
-// API配置管理 - 理性版本
+// API配置管理 - 动态版本
 const getApiBaseUrl = (): string => {
   // 1. 优先使用环境变量
   const envApiUrl = process.env['REACT_APP_API_URL'];
@@ -19,9 +19,11 @@ const getApiBaseUrl = (): string => {
   return window.location.origin;
 };
 
-// 导出API配置
+// 导出API配置 - 使用getter确保动态获取BASE_URL
 export const API_CONFIG = {
-  BASE_URL: getApiBaseUrl(),
+  get BASE_URL() {
+    return getApiBaseUrl();
+  },
   TIMEOUT: 30000,
   HEADERS: {
     'Content-Type': 'application/json',
