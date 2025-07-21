@@ -116,7 +116,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       }}>
         {(!collapsed || mobileView) && (
           <Title level={5} style={{ margin: 0, color: '#1890ff', fontWeight: 600 }}>
-            Research Dashboard v5.0 🔑
+            Research Dashboard v6.0 🚀
           </Title>
         )}
         {collapsed && !mobileView && (
