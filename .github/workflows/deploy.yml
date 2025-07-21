@@ -38,15 +38,11 @@ jobs:
           sudo ln -sf /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/
           sudo nginx -t && sudo systemctl reload nginx
           
-          echo "🔍 检查更改..."
+          echo "🔍 检查后端更改..."
           BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
-          FRONTEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "frontend/" || echo "0")
-          
-          # 添加强制重建标志检查
-          FORCE_REBUILD=$(git diff HEAD~1 --name-only | grep -c "FORCE_REBUILD\|force-rebuild" || echo "0")
           
           if [ "$BACKEND_CHANGED" -gt 0 ]; then
-            echo "🐍 检测到后端更改..."
+            echo "🐍 检测到后端更改，重启服务..."
             
             # 检查是否是用户相关的更改
             USER_CHANGED=$(git diff HEAD~1 --name-only | grep -c "db_init.py" || echo "0")
@@ -54,8 +50,6 @@ jobs:
             if [ "$USER_CHANGED" -gt 0 ]; then
               echo "🗄️ 检测到用户配置更改，更新用户信息..."
               cd backend
-              
-              # 只更新用户，不删除数据
               python3 fix_users_now.py || echo "用户更新脚本不存在，跳过"
             else
               echo "🗄️ 备份数据库..."
@@ -75,15 +69,11 @@ jobs:
             sleep 5
             
             echo "✅ 后端服务已重启"
+          else
+            echo "✅ 后端无更改"
           fi
           
-          if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$FORCE_REBUILD" -gt 0 ]; then
-            echo "⚛️ 检测到前端更改..."
-            echo "⚠️  前端已预构建，跳过构建步骤"
-            echo "💡 如需更新前端，请在本地构建后使用 ./deploy.sh build"
-          else
-            echo "✅ 前端无更改，保持现有部署"
-          fi
+          echo "📦 前端保持现有部署（/var/www/html 不变）"
           
           echo "🔄 最终重新加载Nginx..."
           sudo systemctl reload nginx
@@ -91,10 +81,6 @@ jobs:
           echo "🔍 检查服务状态..."
           systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
           systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
-          
-          echo "🔍 运行简单诊断脚本..."
-          chmod +x simple-diagnosis.sh
-          bash simple-diagnosis.sh
           
           echo "🎉 自动部署完成！"
           echo "📅 部署时间: $(date)"
