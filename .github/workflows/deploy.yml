@@ -77,26 +77,13 @@ jobs:
             echo "✅ 后端服务已重启"
           fi
           
-          # 强制重建前端以解决缓存问题
-          echo "⚛️ 强制重新构建前端（解决CORS和缓存问题）..."
-          cd frontend
-          echo "🧹 彻底清理缓存和构建文件..."
-          rm -rf build node_modules/.cache .eslintcache
-          echo "📦 重新安装依赖..."
-          npm ci
-          echo "🔨 强制重新构建前端..."
-          npm run build
-          echo "📋 清空Web目录并部署新文件..."
-          sudo rm -rf /var/www/html/*
-          sudo cp -r build/* /var/www/html/
-          sudo chown -R www-data:www-data /var/www/html/
-          
-          # 添加缓存清除头
-          echo "🔄 设置防缓存头..."
-          sudo find /var/www/html -name "*.html" -exec sed -i 's/<head>/<head><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta http-equiv="Pragma" content="no-cache"><meta http-equiv="Expires" content="0">/g' {} \;
-          
-          cd ..
-          echo "✅ 前端强制重建完成"
+          if [ "$FRONTEND_CHANGED" -gt 0 ] || [ "$FORCE_REBUILD" -gt 0 ]; then
+            echo "⚛️ 检测到前端更改..."
+            echo "⚠️  前端已预构建，跳过构建步骤"
+            echo "💡 如需更新前端，请在本地构建后使用 ./deploy.sh build"
+          else
+            echo "✅ 前端无更改，保持现有部署"
+          fi
           
           echo "🔄 最终重新加载Nginx..."
           sudo systemctl reload nginx
