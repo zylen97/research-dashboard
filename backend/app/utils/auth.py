@@ -1,16 +1,16 @@
 from datetime import datetime, timedelta
 from typing import Optional, Union
-import os
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from app.models.database import User
 from app.models.schemas import User as UserSchema
+from app.core.config import settings
 
 # JWT配置
-SECRET_KEY = os.getenv("SECRET_KEY", "research-dashboard-secret-key-change-in-production")
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7天
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM = settings.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # 密码加密
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")

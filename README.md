@@ -97,7 +97,7 @@ cd research-dashboard
 ```
 
 ### Access
-- Frontend: http://localhost:3000
+- Frontend: http://localhost:3001
 - Backend API: http://localhost:8080
 - API Docs: http://localhost:8080/docs
 
@@ -164,7 +164,7 @@ python main.py  # Runs on http://localhost:8080
 ```bash
 cd frontend
 npm install
-npm start  # Runs on http://localhost:3000
+npm start  # Runs on http://localhost:3001
 ```
 
 ### Database Management
@@ -178,7 +178,7 @@ python init_db.py  # Initialize database with default users
 ### Port Already in Use
 ```bash
 # Check what's using the ports
-lsof -i :3000
+lsof -i :3001
 lsof -i :8080
 
 # Kill processes if needed

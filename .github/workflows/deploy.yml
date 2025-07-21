@@ -22,10 +22,7 @@ jobs:
           echo "🔄 开始自动部署..."
           cd /var/www/research-dashboard
           
-          # 拉取最新代码（包括tar.gz）
-          git pull
-          
-          # 执行部署脚本
+          # 执行部署脚本（脚本内会拉取最新代码）
           ./vps-update.sh
           
           echo "🎉 部署完成！"

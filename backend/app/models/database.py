@@ -2,10 +2,11 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, F
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
+from app.core.config import settings
 
 # Database configuration
-SQLITE_DATABASE_URL = "sqlite:///./research_dashboard.db"
-engine = create_engine(SQLITE_DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = settings.get_database_url()
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
