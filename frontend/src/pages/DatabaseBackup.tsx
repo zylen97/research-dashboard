@@ -63,9 +63,9 @@ const DatabaseBackup: React.FC = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/backup/list');
-      if (response.data.success) {
-        setBackups(response.data.data);
+      const response: any = await api.get('/api/backup/list');
+      if (response.success) {
+        setBackups(response.data);
       }
     } catch (error) {
       message.error('获取备份列表失败');
@@ -78,9 +78,9 @@ const DatabaseBackup: React.FC = () => {
   // 获取备份统计
   const fetchStats = async () => {
     try {
-      const response = await api.get('/backup/stats');
-      if (response.data.success) {
-        setStats(response.data.data);
+      const response: any = await api.get('/api/backup/stats');
+      if (response.success) {
+        setStats(response.data);
       }
     } catch (error) {
       console.error(error);
@@ -107,10 +107,10 @@ const DatabaseBackup: React.FC = () => {
         const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
         setCreating(true);
         try {
-          const response = await api.post('/backup/create', null, {
+          const response: any = await api.post('/api/backup/create', null, {
             params: { reason }
           });
-          if (response.data.success) {
+          if (response.success) {
             message.success('备份创建成功');
             fetchBackups();
             fetchStats();
@@ -129,8 +129,8 @@ const DatabaseBackup: React.FC = () => {
   const handleRestore = async (backupId: string) => {
     setRestoring(backupId);
     try {
-      const response = await api.post(`/backup/restore/${backupId}`);
-      if (response.data.success) {
+      const response: any = await api.post(`/api/backup/restore/${backupId}`);
+      if (response.success) {
         message.success('数据库恢复成功');
         // 可能需要刷新整个应用
         setTimeout(() => {
@@ -148,8 +148,8 @@ const DatabaseBackup: React.FC = () => {
   // 删除备份
   const handleDelete = async (backupId: string) => {
     try {
-      const response = await api.delete(`/backup/${backupId}`);
-      if (response.data.success) {
+      const response: any = await api.delete(`/api/backup/${backupId}`);
+      if (response.success) {
         message.success('备份删除成功');
         fetchBackups();
         fetchStats();
@@ -163,7 +163,7 @@ const DatabaseBackup: React.FC = () => {
   // 下载备份
   const handleDownload = async (backupId: string, backupName: string) => {
     try {
-      const response = await api.get(`/backup/download/${backupId}`, {
+      const response: any = await api.get(`/api/backup/download/${backupId}`, {
         responseType: 'blob'
       });
       
