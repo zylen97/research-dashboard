@@ -1,17 +1,14 @@
-name: 🚀 自动部署到VPS
+name: 🔨 构建验证
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     
     steps:
-    - name: 📤 开始部署
-      run: echo "开始自动部署到VPS..."
-    
     - name: 📥 检出代码
       uses: actions/checkout@v3
       with:
@@ -23,18 +20,18 @@ jobs:
         echo "检查文件更改..."
         if git diff --name-only HEAD~1 HEAD | grep -q "frontend/"; then
           echo "frontend_changed=true" >> $GITHUB_OUTPUT
-          echo "前端有更改"
+          echo "✅ 前端有更改"
         else
           echo "frontend_changed=false" >> $GITHUB_OUTPUT
-          echo "前端无更改"
+          echo "📦 前端无更改"
         fi
         
         if git diff --name-only HEAD~1 HEAD | grep -q "backend/"; then
           echo "backend_changed=true" >> $GITHUB_OUTPUT
-          echo "后端有更改"
+          echo "✅ 后端有更改"
         else
           echo "backend_changed=false" >> $GITHUB_OUTPUT
-          echo "后端无更改"
+          echo "📦 后端无更改"
         fi
     
     - name: 📦 设置Node.js
@@ -43,105 +40,41 @@ jobs:
       with:
         node-version: '18'
     
-    - name: 🔨 构建前端
+    - name: 🔨 构建前端（验证）
       if: steps.changes.outputs.frontend_changed == 'true'
       run: |
-        echo "构建前端..."
+        echo "开始构建前端..."
         cd frontend
         npm ci
         npm run build
-        tar -czf build.tar.gz build/
+        echo "✅ 前端构建成功！"
     
-    - name: 📤 上传前端到VPS
-      if: steps.changes.outputs.frontend_changed == 'true'
-      uses: appleboy/scp-action@v0.1.5
-      with:
-        host: 45.149.156.216
-        username: root
-        key: ${{ secrets.VPS_SSH_KEY }}
-        source: "frontend/build.tar.gz"
-        target: "/tmp/"
-        strip_components: 1
-    
-    - name: 🚀 部署到VPS
-      uses: appleboy/ssh-action@v0.1.8
-      with:
-        host: 45.149.156.216
-        username: root
-        key: ${{ secrets.VPS_SSH_KEY }}
-        script: |
-          echo "🔄 开始自动部署..."
-          cd /var/www/research-dashboard
-          
-          echo "🔧 配置 Git 安全目录..."
-          git config --global --add safe.directory /var/www/research-dashboard
-          
-          echo "📥 强制更新到最新代码..."
-          git fetch --all
-          git reset --hard origin/main
-          git clean -fd
-          
-          echo "🔍 显示最新提交..."
-          git log --oneline -3
-          
-          echo "🔄 始终更新Nginx配置（端口3001）..."
-          sudo cp deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
-          sudo ln -sf /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/
-          sudo nginx -t && sudo systemctl reload nginx
-          
-          # 检查是否有前端更新
-          if [ -f /tmp/build.tar.gz ]; then
-            echo "🎨 检测到前端更新，部署新版本..."
-            cd /tmp
-            tar -xzf build.tar.gz
-            
-            # 蓝绿部署：先准备新版本，再快速切换
-            if [ -d /var/www/html ]; then
-              sudo rm -rf /var/www/html.old
-              sudo mv /var/www/html /var/www/html.old
-            fi
-            sudo mv build /var/www/html
-            sudo chown -R www-data:www-data /var/www/html
-            
-            # 清理
-            rm -f build.tar.gz
-            sudo rm -rf /var/www/html.old
-            
-            echo "✅ 前端部署完成"
-          else
-            echo "📦 前端无更新"
-          fi
-          
-          echo "🔍 检查后端更改..."
-          cd /var/www/research-dashboard
-          BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
-          
-          if [ "$BACKEND_CHANGED" -gt 0 ]; then
-            echo "🐍 检测到后端更改，重启服务..."
-            
-            # 备份数据库
-            cd backend
-            if [ -f research_dashboard.db ]; then
-              cp research_dashboard.db research_dashboard.db.backup_$(date +%Y%m%d_%H%M%S)
-              echo "✅ 数据库已备份"
-            fi
-            cd ..
-            
-            echo "🔄 重启后端服务..."
-            systemctl restart research-backend
-            sleep 5
-            echo "✅ 后端服务已重启"
-          else
-            echo "✅ 后端无更改"
-          fi
-          
-          echo "🔄 最终重新加载Nginx..."
-          sudo systemctl reload nginx
-          
-          echo "🔍 检查服务状态..."
-          systemctl is-active --quiet research-backend && echo "✅ 后端运行正常" || echo "❌ 后端异常"
-          systemctl is-active --quiet nginx && echo "✅ Nginx运行正常" || echo "❌ Nginx异常"
-          
-          echo "🎉 自动部署完成！"
-          echo "📅 部署时间: $(date)"
-          echo "🌐 访问地址: http://45.149.156.216:3001"
+    - name: 📋 生成部署提醒
+      if: success()
+      run: |
+        echo "## 🎉 构建验证成功！" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 更改内容：" >> $GITHUB_STEP_SUMMARY
+        echo "- 提交: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 分支: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "- 作者: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ steps.changes.outputs.frontend_changed }}" == "true" ]; then
+          echo "- ✅ 前端有更新" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ steps.changes.outputs.backend_changed }}" == "true" ]; then
+          echo "- ✅ 后端有更新" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### 🚀 部署步骤：" >> $GITHUB_STEP_SUMMARY
+        echo "请在VPS上运行以下命令来部署最新版本：" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo "cd /var/www/research-dashboard" >> $GITHUB_STEP_SUMMARY
+        echo "./vps-update.sh" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📅 构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
