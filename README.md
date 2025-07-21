@@ -29,6 +29,12 @@ A modern research project management system with built-in authentication and col
 - **Smart Tables**: Sortable, filterable, and searchable data views
 - **Real-time Feedback**: Loading states and error handling
 
+### Data Management
+- **Environment-Based Databases**: Automatic separation of dev/prod data
+- **Built-in Backup System**: GUI-based backup management
+- **Automated Backups**: Configurable retention policies
+- **One-Click Restore**: Easy database recovery with safety checks
+
 ## 🛠️ Tech Stack
 
 ### Frontend
@@ -66,15 +72,22 @@ research-dashboard/
 │   ├── app/
 │   │   ├── models/          # Database models
 │   │   ├── routes/          # API endpoints
-│   │   ├── utils/           # Utilities
-│   │   └── middleware/      # Security middleware
+│   │   ├── utils/           # Utilities (including backup_manager)
+│   │   ├── middleware/      # Security middleware
+│   │   └── core/            # Configuration management
+│   ├── scripts/             # Database initialization scripts
+│   ├── data/                # Environment-specific databases
+│   ├── backups/             # Database backups
 │   ├── main.py             # Application entry
 │   └── requirements.txt
+├── deploy-scripts/          # Deployment scripts
+│   ├── deploy.sh           # Git push and deployment
+│   └── vps-update.sh       # VPS update script
 ├── deployment/              # Deployment configurations
 │   ├── nginx.conf          # Nginx configuration
 │   └── research-backend.service  # Systemd service
 ├── .github/workflows/       # GitHub Actions
-└── run.sh                  # Local development script
+└── start-dev.sh            # Local development script
 ```
 
 ## 🚀 Quick Start
@@ -92,8 +105,8 @@ git clone https://github.com/zylen97/research-dashboard.git
 cd research-dashboard
 
 # Setup and run
-./setup.sh  # Install dependencies
-./run.sh    # Start both frontend and backend
+./setup.sh        # Install dependencies
+./start-dev.sh    # Start both frontend and backend
 ```
 
 ### Access
@@ -116,6 +129,12 @@ Every push to `main` branch automatically deploys to VPS via GitHub Actions.
 
 ### Manual Deployment
 ```bash
+# Use the deployment script
+./deploy-scripts/deploy.sh
+
+# Or manually
+git add .
+git commit -m "Your changes"
 git push origin main  # Triggers automatic deployment
 ```
 
@@ -151,6 +170,14 @@ git push origin main  # Triggers automatic deployment
 - `GET /api/ideas` - List ideas
 - `POST /api/ideas` - Create idea
 
+### Database Backup
+- `GET /api/backup/stats` - Get backup statistics
+- `GET /api/backup/list` - List all backups
+- `POST /api/backup/create` - Create new backup
+- `POST /api/backup/restore/{id}` - Restore from backup
+- `DELETE /api/backup/{id}` - Delete backup
+- `GET /api/backup/download/{id}` - Download backup file
+
 ## 🔧 Development
 
 ### Backend Development
@@ -168,9 +195,42 @@ npm start  # Runs on http://localhost:3001
 ```
 
 ### Database Management
+
+#### Environment-Based Configuration
+The system automatically manages separate databases for development and production:
+- **Development**: `backend/data/research_dashboard_dev.db`
+- **Production**: `backend/data/research_dashboard_prod.db`
+
+#### Initialize Database
+```bash
+cd backend/scripts
+./init-db.sh  # Automatically detects environment
+
+# For production environment
+ENVIRONMENT=production ./init-db.sh
+```
+
+#### Backup Management
+The application includes a built-in backup management system:
+- Access via user menu → "数据库备份" (Database Backup)
+- Features:
+  - Create manual backups with custom descriptions
+  - Automatic retention of last 7 backups
+  - Download backups as compressed files
+  - Restore from any backup point
+  - View backup statistics and storage usage
+
+#### CLI Backup Operations
 ```bash
 cd backend
-python init_db.py  # Initialize database with default users
+# Create backup
+python -m app.utils.backup_manager create "description"
+
+# List backups
+python -m app.utils.backup_manager list
+
+# Restore backup
+python -m app.utils.backup_manager restore BACKUP_NAME
 ```
 
 ## 🐛 Troubleshooting
@@ -187,10 +247,16 @@ kill -9 <PID>
 
 ### Database Issues
 ```bash
-# Reset database
+# Reset database (development)
+cd backend/scripts
+./init-db.sh
+
+# Reset database (production - be careful!)
+ENVIRONMENT=production ./init-db.sh
+
+# Or use the backup system
 cd backend
-rm research_dashboard.db
-python init_db.py
+python -m app.utils.backup_manager restore BACKUP_NAME
 ```
 
 ### Deployment Issues

@@ -23,7 +23,7 @@ jobs:
           cd /var/www/research-dashboard
           
           # 执行部署脚本（脚本内会拉取最新代码）
-          ./vps-update.sh
+          ./deploy-scripts/vps-update.sh
           
           echo "🎉 部署完成！"
           echo "📅 部署时间: $(date)"

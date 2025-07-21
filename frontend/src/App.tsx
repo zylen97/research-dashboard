@@ -6,6 +6,7 @@ import CollaboratorManagement from './pages/CollaboratorManagement';
 import LiteratureDiscovery from './pages/LiteratureDiscovery';
 import IdeaManagement from './pages/IdeaManagement';
 import AuthPage from './pages/AuthPage';
+import DatabaseBackup from './pages/DatabaseBackup';
 import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
@@ -39,6 +40,7 @@ const ProtectedRoutes: React.FC = () => {
         <Route path="/collaborators" element={<CollaboratorManagement />} />
         <Route path="/literature" element={<LiteratureDiscovery />} />
         <Route path="/ideas" element={<IdeaManagement />} />
+        <Route path="/backup" element={<DatabaseBackup />} />
         <Route path="/auth" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>

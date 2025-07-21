@@ -10,6 +10,7 @@ import {
   UserOutlined,
   SettingOutlined,
   LogoutOutlined,
+  DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ThemeToggle from './ThemeToggle';
@@ -84,6 +85,11 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: 'settings',
       icon: <SettingOutlined />,
       label: '设置',
+    },
+    {
+      key: 'backup',
+      icon: <DatabaseOutlined />,
+      label: '数据库备份',
     },
     {
       type: 'divider' as const,
@@ -209,6 +215,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClick: ({ key }) => {
                   if (key === 'logout') {
                     logout();
+                  } else if (key === 'backup') {
+                    navigate('/backup');
                   }
                 }
               }}

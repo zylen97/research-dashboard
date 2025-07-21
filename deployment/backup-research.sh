@@ -4,11 +4,13 @@
 # 每天自动备份数据库文件
 
 # 配置
-DB_PATH="/var/www/research-dashboard/backend/research_dashboard.db"
+PROJECT_DIR="/var/www/research-dashboard"
+DB_PATH="$PROJECT_DIR/backend/data/research_dashboard_prod.db"
 BACKUP_DIR="/var/backups/research-dashboard"
-DATE=$(date +%Y%m%d)
-BACKUP_FILE="database_backup_${DATE}.db.gz"
+DATE=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="db_backup_${DATE}.db.gz"
 LOG_FILE="/var/log/research-backup.log"
+MAX_BACKUPS=7  # 保留最近7天的备份
 
 # 创建备份目录
 mkdir -p "$BACKUP_DIR"
@@ -34,15 +36,22 @@ else
     exit 1
 fi
 
-# 清理30天前的旧备份
-find "$BACKUP_DIR" -name "database_backup_*.db.gz" -mtime +30 -delete
-DELETED=$(find "$BACKUP_DIR" -name "database_backup_*.db.gz" -mtime +30 2>/dev/null | wc -l)
-if [ "$DELETED" -gt 0 ]; then
-    echo "$(date): Cleaned up $DELETED old backup files" >> "$LOG_FILE"
+# 清理旧备份（保留最近的N个）
+echo "$(date): Cleaning old backups..." >> "$LOG_FILE"
+BACKUP_COUNT=$(ls -1t "$BACKUP_DIR"/db_backup_*.db.gz 2>/dev/null | wc -l)
+
+if [ "$BACKUP_COUNT" -gt "$MAX_BACKUPS" ]; then
+    # 获取要删除的文件列表
+    DELETE_COUNT=$((BACKUP_COUNT - MAX_BACKUPS))
+    ls -1t "$BACKUP_DIR"/db_backup_*.db.gz | tail -n "$DELETE_COUNT" | while read -r file; do
+        rm -f "$file"
+        echo "$(date): Deleted old backup: $(basename "$file")" >> "$LOG_FILE"
+    done
+    echo "$(date): Cleaned up $DELETE_COUNT old backup files" >> "$LOG_FILE"
 fi
 
 # 显示当前备份数量
-BACKUP_COUNT=$(ls -1 "$BACKUP_DIR"/database_backup_*.db.gz 2>/dev/null | wc -l)
+BACKUP_COUNT=$(ls -1 "$BACKUP_DIR"/db_backup_*.db.gz 2>/dev/null | wc -l)
 echo "$(date): Total backups: $BACKUP_COUNT" >> "$LOG_FILE"
 echo "$(date): Backup completed successfully" >> "$LOG_FILE"
 echo "" >> "$LOG_FILE"

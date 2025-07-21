@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 import logging
+from ..core.config import settings
 
 # 配置日志
 logging.basicConfig(
@@ -20,9 +21,16 @@ class BackupManager:
     """数据库备份管理器"""
     
     def __init__(self):
-        self.backend_dir = Path(__file__).parent.parent
-        self.db_path = self.backend_dir / "research_dashboard.db"
-        self.backup_dir = self.backend_dir / "backups" / "local"
+        self.backend_dir = Path(__file__).parent.parent.parent
+        
+        # 根据环境选择数据库文件
+        if settings.IS_PRODUCTION:
+            self.db_path = self.backend_dir / "data" / "research_dashboard_prod.db"
+            self.backup_dir = self.backend_dir / "backups" / "prod"
+        else:
+            self.db_path = self.backend_dir / "data" / "research_dashboard_dev.db"
+            self.backup_dir = self.backend_dir / "backups" / "dev"
+        
         self.max_backups = 7  # 保留最近7个备份
         
         # 确保备份目录存在
@@ -40,7 +48,7 @@ class BackupManager:
         backup_folder.mkdir(exist_ok=True)
         
         # 复制数据库文件
-        backup_file = backup_folder / "research_dashboard.db"
+        backup_file = backup_folder / self.db_path.name
         shutil.copy2(self.db_path, backup_file)
         
         # 创建备份信息文件
@@ -59,7 +67,7 @@ class BackupManager:
     
     def restore_backup(self, backup_name):
         """从备份恢复数据库"""
-        backup_path = self.backup_dir / backup_name / "research_dashboard.db"
+        backup_path = self.backup_dir / backup_name / self.db_path.name
         
         if not backup_path.exists():
             logger.error(f"备份不存在: {backup_name}")
@@ -84,7 +92,7 @@ class BackupManager:
         for folder in sorted(self.backup_dir.iterdir(), reverse=True):
             if folder.is_dir() and folder.name != ".gitkeep":
                 info_file = folder / "backup_info.txt"
-                db_file = folder / "research_dashboard.db"
+                db_file = folder / self.db_path.name
                 
                 if db_file.exists():
                     info = {
@@ -125,6 +133,31 @@ class BackupManager:
         # 这个功能将在部署脚本中实现
         logger.info("服务器备份将在部署时自动执行")
         pass
+    
+    def get_backup_stats(self):
+        """获取备份统计信息"""
+        backups = self.list_backups()
+        
+        if not backups:
+            return {
+                "total_backups": 0,
+                "total_size": 0,
+                "oldest_backup": None,
+                "newest_backup": None,
+                "average_size": 0
+            }
+        
+        total_size = sum(backup["size"] for backup in backups)
+        
+        return {
+            "total_backups": len(backups),
+            "total_size": total_size,
+            "oldest_backup": backups[-1] if backups else None,
+            "newest_backup": backups[0] if backups else None,
+            "average_size": total_size // len(backups) if backups else 0,
+            "max_backups": self.max_backups,
+            "current_environment": settings.ENVIRONMENT
+        }
 
 
 def main():
