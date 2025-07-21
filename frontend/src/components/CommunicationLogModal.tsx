@@ -82,9 +82,9 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
       project_id: project.id,
       communication_type: 'meeting', // 默认值，后端需要
       title: values.title,
-      content: values.content,
-      action_items: values.action_items,
-      communication_date: values.communication_date?.format('YYYY-MM-DD'),
+      content: values.content || '',
+      ...(values.action_items && { action_items: values.action_items }),
+      ...(values.communication_date && { communication_date: values.communication_date.format('YYYY-MM-DD') }),
     };
 
     try {

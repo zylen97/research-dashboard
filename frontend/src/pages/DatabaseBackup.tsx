@@ -29,7 +29,8 @@ import {
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
-import { ApiResponse, BackupStatsResponse, BackupItem } from '../types';
+import { BackupStatsResponse, BackupItem } from '../types';
+import { ApiResponse } from '../types/api';
 
 const { Title, Text } = Typography;
 
@@ -44,7 +45,7 @@ const DatabaseBackup: React.FC = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const response = await api.get<ApiResponse<BackupItem[]>>('/api/backup/list');
+      const response: ApiResponse<BackupItem[]> = await api.get('/api/backup/list');
       if (response.success) {
         setBackups(response.data);
       }
@@ -59,7 +60,7 @@ const DatabaseBackup: React.FC = () => {
   // 获取备份统计
   const fetchStats = async () => {
     try {
-      const response = await api.get<ApiResponse<BackupStatsResponse>>('/api/backup/stats');
+      const response: ApiResponse<BackupStatsResponse> = await api.get('/api/backup/stats');
       if (response.success) {
         setStats(response.data);
       }
@@ -88,7 +89,7 @@ const DatabaseBackup: React.FC = () => {
         const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
         setCreating(true);
         try {
-          const response = await api.post<ApiResponse<BackupItem>>('/api/backup/create', null, {
+          const response: ApiResponse<BackupItem> = await api.post('/api/backup/create', null, {
             params: { reason }
           });
           if (response.success) {
@@ -110,7 +111,7 @@ const DatabaseBackup: React.FC = () => {
   const handleRestore = async (backupId: string) => {
     setRestoring(backupId);
     try {
-      const response = await api.post<ApiResponse<{ message: string }>>(`/api/backup/restore/${backupId}`);
+      const response: ApiResponse<{ message: string }> = await api.post(`/api/backup/restore/${backupId}`);
       if (response.success) {
         message.success('数据库恢复成功');
         // 可能需要刷新整个应用
@@ -129,7 +130,7 @@ const DatabaseBackup: React.FC = () => {
   // 删除备份
   const handleDelete = async (backupId: string) => {
     try {
-      const response = await api.delete<ApiResponse<{ message: string }>>(`/api/backup/${backupId}`);
+      const response: ApiResponse<{ message: string }> = await api.delete(`/api/backup/${backupId}`);
       if (response.success) {
         message.success('备份删除成功');
         fetchBackups();
