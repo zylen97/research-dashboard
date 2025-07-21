@@ -37,7 +37,7 @@ rm -f build.tar.gz
 tar -czf build.tar.gz build/
 
 # 获取版本号
-VERSION=$(grep -o "Research Dashboard v[0-9]\.[0-9]" build/static/js/main.*.js 2>/dev/null | head -1 | sed 's/Research Dashboard //' || echo "未知")
+VERSION=$(grep -o "Research Dashboard v[0-9]\+\.[0-9]\+" build/static/js/main.*.js 2>/dev/null | head -1 | sed 's/Research Dashboard //' || echo "未知")
 SIZE=$(ls -lh build.tar.gz | awk '{print $5}')
 echo -e "${GREEN}✅ 构建版本: $VERSION (大小: $SIZE)${NC}"
 

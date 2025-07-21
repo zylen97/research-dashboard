@@ -1,26 +1,32 @@
-name: 📤 推送验证
+name: 🚀 自动部署到VPS
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  verify:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
     - name: 📥 检出代码
       uses: actions/checkout@v3
     
-    - name: ✅ 推送成功
-      run: |
-        echo "## 🎉 代码已推送到GitHub！" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📝 提交信息：" >> $GITHUB_STEP_SUMMARY
-        echo "- SHA: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 作者: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 时间: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 🚀 部署步骤：" >> $GITHUB_STEP_SUMMARY
-        echo "1. 在本地构建: \`npm run build\`" >> $GITHUB_STEP_SUMMARY
-        echo "2. 在VPS运行: \`./vps-update.sh\`" >> $GITHUB_STEP_SUMMARY
+    - name: 🚀 部署到VPS
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        script: |
+          echo "🔄 开始自动部署..."
+          cd /var/www/research-dashboard
+          
+          # 拉取最新代码（包括tar.gz）
+          git pull
+          
+          # 执行部署脚本
+          ./vps-update.sh
+          
+          echo "🎉 部署完成！"
+          echo "📅 部署时间: $(date)"
