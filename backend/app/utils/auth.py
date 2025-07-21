@@ -89,9 +89,12 @@ async def verify_token_and_get_user(token: str, db: Session) -> User:
     return user
 
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(lambda: next(get_db()))
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> User:
     """获取当前登录用户"""
     from app.models.database import get_db
-    return await verify_token_and_get_user(credentials.credentials, db)
+    db = next(get_db())
+    try:
+        return await verify_token_and_get_user(credentials.credentials, db)
+    finally:
+        db.close()
