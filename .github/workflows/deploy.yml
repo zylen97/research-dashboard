@@ -1,80 +1,26 @@
-name: 🔨 构建验证
+name: 📤 推送验证
 
 on:
   push:
     branches: [ main ]
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
     
     steps:
     - name: 📥 检出代码
       uses: actions/checkout@v3
-      with:
-        fetch-depth: 2  # 获取最近2次提交用于比较
     
-    - name: 🔍 检查更改
-      id: changes
+    - name: ✅ 推送成功
       run: |
-        echo "检查文件更改..."
-        if git diff --name-only HEAD~1 HEAD | grep -q "frontend/"; then
-          echo "frontend_changed=true" >> $GITHUB_OUTPUT
-          echo "✅ 前端有更改"
-        else
-          echo "frontend_changed=false" >> $GITHUB_OUTPUT
-          echo "📦 前端无更改"
-        fi
-        
-        if git diff --name-only HEAD~1 HEAD | grep -q "backend/"; then
-          echo "backend_changed=true" >> $GITHUB_OUTPUT
-          echo "✅ 后端有更改"
-        else
-          echo "backend_changed=false" >> $GITHUB_OUTPUT
-          echo "📦 后端无更改"
-        fi
-    
-    - name: 📦 设置Node.js
-      if: steps.changes.outputs.frontend_changed == 'true'
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-    
-    - name: 🔨 构建前端（验证）
-      if: steps.changes.outputs.frontend_changed == 'true'
-      run: |
-        echo "开始构建前端..."
-        cd frontend
-        npm ci
-        npm run build
-        echo "✅ 前端构建成功！"
-    
-    - name: 📋 生成部署提醒
-      if: success()
-      run: |
-        echo "## 🎉 构建验证成功！" >> $GITHUB_STEP_SUMMARY
+        echo "## 🎉 代码已推送到GitHub！" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📝 更改内容：" >> $GITHUB_STEP_SUMMARY
-        echo "- 提交: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
-        echo "- 分支: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "### 📝 提交信息：" >> $GITHUB_STEP_SUMMARY
+        echo "- SHA: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
         echo "- 作者: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        
-        if [ "${{ steps.changes.outputs.frontend_changed }}" == "true" ]; then
-          echo "- ✅ 前端有更新" >> $GITHUB_STEP_SUMMARY
-        fi
-        
-        if [ "${{ steps.changes.outputs.backend_changed }}" == "true" ]; then
-          echo "- ✅ 后端有更新" >> $GITHUB_STEP_SUMMARY
-        fi
-        
+        echo "- 时间: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "### 🚀 部署步骤：" >> $GITHUB_STEP_SUMMARY
-        echo "请在VPS上运行以下命令来部署最新版本：" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo '```bash' >> $GITHUB_STEP_SUMMARY
-        echo "cd /var/www/research-dashboard" >> $GITHUB_STEP_SUMMARY
-        echo "./vps-update.sh" >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "📅 构建时间: $(date '+%Y-%m-%d %H:%M:%S')" >> $GITHUB_STEP_SUMMARY
+        echo "1. 在本地构建: \`npm run build\`" >> $GITHUB_STEP_SUMMARY
+        echo "2. 在VPS运行: \`./vps-update.sh\`" >> $GITHUB_STEP_SUMMARY
