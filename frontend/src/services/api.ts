@@ -21,6 +21,11 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
+    // 从localStorage获取token
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -35,6 +40,17 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Error:', error);
+    
+    // 处理401未授权错误
+    if (error.response?.status === 401) {
+      // 清除本地认证信息
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      
+      // 跳转到登录页面
+      window.location.href = '/auth';
+    }
+    
     return Promise.reject(error);
   }
 );

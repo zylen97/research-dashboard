@@ -2,7 +2,7 @@
 # Database backup and restore script for VPS
 
 BACKUP_DIR="/var/www/research-dashboard/backend/backups/server"
-DB_PATH="/var/www/research-dashboard/backend/research_dashboard.db"
+DB_PATH="/var/www/research-dashboard/backend/data/research_dashboard_prod.db"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
 # Create backup directory if not exists
