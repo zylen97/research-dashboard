@@ -12,6 +12,50 @@ jobs:
     - name: 📤 开始部署
       run: echo "开始自动部署到VPS..."
     
+    - name: 📥 检出代码
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 2  # 获取最近2次提交用于比较
+    
+    - name: 🔍 检查更改
+      id: changes
+      run: |
+        echo "检查文件更改..."
+        FRONTEND_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -c "frontend/" || echo "0")
+        BACKEND_CHANGED=$(git diff --name-only HEAD~1 HEAD | grep -c "backend/" || echo "0")
+        echo "frontend_changed=$FRONTEND_CHANGED" >> $GITHUB_OUTPUT
+        echo "backend_changed=$BACKEND_CHANGED" >> $GITHUB_OUTPUT
+        echo "前端更改: $FRONTEND_CHANGED"
+        echo "后端更改: $BACKEND_CHANGED"
+    
+    - name: 📦 设置Node.js
+      if: steps.changes.outputs.frontend_changed != '0'
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+    
+    - name: 🔨 构建前端
+      if: steps.changes.outputs.frontend_changed != '0'
+      run: |
+        echo "构建前端..."
+        cd frontend
+        npm ci
+        npm run build
+        tar -czf build.tar.gz build/
+    
+    - name: 📤 上传前端到VPS
+      if: steps.changes.outputs.frontend_changed != '0'
+      uses: appleboy/scp-action@v0.1.5
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        source: "frontend/build.tar.gz"
+        target: "/tmp/"
+        strip_components: 1
+    
     - name: 🚀 部署到VPS
       uses: appleboy/ssh-action@v0.1.8
       with:
@@ -38,42 +82,51 @@ jobs:
           sudo ln -sf /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/
           sudo nginx -t && sudo systemctl reload nginx
           
+          # 检查是否有前端更新
+          if [ -f /tmp/build.tar.gz ]; then
+            echo "🎨 检测到前端更新，部署新版本..."
+            cd /tmp
+            tar -xzf build.tar.gz
+            
+            # 蓝绿部署：先准备新版本，再快速切换
+            if [ -d /var/www/html ]; then
+              sudo rm -rf /var/www/html.old
+              sudo mv /var/www/html /var/www/html.old
+            fi
+            sudo mv build /var/www/html
+            sudo chown -R www-data:www-data /var/www/html
+            
+            # 清理
+            rm -f build.tar.gz
+            sudo rm -rf /var/www/html.old
+            
+            echo "✅ 前端部署完成"
+          else
+            echo "📦 前端无更新"
+          fi
+          
           echo "🔍 检查后端更改..."
+          cd /var/www/research-dashboard
           BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
           
           if [ "$BACKEND_CHANGED" -gt 0 ]; then
             echo "🐍 检测到后端更改，重启服务..."
             
-            # 检查是否是用户相关的更改
-            USER_CHANGED=$(git diff HEAD~1 --name-only | grep -c "db_init.py" || echo "0")
-            
-            if [ "$USER_CHANGED" -gt 0 ]; then
-              echo "🗄️ 检测到用户配置更改，更新用户信息..."
-              cd backend
-              python3 fix_users_now.py || echo "用户更新脚本不存在，跳过"
-            else
-              echo "🗄️ 备份数据库..."
-              cd backend
-              if [ -f research_dashboard.db ]; then
-                cp research_dashboard.db research_dashboard.db.backup_$(date +%Y%m%d_%H%M%S)
-                echo "✅ 数据库已备份"
-              fi
+            # 备份数据库
+            cd backend
+            if [ -f research_dashboard.db ]; then
+              cp research_dashboard.db research_dashboard.db.backup_$(date +%Y%m%d_%H%M%S)
+              echo "✅ 数据库已备份"
             fi
-            
             cd ..
             
             echo "🔄 重启后端服务..."
             systemctl restart research-backend
-            
-            echo "⏳ 等待服务启动..."
             sleep 5
-            
             echo "✅ 后端服务已重启"
           else
             echo "✅ 后端无更改"
           fi
-          
-          echo "📦 前端保持现有部署（/var/www/html 不变）"
           
           echo "🔄 最终重新加载Nginx..."
           sudo systemctl reload nginx
