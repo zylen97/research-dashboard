@@ -42,6 +42,7 @@ export interface CollaboratorUpdate {
   future_plan?: string;
   background?: string;
   contact_info?: string;
+  is_senior?: boolean;
   is_group?: boolean;
 }
 

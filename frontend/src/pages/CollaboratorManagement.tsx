@@ -290,7 +290,7 @@ const CollaboratorManagement: React.FC = () => {
   const [pendingGroupStatus, setPendingGroupStatus] = useState<boolean>(false);
 
   // 处理表单提交
-  const handleSubmit = async (values: CollaboratorCreate) => {
+  const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean }) => {
     // 提取is_group字段并在本地管理
     const { is_group, ...apiValues } = values;
     
@@ -312,10 +312,11 @@ const CollaboratorManagement: React.FC = () => {
   // 处理编辑
   const handleEdit = (collaborator: Collaborator) => {
     setEditingCollaborator(collaborator);
-    // 设置表单值，包括当前的小组状态
+    // 设置表单值，包括当前的小组状态和高级合作者状态
     form.setFieldsValue({
       ...collaborator,
-      is_group: isGroupCollaborator(collaborator)
+      is_group: isGroupCollaborator(collaborator),
+      is_senior: collaborator.is_senior
     });
     setIsModalVisible(true);
   };
@@ -608,7 +609,7 @@ const CollaboratorManagement: React.FC = () => {
                     icon={isGroup ? <TeamOutlined /> : <UserOutlined />}
                     style={{ 
                       backgroundColor: isGroup ? '#722ed1' : 
-                        (record.is_senior ? '#ff4d4f' : (record.gender === '男' ? '#1890ff' : '#eb2f96')),
+                        (record.is_senior ? '#faad14' : (record.gender === '男' ? '#1890ff' : '#eb2f96')),
                     }}
                   />
                   <div>
@@ -778,6 +779,22 @@ const CollaboratorManagement: React.FC = () => {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="is_senior"
+                valuePropName="checked"
+              >
+                <Checkbox>
+                  <Space>
+                    <UserOutlined style={{ color: '#faad14' }} />
+                    <Text style={{ color: '#faad14' }}>设为高级合作者</Text>
+                  </Space>
+                </Checkbox>
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item
             name="future_plan"
             label="未来规划"
@@ -839,7 +856,7 @@ const CollaboratorManagement: React.FC = () => {
                       icon={isGroup ? <TeamOutlined /> : <UserOutlined />}
                       style={{ 
                         backgroundColor: isGroup ? '#722ed1' : 
-                          (selectedCollaborator.gender === '男' ? '#1890ff' : '#eb2f96'),
+                          (selectedCollaborator.is_senior ? '#faad14' : (selectedCollaborator.gender === '男' ? '#1890ff' : '#eb2f96')),
                         marginBottom: 16
                       }}
                     />

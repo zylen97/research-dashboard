@@ -5,7 +5,7 @@ A modern research project management system with built-in authentication and col
 ## 🚀 Features
 
 ### Authentication & Security
-- **Pre-configured Users**: 4 built-in users (zl, zz, yq, dz) with secure authentication
+- **Pre-configured Users**: 4 built-in users (zl, zz, yq, dj) with secure authentication
 - **JWT Token System**: Secure session management with automatic expiration
 - **Enhanced Security**: CORS protection, rate limiting, input validation
 - **Secure API**: All endpoints protected with authentication middleware
@@ -120,7 +120,7 @@ cd research-dashboard
 | zl       | 123      | User 1      |
 | zz       | 123      | User 2      |
 | yq       | 123      | User 3      |
-| dz       | 123      | User 4      |
+| dj       | 123      | User 4      |
 
 ## 🌐 Production Deployment
 

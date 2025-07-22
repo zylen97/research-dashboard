@@ -8,7 +8,6 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
-  SettingOutlined,
   LogoutOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons';
@@ -72,6 +71,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       label: 'Idea管理',
       onClick: () => navigate('/ideas'),
     },
+    {
+      key: '/backup',
+      icon: <DatabaseOutlined />,
+      label: '数据库备份',
+      onClick: () => navigate('/backup'),
+    },
   ];
 
   // 用户菜单
@@ -80,16 +85,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       key: 'profile',
       icon: <UserOutlined />,
       label: '个人资料',
-    },
-    {
-      key: 'settings',
-      icon: <SettingOutlined />,
-      label: '设置',
-    },
-    {
-      key: 'backup',
-      icon: <DatabaseOutlined />,
-      label: '数据库备份',
     },
     {
       type: 'divider' as const,
@@ -122,7 +117,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       }}>
         {(!collapsed || mobileView) && (
           <Title level={5} style={{ margin: 0, color: '#1890ff', fontWeight: 600 }}>
-            Research Dashboard v5.0 🚀
+            Research Dashboard
           </Title>
         )}
         {collapsed && !mobileView && (
@@ -215,8 +210,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
                 onClick: ({ key }) => {
                   if (key === 'logout') {
                     logout();
-                  } else if (key === 'backup') {
-                    navigate('/backup');
                   }
                 }
               }}

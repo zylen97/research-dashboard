@@ -22,6 +22,7 @@ class CollaboratorUpdate(BaseModel):
     future_plan: Optional[str] = None
     background: Optional[str] = None
     contact_info: Optional[str] = Field(None, max_length=200)
+    is_senior: Optional[bool] = None
 
 class Collaborator(CollaboratorBase):
     id: int

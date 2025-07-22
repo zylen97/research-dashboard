@@ -84,7 +84,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
       title: values.title,
       content: values.content || '',
       ...(values.action_items && { action_items: values.action_items }),
-      ...(values.communication_date && { communication_date: values.communication_date.format('YYYY-MM-DD') }),
+      ...(values.communication_date && { communication_date: values.communication_date.toISOString() }),
     };
 
     try {

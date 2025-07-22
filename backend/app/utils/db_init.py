@@ -45,9 +45,9 @@ def init_users():
                 "password": "123"
             },
             {
-                "username": "dz",
-                "email": "dz@example.com",
-                "display_name": "DZ", 
+                "username": "dj",
+                "email": "dj@example.com",
+                "display_name": "DJ", 
                 "password": "123"
             }
         ]

@@ -5,7 +5,6 @@ import {
   Form,
   Input,
   Select,
-  DatePicker,
   Typography,
   Table,
 } from 'antd';
@@ -22,7 +21,6 @@ import {
   useProjectActions 
 } from '../components/research-dashboard';
 import CommunicationLogModal from '../components/CommunicationLogModal';
-import dayjs from 'dayjs';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -66,7 +64,6 @@ const ResearchDashboard: React.FC = () => {
   const handleSubmit = async (values: any) => {
     const projectData: ResearchProjectCreate = {
       ...values,
-      expected_completion: values.expected_completion?.format('YYYY-MM-DD'),
     };
 
     if (editingProject) {
@@ -86,7 +83,6 @@ const ResearchDashboard: React.FC = () => {
     setEditingProject(project);
     form.setFieldsValue({
       ...project,
-      expected_completion: project.expected_completion ? dayjs(project.expected_completion) : undefined,
       collaborator_ids: project.collaborators.map(c => c.id),
     });
     setIsModalVisible(true);
@@ -235,12 +231,6 @@ const ResearchDashboard: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="expected_completion"
-            label="预计完成时间"
-          >
-            <DatePicker style={{ width: '100%' }} />
-          </Form.Item>
 
           <Form.Item
             name="collaborator_ids"
