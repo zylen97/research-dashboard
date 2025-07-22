@@ -23,12 +23,14 @@ class BackupManager:
     def __init__(self):
         self.backend_dir = Path(__file__).parent.parent.parent
         
-        # 备份应用实际使用的数据库文件
+        # 根据环境变量获取实际的数据库路径
         if settings.IS_PRODUCTION:
-            self.db_path = self.backend_dir / "research_dashboard.db"  # 修复：备份应用真正使用的数据库
+            # 生产环境：data/research_dashboard_prod.db
+            self.db_path = self.backend_dir / "data" / "research_dashboard_prod.db"
             self.backup_dir = self.backend_dir / "backups" / "production"
         else:
-            self.db_path = self.backend_dir / "research_dashboard.db"  # 开发环境也使用同样的文件
+            # 开发环境：data/research_dashboard_dev.db
+            self.db_path = self.backend_dir / "data" / "research_dashboard_dev.db"
             self.backup_dir = self.backend_dir / "backups" / "dev"
         
         self.max_backups = 7  # 保留最近7个备份
