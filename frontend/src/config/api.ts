@@ -66,6 +66,27 @@ export const API_ENDPOINTS = {
     CREATE: '/api/ideas',
     UPDATE: (id: number) => `/api/ideas/${id}`,
     DELETE: (id: number) => `/api/ideas/${id}`,
+    STATS: '/api/ideas/stats/summary',
+    SEARCH: '/api/ideas/search',
+    CONVERT_TO_PROJECT: (id: number) => `/api/ideas/${id}/convert-to-project`,
+  },
+  // 系统配置
+  CONFIG: {
+    LIST: '/api/config',
+    CREATE: '/api/config',
+    UPDATE: (id: number) => `/api/config/${id}`,
+    DELETE: (id: number) => `/api/config/${id}`,
+    AI_PROVIDERS: '/api/config/ai/providers',
+    AI_TEST: '/api/config/ai/test',
+  },
+  // 备份管理
+  BACKUP: {
+    STATS: '/api/backup/stats',
+    LIST: '/api/backup/list',
+    CREATE: '/api/backup/create',
+    RESTORE: (id: string) => `/api/backup/restore/${id}`,
+    DELETE: (id: string) => `/api/backup/${id}`,
+    DOWNLOAD: (id: string) => `/api/backup/download/${id}`,
   },
 } as const;
 

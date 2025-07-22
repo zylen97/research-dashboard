@@ -116,6 +116,20 @@ async def update_research_project(
         )
     
     update_data = project_update.dict(exclude_unset=True, exclude={'collaborator_ids'})
+    
+    # 特殊处理is_todo字段
+    if 'is_todo' in update_data:
+        from datetime import datetime
+        db_project.is_todo = update_data['is_todo']
+        if update_data['is_todo']:
+            # 标记为待办时记录时间
+            db_project.todo_marked_at = datetime.utcnow()
+        else:
+            # 取消待办标记时清除时间
+            db_project.todo_marked_at = None
+        update_data.pop('is_todo')  # 从 update_data 中移除，已单独处理
+    
+    # 处理其他字段
     for field, value in update_data.items():
         setattr(db_project, field, value)
     

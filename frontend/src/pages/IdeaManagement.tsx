@@ -17,6 +17,7 @@ import {
   Table,
   Row,
   Col,
+  Avatar,
 } from 'antd';
 import {
   PlusOutlined,
@@ -25,10 +26,12 @@ import {
   ProjectOutlined,
   MoreOutlined,
   SearchOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ideaApi, collaboratorApi } from '../services/api';
 import { Idea, IdeaCreate } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -36,6 +39,7 @@ const { TextArea } = Input;
 const { Search } = Input;
 
 const IdeaManagement: React.FC = () => {
+  const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
@@ -246,10 +250,22 @@ const IdeaManagement: React.FC = () => {
     <div>
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
-        <Title level={3} style={{ margin: 0 }}>
-          <BulbOutlined style={{ marginRight: 8 }} />
-          Idea管理
-        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <Title level={3} style={{ margin: 0 }}>
+            <BulbOutlined style={{ marginRight: 8 }} />
+            Idea管理
+          </Title>
+          {user && (
+            <Tag color="blue" style={{ marginBottom: 0 }}>
+              <Avatar 
+                size="small" 
+                icon={<UserOutlined />} 
+                style={{ marginRight: 4 }}
+              />
+              {user.display_name} 的专属面板
+            </Tag>
+          )}
+        </div>
         <Button 
           type="primary" 
           icon={<PlusOutlined />}
@@ -364,7 +380,7 @@ const IdeaManagement: React.FC = () => {
           showQuickJumper: true,
           showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
         }}
-        scroll={{ x: 1400 }}
+        scroll={{ x: 1500 }}
         columns={[
           {
             title: 'Idea标题',
@@ -477,6 +493,25 @@ const IdeaManagement: React.FC = () => {
                       <Tag>...</Tag>
                     </Tooltip>
                   )}
+                </Space>
+              );
+            },
+          },
+          {
+            title: '负责人',
+            dataIndex: 'user',
+            key: 'user',
+            width: 100,
+            render: (user: any) => {
+              if (!user) return '-';
+              return (
+                <Space>
+                  <Avatar 
+                    size="small" 
+                    icon={<UserOutlined />}
+                    style={{ backgroundColor: '#1890ff' }}
+                  />
+                  <Text>{user.display_name || user.username}</Text>
                 </Space>
               );
             },

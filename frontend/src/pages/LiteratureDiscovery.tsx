@@ -16,6 +16,9 @@ import {
   Col,
   Statistic,
   Popconfirm,
+  Select,
+  Progress,
+  Alert,
 } from 'antd';
 import {
   UploadOutlined,
@@ -27,28 +30,71 @@ import {
   BookOutlined,
   BulbOutlined,
   FileTextOutlined,
+  UserOutlined,
+  RobotOutlined,
+  LoadingOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { literatureApi } from '../services/api';
 import { Literature, LiteratureCreate, ValidationRequest } from '../types';
+import { useAuth } from '../contexts/AuthContext';
 import type { ColumnsType } from 'antd/es/table';
 
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
+const { Option } = Select;
 
 const LiteratureDiscovery: React.FC = () => {
+  const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
   const [editingLiterature, setEditingLiterature] = useState<Literature | null>(null);
+  const [convertingLiterature, setConvertingLiterature] = useState<Literature | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const [isBatchMatchingModalVisible, setIsBatchMatchingModalVisible] = useState(false);
+  const [predefinedPrompts, setPredefinedPrompts] = useState<any[]>([]);
+  const [aiProviders, setAiProviders] = useState<any[]>([]);
+  const [matchingProgress, setMatchingProgress] = useState({ current: 0, total: 0 });
   const [form] = Form.useForm();
   const [validationForm] = Form.useForm();
+  const [batchMatchingForm] = Form.useForm();
+  const [convertForm] = Form.useForm();
   const queryClient = useQueryClient();
 
   // 获取文献数据
   const { data: literature = [], isLoading } = useQuery({
     queryKey: ['literature'],
     queryFn: () => literatureApi.getLiterature(),
+  });
+
+  // 获取预定义prompts
+  const { data: promptsData = [] } = useQuery({
+    queryKey: ['literature-prompts'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/literature/prompts');
+        return response.json();
+      } catch (error) {
+        console.error('获取prompts失败:', error);
+        return [];
+      }
+    },
+  });
+
+  // 获取AI providers
+  const { data: providersData = [] } = useQuery({
+    queryKey: ['ai-providers'],
+    queryFn: async () => {
+      try {
+        const response = await fetch('/api/config/ai/providers');
+        return response.json();
+      } catch (error) {
+        console.error('获取AI providers失败:', error);
+        return [];
+      }
+    },
   });
 
   // 创建文献mutation
@@ -146,14 +192,48 @@ const LiteratureDiscovery: React.FC = () => {
 
   // 转换为idea mutation
   const convertToIdeaMutation = useMutation({
-    mutationFn: literatureApi.convertToIdea,
+    mutationFn: ({ id, ideaData }: { id: number; ideaData?: any }) => 
+      literatureApi.convertToIdea(id, ideaData),
     onSuccess: (response) => {
       message.success(`文献已转换为idea！ID: ${response.idea_id}`);
+      setIsConvertModalVisible(false);
+      setConvertingLiterature(null);
+      convertForm.resetFields();
       queryClient.invalidateQueries({ queryKey: ['literature'] });
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
     },
     onError: (error) => {
       message.error('转换失败：' + error.message);
+    },
+  });
+
+  // 批量AI匹配mutation
+  const batchMatchingMutation = useMutation({
+    mutationFn: async (data: { literature_ids: number[]; prompt_template: string; ai_provider: string }) => {
+      const response = await fetch('/api/literature/batch-match', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Batch matching failed');
+      }
+      return response.json();
+    },
+    onSuccess: (response) => {
+      message.success(`批量匹配完成！处理${response.total_processed}篇文献，成功${response.successful_count}篇`);
+      setIsBatchMatchingModalVisible(false);
+      batchMatchingForm.resetFields();
+      setSelectedRowKeys([]);
+      setMatchingProgress({ current: 0, total: 0 });
+      queryClient.invalidateQueries({ queryKey: ['literature'] });
+    },
+    onError: (error) => {
+      message.error('批量匹配失败：' + error.message);
+      setMatchingProgress({ current: 0, total: 0 });
     },
   });
 
@@ -209,7 +289,42 @@ const LiteratureDiscovery: React.FC = () => {
 
   // 处理转换为idea
   const handleConvertToIdea = (record: Literature) => {
-    convertToIdeaMutation.mutate(record.id);
+    setConvertingLiterature(record);
+    convertForm.setFieldsValue({
+      title: record.title,
+      description: record.abstract || `基于文献: ${record.title}`,
+      tags: record.keywords,
+      priority: 'medium',
+    });
+    setIsConvertModalVisible(true);
+  };
+
+  // 处理转换提交
+  const handleConvertSubmit = (values: any) => {
+    if (convertingLiterature) {
+      convertToIdeaMutation.mutate({
+        id: convertingLiterature.id,
+        ideaData: values,
+      });
+    }
+  };
+
+  // 处理批量AI匹配
+  const handleBatchMatching = (values: { prompt_template: string; ai_provider: string }) => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请选择要匹配的文献');
+      return;
+    }
+
+    setMatchingProgress({ current: 0, total: selectedRowKeys.length });
+    
+    const data = {
+      literature_ids: selectedRowKeys as number[],
+      prompt_template: values.prompt_template,
+      ai_provider: values.ai_provider,
+    };
+
+    batchMatchingMutation.mutate(data);
   };
 
   // 文件上传配置
@@ -298,6 +413,30 @@ const LiteratureDiscovery: React.FC = () => {
       onFilter: (value, record) => record.validation_status === value,
     },
     {
+      title: 'AI分析结果',
+      dataIndex: 'validation_reason',
+      key: 'ai_response',
+      width: 250,
+      render: (reason: string) => {
+        if (!reason) return '-';
+        return (
+          <Tooltip title={reason} placement="top">
+            <div style={{ 
+              overflow: 'hidden', 
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              maxWidth: '230px',
+              fontSize: '12px',
+              color: '#666'
+            }}>
+              <RobotOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+              {reason}
+            </div>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: '状态',
       dataIndex: 'status',
       key: 'status',
@@ -369,10 +508,18 @@ const LiteratureDiscovery: React.FC = () => {
     <div>
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
-        <Title level={3} style={{ margin: 0 }}>
-          <BookOutlined style={{ marginRight: 8 }} />
-          Idea发掘系统
-        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Title level={3} style={{ margin: 0 }}>
+            <BookOutlined style={{ marginRight: 8 }} />
+            Idea发掘系统
+          </Title>
+          {user && (
+            <Tag color="blue">
+              <UserOutlined style={{ marginRight: 4 }} />
+              {user.display_name} 的专属面板
+            </Tag>
+          )}
+        </div>
         <Space>
           <Upload {...uploadProps}>
             <Button icon={<UploadOutlined />} loading={uploadMutation.isPending}>
@@ -381,11 +528,12 @@ const LiteratureDiscovery: React.FC = () => {
           </Upload>
           <Button
             type="primary"
-            icon={<CheckCircleOutlined />}
+            icon={<RobotOutlined />}
             disabled={selectedRowKeys.length === 0}
-            onClick={() => setIsValidationModalVisible(true)}
+            onClick={() => setIsBatchMatchingModalVisible(true)}
+            loading={batchMatchingMutation.isPending}
           >
-            批量验证 ({selectedRowKeys.length})
+            AI批量匹配 ({selectedRowKeys.length})
           </Button>
         </Space>
       </div>
@@ -581,6 +729,265 @@ const LiteratureDiscovery: React.FC = () => {
               placeholder="例如：我研究的是深度学习在自然语言处理中的应用，特别关注Transformer架构和注意力机制。请评估这些文献是否与我的研究方向相关，是否具有参考价值..."
             />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 转换为Idea模态框 */}
+      <Modal
+        title="转换文献为Idea"
+        open={isConvertModalVisible}
+        onCancel={() => {
+          setIsConvertModalVisible(false);
+          setConvertingLiterature(null);
+          convertForm.resetFields();
+        }}
+        onOk={() => convertForm.submit()}
+        confirmLoading={convertToIdeaMutation.isPending}
+        width={800}
+      >
+        {convertingLiterature && (
+          <div>
+            {/* 显示原文献信息 */}
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Title level={5}>原文献信息</Title>
+              <Paragraph>
+                <Text strong>标题：</Text> {convertingLiterature.title}
+              </Paragraph>
+              {convertingLiterature.authors && (
+                <Paragraph>
+                  <Text strong>作者：</Text> {convertingLiterature.authors}
+                </Paragraph>
+              )}
+              {convertingLiterature.journal && (
+                <Paragraph>
+                  <Text strong>期刊：</Text> {convertingLiterature.journal}
+                </Paragraph>
+              )}
+              {convertingLiterature.abstract && (
+                <Paragraph ellipsis={{ rows: 3, expandable: true }}>
+                  <Text strong>摘要：</Text> {convertingLiterature.abstract}
+                </Paragraph>
+              )}
+            </Card>
+
+            {/* Idea编辑表单 */}
+            <Form
+              form={convertForm}
+              layout="vertical"
+              onFinish={handleConvertSubmit}
+            >
+              <Form.Item
+                name="title"
+                label="Idea标题"
+                rules={[{ required: true, message: '请输入idea标题' }]}
+              >
+                <Input placeholder="请输入idea标题" />
+              </Form.Item>
+
+              <Form.Item
+                name="description"
+                label="详细描述"
+                rules={[{ required: true, message: '请输入详细描述' }]}
+              >
+                <TextArea 
+                  rows={4} 
+                  placeholder="请详细描述这个idea的核心内容、目标和价值"
+                />
+              </Form.Item>
+
+              <Row gutter={16}>
+                <Col span={8}>
+                  <Form.Item
+                    name="priority"
+                    label="优先级"
+                    initialValue="medium"
+                  >
+                    <Select>
+                      <Select.Option value="high">高</Select.Option>
+                      <Select.Option value="medium">中</Select.Option>
+                      <Select.Option value="low">低</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="difficulty_level"
+                    label="难度等级"
+                  >
+                    <Select placeholder="选择难度">
+                      <Select.Option value="easy">简单</Select.Option>
+                      <Select.Option value="medium">中等</Select.Option>
+                      <Select.Option value="hard">困难</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
+                  <Form.Item
+                    name="potential_impact"
+                    label="潜在影响"
+                  >
+                    <Select placeholder="选择潜在影响">
+                      <Select.Option value="low">低</Select.Option>
+                      <Select.Option value="medium">中</Select.Option>
+                      <Select.Option value="high">高</Select.Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="estimated_duration"
+                    label="预计耗时"
+                  >
+                    <Input placeholder="例如：3个月、半年等" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="required_skills"
+                    label="所需技能"
+                  >
+                    <Input placeholder="描述完成这个idea需要的技能" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="tags"
+                label="标签"
+              >
+                <Input placeholder="输入标签，用逗号分隔" />
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
+
+      {/* 批量AI匹配模态框 */}
+      <Modal
+        title="AI批量匹配文献"
+        open={isBatchMatchingModalVisible}
+        onCancel={() => {
+          if (!batchMatchingMutation.isPending) {
+            setIsBatchMatchingModalVisible(false);
+            batchMatchingForm.resetFields();
+            setMatchingProgress({ current: 0, total: 0 });
+          }
+        }}
+        onOk={() => batchMatchingForm.submit()}
+        confirmLoading={batchMatchingMutation.isPending}
+        width={800}
+        closable={!batchMatchingMutation.isPending}
+        maskClosable={false}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Alert
+            message={`已选择 ${selectedRowKeys.length} 篇文献进行AI匹配`}
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+          
+          {batchMatchingMutation.isPending && (
+            <div style={{ marginBottom: 16 }}>
+              <Text>匹配进度：</Text>
+              <Progress
+                percent={matchingProgress.total > 0 ? Math.round((matchingProgress.current / matchingProgress.total) * 100) : 0}
+                status="active"
+                strokeColor="#1890ff"
+              />
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {matchingProgress.current} / {matchingProgress.total}
+              </Text>
+            </div>
+          )}
+        </div>
+        
+        <Form
+          form={batchMatchingForm}
+          layout="vertical"
+          onFinish={handleBatchMatching}
+          disabled={batchMatchingMutation.isPending}
+        >
+          <Form.Item
+            name="ai_provider"
+            label="选择AI提供商"
+            rules={[{ required: true, message: '请选择AI提供商' }]}
+            tooltip="选择用于文献匹配分析的AI提供商"
+          >
+            <Select placeholder="选择AI提供商" size="large">
+              {providersData.map((provider: any) => (
+                <Option key={provider.provider} value={provider.provider}>
+                  <Space>
+                    <RobotOutlined />
+                    {provider.provider} {provider.model && `(${provider.model})`}
+                  </Space>
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="prompt_template"
+            label="选择匹配策略"
+            rules={[{ required: true, message: '请选择或输入匹配提示词' }]}
+            tooltip="选择预定义的匹配策略，或自定义提示词"
+          >
+            <Select
+              placeholder="选择匹配策略或自定义"
+              size="large"
+              style={{ marginBottom: 8 }}
+              onChange={(value) => {
+                if (value) {
+                  const selectedPrompt = promptsData.find((p: any) => p.id === value);
+                  if (selectedPrompt) {
+                    batchMatchingForm.setFieldsValue({
+                      prompt_template: selectedPrompt.template
+                    });
+                  }
+                }
+              }}
+              allowClear
+            >
+              {promptsData.map((prompt: any) => (
+                <Option key={prompt.id} value={prompt.id}>
+                  <div>
+                    <Text strong>{prompt.name}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                      {prompt.template.substring(0, 100)}...
+                    </Text>
+                  </div>
+                </Option>
+              ))}
+              <Option value="custom">
+                <Text strong>自定义提示词</Text>
+              </Option>
+            </Select>
+            
+            <TextArea 
+              rows={8} 
+              placeholder="输入自定义的匹配提示词..."
+              style={{ fontSize: '12px' }}
+            />
+          </Form.Item>
+
+          <Alert
+            message="匹配说明"
+            description={
+              <div>
+                <p>• AI将根据您提供的提示词分析每篇文献的相关性</p>
+                <p>• 分析结果将显示在"AI分析结果"列中</p>
+                <p>• 相关的文献状态会更新为"已验证"，不相关的会标记为"已拒绝"</p>
+                <p>• 请耐心等待，批量匹配可能需要一些时间</p>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
         </Form>
       </Modal>
     </div>

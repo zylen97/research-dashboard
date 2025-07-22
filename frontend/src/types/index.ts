@@ -1,7 +1,9 @@
-// API响应类型
+// API响应类型 - 统一后端响应格式
 export interface ApiResponse<T> {
+  success: boolean;
   data: T;
   message?: string;
+  total?: number;
 }
 
 // 分页类型
@@ -16,13 +18,22 @@ export interface Collaborator {
   name: string;
   gender?: string;
   class_name?: string;
-  future_plan?: string;
+  student_id?: string;
+  phone?: string;
+  email?: string;
+  qq?: string;
+  wechat?: string;
+  skills?: string;
+  research_interests?: string;
+  future_plans?: string;
   background?: string;
   contact_info?: string;
-  is_senior?: boolean;
-  is_group?: boolean; // 是否为小组/团队
+  is_senior: boolean;
+  is_deleted: boolean;  // 软删除标记
+  deleted_at?: string;  // 删除时间
   created_at: string;
   updated_at: string;
+  project_count?: number;
 }
 
 export interface CollaboratorCreate {
@@ -32,7 +43,7 @@ export interface CollaboratorCreate {
   future_plan?: string;
   background?: string;
   contact_info?: string;
-  is_group?: boolean;
+  is_senior?: boolean;
 }
 
 export interface CollaboratorUpdate {
@@ -43,7 +54,6 @@ export interface CollaboratorUpdate {
   background?: string;
   contact_info?: string;
   is_senior?: boolean;
-  is_group?: boolean;
 }
 
 // 研究项目类型
@@ -60,7 +70,7 @@ export interface ResearchProject {
   collaborators: Collaborator[];
   latest_communication?: string;
   actual_start_date?: string;
-  is_todo?: boolean; // 是否标记为待办事项
+  is_todo: boolean; // 是否标记为待办事项
   todo_marked_at?: string; // 标记为待办事项的时间
 }
 
@@ -138,6 +148,7 @@ export interface Idea {
   description: string;
   source: string;
   source_literature_id?: number;
+  user_id: number;
   difficulty_level?: string;
   estimated_duration?: string;
   required_skills?: string;
@@ -147,6 +158,7 @@ export interface Idea {
   tags?: string;
   created_at: string;
   updated_at: string;
+  user?: User;
   source_literature?: Literature;
 }
 
@@ -229,6 +241,38 @@ export interface ValidationResult {
   status: string;
   score?: number;
   reason: string;
+  ai_response?: string;
+}
+
+// 批量AI匹配相关类型
+export interface BatchMatchingRequest {
+  literature_ids: number[];
+  prompt_template: string;
+  ai_provider: string;
+}
+
+export interface MatchingResult {
+  literature_id: number;
+  status: string;
+  score?: number;
+  reason: string;
+  ai_response?: string;
+}
+
+export interface BatchMatchingResponse {
+  success: boolean;
+  message: string;
+  results: MatchingResult[];
+  total_processed: number;
+  successful_count: number;
+  error_count: number;
+}
+
+// AI提示词模板类型
+export interface PredefinedPrompt {
+  id: string;
+  name: string;
+  template: string;
 }
 
 // 统计类型
@@ -273,9 +317,10 @@ export interface UserLogin {
 }
 
 
+// 认证令牌响应 - 与后端Token模型匹配
 export interface AuthToken {
   access_token: string;
-  token_type: string;
+  token_type: string;  // 默认"bearer"
   expires_in: number;
   user: User;
 }
@@ -287,4 +332,105 @@ export interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+}
+
+// 系统配置类型
+export interface SystemConfig {
+  id: number;
+  key: string;
+  value: string;
+  category: string;
+  description?: string;
+  is_encrypted: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  created_by_id?: number;
+  updated_by_id?: number;
+}
+
+export interface SystemConfigCreate {
+  key: string;
+  value: string;
+  category: string;
+  description?: string;
+  is_encrypted?: boolean;
+  is_active?: boolean;
+}
+
+export interface SystemConfigUpdate {
+  value?: string;
+  description?: string;
+  is_active?: boolean;
+}
+
+// AI配置相关类型
+export interface AIProvider {
+  provider: string;
+  name: string;
+  is_configured: boolean;
+  is_active: boolean;
+  config?: {
+    api_key?: string;
+    api_url?: string;
+    model?: string;
+    max_tokens?: number;
+    temperature?: number;
+  };
+}
+
+export interface AIProviderCreate {
+  provider: string;
+  name: string;
+  api_key: string;
+  api_url?: string;
+  model?: string;
+  max_tokens?: number;
+  temperature?: number;
+}
+
+export interface AITestResponse {
+  success: boolean;
+  message: string;
+  provider: string;
+  response_time?: number;
+  response_content?: string;
+}
+
+// 备份管理相关类型
+export interface BackupStats {
+  total_backups: number;
+  total_size: number;
+  oldest_backup: BackupItem | null;
+  newest_backup: BackupItem | null;
+  average_size: number;
+  max_backups: number;
+  current_environment: string;
+}
+
+export interface BackupItem {
+  id: string;
+  name: string;
+  size: number;
+  sizeFormatted: string;
+  created: string;
+  createdFormatted: string;
+  details?: string;
+  collaborators_count?: number;
+  projects_count?: number;
+  logs_count?: number;
+}
+
+export interface BackupListResponse {
+  data: BackupItem[];
+  total: number;
+}
+
+export interface BackupCreateResponse {
+  id: string;
+  name: string;
+  size: number;
+  sizeFormatted: string;
+  created: string;
+  createdFormatted: string;
 }

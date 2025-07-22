@@ -1,23 +1,17 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import {
-  Card,
   Button,
   Modal,
   Form,
   Input,
-  Select,
   message,
   Avatar,
   Typography,
   Tag,
   Space,
-  Descriptions,
   Table,
-  Row,
-  Col,
-  Radio,
-  Statistic,
   Checkbox,
+  Radio,
 } from 'antd';
 import {
   PlusOutlined,
@@ -31,9 +25,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { collaboratorApi, researchApi } from '../services/api';
 import { Collaborator, CollaboratorCreate } from '../types';
+import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
+import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
+import CollaboratorDetailModal from '../components/collaborator/CollaboratorDetailModal';
+import { formatTextWithLineBreaks } from '../utils/textFormatters';
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
 
 const CollaboratorManagement: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -63,48 +60,6 @@ const CollaboratorManagement: React.FC = () => {
   // 用于跟踪删除类型的ref
   const deleteTypeRef = useRef<'soft' | 'hard'>('soft');
   
-  // 格式化文本，在数字后添加换行
-  const formatTextWithLineBreaks = (text: string | undefined): React.ReactNode => {
-    if (!text) return text;
-    
-    // 先清理掉所有现有的换行符和多余空格
-    const cleaned = text.replace(/\s+/g, ' ').trim();
-    
-    // 找到所有数字+点的匹配位置
-    const matches = Array.from(cleaned.matchAll(/(\d+\.)/g));
-    
-    if (matches.length === 0) return cleaned;
-    
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    
-    matches.forEach((match, index) => {
-      const matchStart = match.index!;
-      const matchText = match[0];
-      
-      // 添加匹配前的文本
-      const beforeText = cleaned.slice(lastIndex, matchStart);
-      if (beforeText) {
-        parts.push(beforeText);
-      }
-      
-      // 如果不是第一个匹配，添加换行
-      if (index > 0) {
-        parts.push(<br key={`br-${index}`} />);
-      }
-      
-      parts.push(matchText);
-      lastIndex = matchStart + matchText.length;
-    });
-    
-    // 添加最后剩余的文本
-    const remainingText = cleaned.slice(lastIndex);
-    if (remainingText) {
-      parts.push(remainingText);
-    }
-    
-    return parts;
-  };
 
   // 获取合作者数据
   const { data: collaborators = [], isLoading, refetch } = useQuery({
@@ -475,52 +430,10 @@ const CollaboratorManagement: React.FC = () => {
       </div>
 
       {/* 统计卡片 */}
-      <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col xs={12} sm={8} lg={5}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic 
-              title="总合作者" 
-              value={collaboratorStats.total} 
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} lg={5}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic 
-              title="小组/团队" 
-              value={collaboratorStats.groups} 
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} lg={5}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic 
-              title="已参与项目" 
-              value={collaboratorStats.participating} 
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} lg={5}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic 
-              title="未参与项目" 
-              value={collaboratorStats.notParticipating} 
-              valueStyle={{ color: '#ff4d4f' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={8} lg={4}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic 
-              title="高级合作者" 
-              value={collaboratorStats.senior} 
-              valueStyle={{ color: '#faad14' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <CollaboratorStatistics 
+        collaborators={collaborators} 
+        localGroupMarks={localGroupMarks} 
+      />
 
       {/* 合作者列表 */}
       <div className="table-container">
@@ -671,201 +584,35 @@ const CollaboratorManagement: React.FC = () => {
       </div>
 
       {/* 创建/编辑合作者模态框 */}
-      <Modal
-        title={editingCollaborator ? '编辑合作者' : '新增合作者'}
-        open={isModalVisible}
+      <CollaboratorFormModal
+        visible={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
           setEditingCollaborator(null);
-          setPendingGroupStatus(false);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
+        editingCollaborator={editingCollaborator}
+        form={form}
+        onSubmit={handleSubmit}
         confirmLoading={createCollaboratorMutation.isPending || updateCollaboratorMutation.isPending}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <Form.Item
-            name="name"
-            label="姓名"
-            rules={[{ required: true, message: '请输入姓名' }]}
-          >
-            <Input placeholder="请输入姓名" />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="gender"
-                label="性别"
-              >
-                <Select placeholder="请选择性别">
-                  <Select.Option value="男">男</Select.Option>
-                  <Select.Option value="女">女</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="class_name"
-                label="班级"
-              >
-                <Input placeholder="请输入班级" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="is_group"
-                valuePropName="checked"
-                style={{ marginTop: 30 }}
-              >
-                <Checkbox>
-                  <Space>
-                    <TeamOutlined style={{ color: '#722ed1' }} />
-                    <Text style={{ color: '#722ed1' }}>标记为小组/团队</Text>
-                  </Space>
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="is_senior"
-                valuePropName="checked"
-              >
-                <Checkbox>
-                  <Space>
-                    <UserOutlined style={{ color: '#faad14' }} />
-                    <Text style={{ color: '#faad14' }}>设为高级合作者</Text>
-                  </Space>
-                </Checkbox>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item
-            name="future_plan"
-            label="未来规划"
-          >
-            <TextArea 
-              rows={3} 
-              placeholder="请输入未来规划"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="background"
-            label="具体情况和背景"
-          >
-            <TextArea 
-              rows={4} 
-              placeholder="请输入具体情况和背景信息"
-            />
-          </Form.Item>
-        </Form>
-      </Modal>
+      />
 
       {/* 合作者详情模态框 */}
-      <Modal
-        title="合作者详情"
-        open={isDetailModalVisible}
+      <CollaboratorDetailModal
+        visible={isDetailModalVisible}
+        collaborator={selectedCollaborator}
+        isGroup={selectedCollaborator ? isGroupCollaborator(selectedCollaborator) : false}
         onCancel={() => {
           setIsDetailModalVisible(false);
           setSelectedCollaborator(null);
         }}
-        footer={[
-          <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
-            关闭
-          </Button>,
-          <Button 
-            key="edit" 
-            type="primary" 
-            onClick={() => {
-              if (selectedCollaborator) {
-                setIsDetailModalVisible(false);
-                handleEdit(selectedCollaborator);
-              }
-            }}
-          >
-            编辑
-          </Button>,
-        ]}
-        width={600}
-      >
-        {selectedCollaborator && (
-          <div>
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              {(() => {
-                const isGroup = isGroupCollaborator(selectedCollaborator);
-                return (
-                  <>
-                    <Avatar 
-                      size={80} 
-                      icon={isGroup ? <TeamOutlined /> : <UserOutlined />}
-                      style={{ 
-                        backgroundColor: isGroup ? '#722ed1' : 
-                          (selectedCollaborator.is_senior ? '#faad14' : (selectedCollaborator.gender === '男' ? '#1890ff' : '#eb2f96')),
-                        marginBottom: 16
-                      }}
-                    />
-                    <Title level={3} style={{ margin: 0, color: isGroup ? '#722ed1' : 'inherit' }}>
-                      {isGroup && '👥 '}{selectedCollaborator.name}
-                    </Title>
-                    <div style={{ marginTop: 8 }}>
-                      {isGroup && (
-                        <Tag color="purple">
-                          小组/团队
-                        </Tag>
-                      )}
-                      {selectedCollaborator.gender && !isGroup && (
-                        <Tag color={getGenderColor(selectedCollaborator.gender)}>
-                          {selectedCollaborator.gender}
-                        </Tag>
-                      )}
-                      {selectedCollaborator.is_senior && (
-                        <Tag color="gold" style={{ marginLeft: 8 }}>
-                          高级合作者
-                        </Tag>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-
-            <Descriptions column={1} bordered>
-              <Descriptions.Item label="姓名">
-                {selectedCollaborator.name}
-              </Descriptions.Item>
-              {selectedCollaborator.gender && (
-                <Descriptions.Item label="性别">
-                  {selectedCollaborator.gender}
-                </Descriptions.Item>
-              )}
-              {selectedCollaborator.class_name && (
-                <Descriptions.Item label="班级">
-                  {selectedCollaborator.class_name}
-                </Descriptions.Item>
-              )}
-              {selectedCollaborator.future_plan && (
-                <Descriptions.Item label="未来规划">
-                  {formatTextWithLineBreaks(selectedCollaborator.future_plan)}
-                </Descriptions.Item>
-              )}
-              {selectedCollaborator.background && (
-                <Descriptions.Item label="具体情况和背景">
-                  {formatTextWithLineBreaks(selectedCollaborator.background)}
-                </Descriptions.Item>
-              )}
-            </Descriptions>
-          </div>
-        )}
-      </Modal>
+        onEdit={() => {
+          if (selectedCollaborator) {
+            setIsDetailModalVisible(false);
+            handleEdit(selectedCollaborator);
+          }
+        }}
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ User=root
 WorkingDirectory=/var/www/research-dashboard/backend
 Environment="PATH=/usr/bin:/usr/local/bin"
 Environment="PYTHONPATH=/var/www/research-dashboard/backend"
+Environment="ENVIRONMENT=production"
 
 # Start command
 ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 2

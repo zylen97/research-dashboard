@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, literature, ideas, validation, audit, auth, backup
+from app.routes import research, collaborators, literature, ideas, validation, audit, auth, backup, config
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 from app.core.config import settings
@@ -68,6 +68,7 @@ app.include_router(ideas.router, prefix="/api/ideas", tags=["ideas"])
 app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
 app.include_router(audit.router, prefix="/api/audit", tags=["audit"])
 app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
+app.include_router(config.router, prefix="/api/config", tags=["configuration"])
 
 @app.get("/")
 async def root():

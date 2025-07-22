@@ -28,7 +28,9 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
     
     # 数据库配置
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./research_dashboard.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", 
+        f"sqlite:///./data/research_dashboard_{'prod' if os.getenv('ENVIRONMENT') == 'production' else 'dev'}.db"
+    )
     
     # CORS配置
     CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3001").split(",")

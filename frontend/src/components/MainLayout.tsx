@@ -10,6 +10,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   DatabaseOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -45,38 +46,52 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   }, []);
 
   // 菜单项配置
-  const menuItems = [
-    {
-      key: '/dashboard',
-      icon: <DashboardOutlined />,
-      label: '研究看板',
-      onClick: () => navigate('/dashboard'),
-    },
-    {
-      key: '/collaborators',
-      icon: <TeamOutlined />,
-      label: '合作者管理',
-      onClick: () => navigate('/collaborators'),
-    },
-    {
-      key: '/literature',
-      icon: <BookOutlined />,
-      label: 'Idea发掘',
-      onClick: () => navigate('/literature'),
-    },
-    {
-      key: '/ideas',
-      icon: <BulbOutlined />,
-      label: 'Idea管理',
-      onClick: () => navigate('/ideas'),
-    },
-    {
-      key: '/backup',
-      icon: <DatabaseOutlined />,
-      label: '数据库备份',
-      onClick: () => navigate('/backup'),
-    },
-  ];
+  const getMenuItems = () => {
+    const baseItems = [
+      {
+        key: '/dashboard',
+        icon: <DashboardOutlined />,
+        label: '研究看板',
+        onClick: () => navigate('/dashboard'),
+      },
+      {
+        key: '/collaborators',
+        icon: <TeamOutlined />,
+        label: '合作者管理',
+        onClick: () => navigate('/collaborators'),
+      },
+      {
+        key: '/literature',
+        icon: <BookOutlined />,
+        label: 'Idea发掘',
+        onClick: () => navigate('/literature'),
+      },
+      {
+        key: '/ideas',
+        icon: <BulbOutlined />,
+        label: 'Idea管理',
+        onClick: () => navigate('/ideas'),
+      },
+      {
+        key: '/backup',
+        icon: <DatabaseOutlined />,
+        label: '数据库备份',
+        onClick: () => navigate('/backup'),
+      },
+    ];
+
+    // 只有管理员(zl用户)可以看到系统设置
+    if (user?.username === 'zl') {
+      baseItems.push({
+        key: '/settings',
+        icon: <SettingOutlined />,
+        label: '系统设置',
+        onClick: () => navigate('/settings'),
+      });
+    }
+
+    return baseItems;
+  };
 
   // 用户菜单
   const userMenuItems = [
@@ -128,7 +143,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       <Menu
         mode="inline"
         selectedKeys={[getSelectedKey()]}
-        items={menuItems}
+        items={getMenuItems()}
         style={{ 
           border: 'none',
           marginTop: 4

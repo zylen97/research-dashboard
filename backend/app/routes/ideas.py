@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, status, Request
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from ..models import (
     get_db, Idea, IdeaSchema, IdeaCreate, IdeaUpdate,
-    ResearchProject, Collaborator
+    ResearchProject, Collaborator, User
 )
 
 router = APIRouter()
 
 @router.get("/", response_model=List[IdeaSchema])
 async def get_ideas(
+    request: Request,
     skip: int = 0, 
     limit: int = 100,
     status_filter: Optional[str] = None,
@@ -17,8 +18,12 @@ async def get_ideas(
     source_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取idea列表"""
-    query = db.query(Idea)
+    """获取当前用户的idea列表"""
+    # 从请求中获取当前用户
+    current_user = request.state.current_user
+    
+    # 查询当前用户的ideas，并加载关联的用户信息
+    query = db.query(Idea).options(joinedload(Idea.user)).filter(Idea.user_id == current_user.id)
     
     if status_filter:
         query = query.filter(Idea.status == status_filter)
@@ -31,9 +36,19 @@ async def get_ideas(
     return ideas
 
 @router.get("/{idea_id}", response_model=IdeaSchema)
-async def get_idea(idea_id: int, db: Session = Depends(get_db)):
+async def get_idea(
+    request: Request,
+    idea_id: int, 
+    db: Session = Depends(get_db)
+):
     """获取单个idea详情"""
-    idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    current_user = request.state.current_user
+    
+    idea = db.query(Idea).options(joinedload(Idea.user)).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -43,24 +58,37 @@ async def get_idea(idea_id: int, db: Session = Depends(get_db)):
 
 @router.post("/", response_model=IdeaSchema)
 async def create_idea(
+    request: Request,
     idea: IdeaCreate, 
     db: Session = Depends(get_db)
 ):
     """创建新idea"""
-    db_idea = Idea(**idea.dict())
+    current_user = request.state.current_user
+    
+    db_idea = Idea(**idea.dict(), user_id=current_user.id)
     db.add(db_idea)
     db.commit()
     db.refresh(db_idea)
+    
+    # 加载用户信息
+    db_idea.user = current_user
     return db_idea
 
 @router.put("/{idea_id}", response_model=IdeaSchema)
 async def update_idea(
+    request: Request,
     idea_id: int,
     idea_update: IdeaUpdate,
     db: Session = Depends(get_db)
 ):
     """更新idea信息"""
-    db_idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    current_user = request.state.current_user
+    
+    db_idea = db.query(Idea).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not db_idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -73,12 +101,25 @@ async def update_idea(
     
     db.commit()
     db.refresh(db_idea)
+    
+    # 加载用户信息
+    db_idea.user = current_user
     return db_idea
 
 @router.delete("/{idea_id}")
-async def delete_idea(idea_id: int, db: Session = Depends(get_db)):
+async def delete_idea(
+    request: Request,
+    idea_id: int, 
+    db: Session = Depends(get_db)
+):
     """删除idea"""
-    db_idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    current_user = request.state.current_user
+    
+    db_idea = db.query(Idea).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not db_idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -91,18 +132,25 @@ async def delete_idea(idea_id: int, db: Session = Depends(get_db)):
 
 @router.put("/{idea_id}/priority")
 async def update_idea_priority(
+    request: Request,
     idea_id: int,
     priority: str,
     db: Session = Depends(get_db)
 ):
     """更新idea优先级"""
+    current_user = request.state.current_user
+    
     if priority not in ["low", "medium", "high"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Priority must be one of: low, medium, high"
         )
     
-    db_idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    db_idea = db.query(Idea).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not db_idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -115,11 +163,14 @@ async def update_idea_priority(
 
 @router.put("/{idea_id}/status")
 async def update_idea_status(
+    request: Request,
     idea_id: int,
     status_value: str,
     db: Session = Depends(get_db)
 ):
     """更新idea状态"""
+    current_user = request.state.current_user
+    
     valid_statuses = ["pool", "in_development", "converted_to_project"]
     if status_value not in valid_statuses:
         raise HTTPException(
@@ -127,7 +178,11 @@ async def update_idea_status(
             detail=f"Status must be one of: {', '.join(valid_statuses)}"
         )
     
-    db_idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    db_idea = db.query(Idea).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not db_idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -140,12 +195,19 @@ async def update_idea_status(
 
 @router.post("/{idea_id}/convert-to-project")
 async def convert_idea_to_project(
+    request: Request,
     idea_id: int,
     collaborator_ids: List[int] = [],
     db: Session = Depends(get_db)
 ):
     """将idea转换为研究项目"""
-    idea = db.query(Idea).filter(Idea.id == idea_id).first()
+    current_user = request.state.current_user
+    
+    idea = db.query(Idea).filter(
+        Idea.id == idea_id,
+        Idea.user_id == current_user.id
+    ).first()
+    
     if not idea:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -198,29 +260,34 @@ async def convert_idea_to_project(
     }
 
 @router.get("/stats/summary")
-async def get_ideas_summary(db: Session = Depends(get_db)):
-    """获取idea统计摘要"""
+async def get_ideas_summary(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """获取当前用户的idea统计摘要"""
     from sqlalchemy import func
     
-    # Count by status
+    current_user = request.state.current_user
+    
+    # Count by status for current user
     status_counts = db.query(
         Idea.status,
         func.count(Idea.id).label('count')
-    ).group_by(Idea.status).all()
+    ).filter(Idea.user_id == current_user.id).group_by(Idea.status).all()
     
-    # Count by priority
+    # Count by priority for current user
     priority_counts = db.query(
         Idea.priority,
         func.count(Idea.id).label('count')
-    ).group_by(Idea.priority).all()
+    ).filter(Idea.user_id == current_user.id).group_by(Idea.priority).all()
     
-    # Count by source
+    # Count by source for current user
     source_counts = db.query(
         Idea.source,
         func.count(Idea.id).label('count')
-    ).group_by(Idea.source).all()
+    ).filter(Idea.user_id == current_user.id).group_by(Idea.source).all()
     
-    total_ideas = db.query(func.count(Idea.id)).scalar()
+    total_ideas = db.query(func.count(Idea.id)).filter(Idea.user_id == current_user.id).scalar()
     
     return {
         "total_ideas": total_ideas,
@@ -231,14 +298,18 @@ async def get_ideas_summary(db: Session = Depends(get_db)):
 
 @router.get("/search")
 async def search_ideas(
+    request: Request,
     q: str,
     db: Session = Depends(get_db)
 ):
-    """搜索ideas"""
+    """搜索当前用户的ideas"""
+    current_user = request.state.current_user
+    
     ideas = db.query(Idea).filter(
-        Idea.title.contains(q) | 
-        Idea.description.contains(q) |
-        Idea.tags.contains(q)
+        Idea.user_id == current_user.id,
+        (Idea.title.contains(q) | 
+         Idea.description.contains(q) |
+         Idea.tags.contains(q))
     ).all()
     
     return ideas

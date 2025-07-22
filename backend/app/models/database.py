@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, UniqueConstraint, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -51,6 +51,8 @@ class ResearchProject(Base):
     progress = Column(Float, default=0.0)  # 进展百分比
     start_date = Column(DateTime, default=datetime.utcnow)
     expected_completion = Column(DateTime)
+    is_todo = Column(Boolean, default=False, index=True)  # 待办事项标记
+    todo_marked_at = Column(DateTime, nullable=True)  # 标记为待办的时间
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -59,59 +61,83 @@ class ResearchProject(Base):
     communication_logs = relationship("CommunicationLog", back_populates="project", cascade="all, delete-orphan")
 
 class Literature(Base):
-    """文献模型"""
+    """文献模型 - 存储用户的文献信息和AI分析结果"""
     __tablename__ = "literature"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(500), nullable=False, index=True)
+    title = Column(String(500), nullable=False, index=True)  # 标题索引，支持搜索
     authors = Column(String(500))
-    journal = Column(String(200))
-    year = Column(Integer)
-    doi = Column(String(100))
+    journal = Column(String(200), index=True)  # 期刊索引，支持按期刊筛选
+    year = Column(Integer, index=True)  # 年份索引，支持按年份排序
+    doi = Column(String(100), unique=True)  # DOI唯一索引，防重复
     abstract = Column(Text)
     keywords = Column(String(500))
-    citation_count = Column(Integer, default=0)
+    citation_count = Column(Integer, default=0, index=True)  # 引用数索引，支持排序
     
-    # API validation results
-    validation_status = Column(String(50), default="pending")  # pending, validated, rejected
-    validation_score = Column(Float)  # API返回的匹配分数
-    validation_reason = Column(Text)  # 验证原因
+    # User association
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    
+    # AI validation results
+    validation_status = Column(String(50), default="pending", index=True)  # 验证状态索引
+    validation_score = Column(Float)  # AI返回的匹配分数
+    validation_reason = Column(Text)  # AI分析结果
     
     # Status management
-    status = Column(String(50), default="imported")  # imported, reviewed, converted_to_idea
+    status = Column(String(50), default="imported", index=True)  # 状态索引
     notes = Column(Text)  # 用户备注
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)  # 创建时间索引
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
+    user = relationship("User", backref="literature")
+    
+    # 复合索引优化常用查询
+    __table_args__ = (
+        Index('idx_literature_user_validation', 'user_id', 'validation_status'),
+        Index('idx_literature_user_status', 'user_id', 'status'),
+        Index('idx_literature_year_citation', 'year', 'citation_count'),
+        Index('idx_literature_created_user', 'created_at', 'user_id'),
+    )
 
 class Idea(Base):
-    """idea池模型"""
+    """Idea池模型 - 存储用户的研究想法和创意"""
     __tablename__ = "ideas"
     
     id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, index=True)
+    title = Column(String(200), nullable=False, index=True)  # 标题索引，支持搜索
     description = Column(Text, nullable=False)
-    source = Column(String(100))  # literature, manual, other
-    source_literature_id = Column(Integer, ForeignKey('literature.id'), nullable=True)
+    source = Column(String(100), index=True)  # literature, manual, other - 来源索引
+    source_literature_id = Column(Integer, ForeignKey('literature.id'), nullable=True, index=True)
+    
+    # User ownership
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     
     # Idea details
-    difficulty_level = Column(String(20))  # easy, medium, hard
+    difficulty_level = Column(String(20), index=True)  # easy, medium, hard - 难度索引
     estimated_duration = Column(String(50))  # 预计耗时
     required_skills = Column(String(500))  # 所需技能
-    potential_impact = Column(String(20))  # low, medium, high
+    potential_impact = Column(String(20), index=True)  # low, medium, high - 影响力索引
     
     # Status management
-    status = Column(String(50), default="pool")  # pool, in_development, converted_to_project
-    priority = Column(String(20), default="medium")  # low, medium, high
+    status = Column(String(50), default="pool", index=True)  # 状态索引
+    priority = Column(String(20), default="medium", index=True)  # 优先级索引
     tags = Column(String(500))  # 标签，逗号分隔
     
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)  # 创建时间索引
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     source_literature = relationship("Literature")
+    user = relationship("User", backref="ideas")
+    
+    # 复合索引优化常用查询
+    __table_args__ = (
+        Index('idx_idea_user_status', 'user_id', 'status'),
+        Index('idx_idea_user_priority', 'user_id', 'priority'),
+        Index('idx_idea_difficulty_impact', 'difficulty_level', 'potential_impact'),
+        Index('idx_idea_created_user', 'created_at', 'user_id'),
+    )
 
 class AuditLog(Base):
     """审计日志模型"""
@@ -169,6 +195,33 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime)
+
+class SystemConfig(Base):
+    """系统配置模型 - 存储系统设置和AI配置信息"""
+    __tablename__ = "system_configs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(100), unique=True, nullable=False, index=True)
+    value = Column(Text, nullable=False)
+    category = Column(String(50), nullable=False, default="general", index=True)  # ai_api, system等
+    description = Column(String(500))
+    is_encrypted = Column(Boolean, default=False, index=True)  # 加密状态索引
+    is_active = Column(Boolean, default=True, index=True)  # 启用状态索引
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_by_id = Column(Integer, ForeignKey('users.id'), index=True)
+    updated_by_id = Column(Integer, ForeignKey('users.id'), index=True)
+    
+    # Relationships
+    created_by = relationship("User", foreign_keys=[created_by_id], backref="created_configs")
+    updated_by = relationship("User", foreign_keys=[updated_by_id], backref="updated_configs")
+    
+    # 复合索引优化配置查询
+    __table_args__ = (
+        Index('idx_config_category_active', 'category', 'is_active'),
+        Index('idx_config_encrypted_active', 'is_encrypted', 'is_active'),
+    )
     
 
 

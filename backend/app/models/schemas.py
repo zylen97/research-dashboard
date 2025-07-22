@@ -42,9 +42,11 @@ class ResearchProjectBase(BaseModel):
     status: str = Field(default="active", max_length=50)
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
+    is_todo: bool = Field(default=False)
 
 class ResearchProjectCreate(ResearchProjectBase):
     collaborator_ids: List[int] = []
+    is_todo: Optional[bool] = Field(default=False)
 
 class ResearchProjectUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
@@ -53,10 +55,13 @@ class ResearchProjectUpdate(BaseModel):
     progress: Optional[float] = Field(None, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     collaborator_ids: Optional[List[int]] = None
+    is_todo: Optional[bool] = None
 
 class ResearchProject(ResearchProjectBase):
     id: int
     start_date: datetime
+    is_todo: bool
+    todo_marked_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     collaborators: List[Collaborator] = []
@@ -97,6 +102,7 @@ class LiteratureUpdate(BaseModel):
 
 class Literature(LiteratureBase):
     id: int
+    user_id: int
     validation_status: str
     validation_score: Optional[float]
     validation_reason: Optional[str]
@@ -104,6 +110,7 @@ class Literature(LiteratureBase):
     notes: Optional[str]
     created_at: datetime
     updated_at: datetime
+    user: Optional['User'] = None
     
     class Config:
         from_attributes = True
@@ -138,9 +145,11 @@ class IdeaUpdate(BaseModel):
 class Idea(IdeaBase):
     id: int
     status: str
+    user_id: int
     created_at: datetime
     updated_at: datetime
     source_literature: Optional[Literature] = None
+    user: Optional['User'] = None
     
     class Config:
         from_attributes = True
@@ -229,3 +238,75 @@ class Token(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: User
+
+# System Config schemas
+class SystemConfigBase(BaseModel):
+    key: str = Field(..., max_length=100)
+    value: str
+    category: str = Field(default="general", max_length=50)
+    description: Optional[str] = Field(None, max_length=500)
+    is_encrypted: bool = Field(default=False)
+    is_active: bool = Field(default=True)
+
+class SystemConfigCreate(SystemConfigBase):
+    pass
+
+class SystemConfigUpdate(BaseModel):
+    value: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=500)
+    is_active: Optional[bool] = None
+
+class SystemConfig(SystemConfigBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    created_by_id: Optional[int] = None
+    updated_by_id: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+# AI Provider configuration
+class AIProviderConfig(BaseModel):
+    provider: str = Field(..., description="AI提供商名称，如openai, anthropic等")
+    api_key: str = Field(..., description="API密钥")
+    api_url: Optional[str] = Field(None, description="API地址，默认使用官方地址")
+    model: Optional[str] = Field(None, description="默认模型")
+    max_tokens: Optional[int] = Field(None, description="最大token数")
+    temperature: Optional[float] = Field(None, description="温度参数")
+
+class AITestRequest(BaseModel):
+    provider: str
+    api_key: str
+    api_url: Optional[str] = None
+    test_prompt: str = Field(default="Hello, please respond with 'API connection successful'")
+
+class AITestResponse(BaseModel):
+    success: bool
+    message: str
+    response: Optional[str] = None
+
+# Batch AI Matching schemas
+class BatchMatchingRequest(BaseModel):
+    literature_ids: List[int] = Field(..., description="文献ID列表")
+    prompt_template: str = Field(..., description="AI提示词模板")
+    ai_provider: str = Field(..., description="AI提供商名称")
+
+class MatchingResult(BaseModel):
+    literature_id: int
+    status: str  # "matched", "not_matched", "error"
+    score: Optional[float] = None
+    reason: str
+    ai_response: Optional[str] = None
+
+class BatchMatchingResponse(BaseModel):
+    success: bool
+    message: str
+    results: List[MatchingResult]
+    total_processed: int
+    successful_count: int
+    error_count: int
+
+# Update forward references
+Literature.model_rebuild()
+Idea.model_rebuild()

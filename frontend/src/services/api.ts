@@ -6,7 +6,11 @@ import {
   Idea, IdeaCreate, IdeaUpdate,
   CommunicationLog, CommunicationLogCreate, CommunicationLogUpdate,
   FileUploadResponse, ValidationRequest, ValidationResult,
-  IdeasSummary, PaginationParams
+  IdeasSummary, PaginationParams,
+  BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
+  User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
+  AIProvider, AIProviderCreate, AITestResponse, BackupStats, BackupItem,
+  BackupListResponse, BackupCreateResponse
 } from '../types';
 
 // API基础配置
@@ -33,26 +37,68 @@ api.interceptors.request.use(
   }
 );
 
-// 响应拦截器
+// 响应拦截器 - 统一错误处理和数据格式
 api.interceptors.response.use(
   (response) => {
     // 对于blob类型的响应（如文件下载），直接返回完整响应
     if (response.config.responseType === 'blob') {
       return response;
     }
-    return response.data;
+    
+    // 统一处理API响应格式
+    const data = response.data;
+    
+    // 如果响应是统一格式（包含success字段），返回数据部分
+    if (data && typeof data === 'object' && 'success' in data) {
+      if (!data.success) {
+        throw new Error(data.message || 'API call failed');
+      }
+      return data.data || data;
+    }
+    
+    // 否则直接返回数据
+    return data;
   },
   (error) => {
     console.error('API Error:', error);
     
-    // 处理401未授权错误
-    if (error.response?.status === 401) {
-      // 清除本地认证信息
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
+    // 处理具体的HTTP状态码
+    if (error.response) {
+      const { status, data } = error.response;
       
-      // 跳转到登录页面
-      window.location.href = '/auth';
+      switch (status) {
+        case 401:
+          // 清除本地认证信息
+          localStorage.removeItem('auth_token');
+          localStorage.removeItem('auth_user');
+          
+          // 跳转到登录页面
+          window.location.href = '/auth';
+          break;
+          
+        case 403:
+          console.error('无权访问该资源');
+          break;
+          
+        case 404:
+          console.error('请求的资源不存在');
+          break;
+          
+        case 422:
+          console.error('请求数据验证失败:', data);
+          break;
+          
+        case 500:
+          console.error('服务器内部错误');
+          break;
+          
+        default:
+          console.error(`API调用失败: ${status}`);
+      }
+    } else if (error.request) {
+      console.error('网络错误或请求超时');
+    } else {
+      console.error('API调用配置错误:', error.message);
     }
     
     return Promise.reject(error);
@@ -213,8 +259,16 @@ export const literatureApi = {
     api.post('/api/literature/validate', data),
 
   // 转换文献为idea
-  convertToIdea: (id: number): Promise<{ message: string; idea_id: number }> =>
-    api.put(`/api/literature/${id}/convert-to-idea`),
+  convertToIdea: (id: number, ideaData?: any): Promise<{ message: string; idea_id: number }> =>
+    api.put(`/api/literature/${id}/convert-to-idea`, ideaData),
+
+  // 批量AI匹配文献 - 使用类型安全的接口
+  batchMatchLiterature: (data: BatchMatchingRequest): Promise<BatchMatchingResponse> =>
+    api.post('/api/literature/batch-match', data),
+
+  // 获取预定义的匹配提示词
+  getPredefinedPrompts: (): Promise<PredefinedPrompt[]> =>
+    api.get('/api/literature/prompts'),
 };
 
 // Idea API
@@ -268,6 +322,107 @@ export const ideaApi = {
   // 搜索ideas
   searchIdeas: (query: string): Promise<Idea[]> =>
     api.get('/api/ideas/search', { params: { q: query } }),
+};
+
+// 认证API
+export const authApi = {
+  // 用户登录
+  login: (credentials: UserLogin): Promise<AuthToken> =>
+    api.post('/api/auth/login', credentials),
+
+  // 获取当前用户信息
+  getCurrentUser: (): Promise<User> =>
+    api.get('/api/auth/me'),
+
+  // 用户登出（本地操作）
+  logout: (): void => {
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
+    window.location.href = '/auth';
+  },
+
+  // 检查登录状态
+  isAuthenticated: (): boolean => {
+    const token = localStorage.getItem('auth_token');
+    return !!token;
+  },
+
+  // 获取本地缓存的用户信息
+  getLocalUser: (): User | null => {
+    const userStr = localStorage.getItem('auth_user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+};
+
+// 系统配置 API
+export const configApi = {
+  // 获取配置列表
+  getConfigs: (params?: {
+    category?: string;
+    is_active?: boolean;
+  }): Promise<SystemConfig[]> =>
+    api.get('/api/config/', { params }),
+
+  // 获取单个配置
+  getConfig: (id: number): Promise<SystemConfig> =>
+    api.get(`/api/config/${id}`),
+
+  // 创建配置
+  createConfig: (data: SystemConfigCreate): Promise<SystemConfig> =>
+    api.post('/api/config/', data),
+
+  // 更新配置
+  updateConfig: (id: number, data: SystemConfigUpdate): Promise<SystemConfig> =>
+    api.put(`/api/config/${id}`, data),
+
+  // 删除配置
+  deleteConfig: (id: number): Promise<{ message: string }> =>
+    api.delete(`/api/config/${id}`),
+
+  // 获取AI提供商列表
+  getAIProviders: (): Promise<AIProvider[]> =>
+    api.get('/api/config/ai/providers'),
+
+  // 创建AI提供商配置
+  createAIProvider: (data: AIProviderCreate): Promise<SystemConfig> =>
+    api.post('/api/config/ai/providers', data),
+
+  // 测试AI提供商连接
+  testAIProvider: (data: {
+    provider: string;
+    test_prompt?: string;
+  }): Promise<AITestResponse> =>
+    api.post('/api/config/ai/test', data),
+};
+
+// 备份管理 API
+export const backupApi = {
+  // 获取备份统计
+  getStats: (): Promise<BackupStats> =>
+    api.get('/api/backup/stats'),
+
+  // 获取备份列表
+  getBackups: (): Promise<BackupListResponse> =>
+    api.get('/api/backup/list'),
+
+  // 创建备份
+  createBackup: (): Promise<BackupCreateResponse> =>
+    api.post('/api/backup/create'),
+
+  // 恢复备份
+  restoreBackup: (backupId: string): Promise<{ message: string }> =>
+    api.post(`/api/backup/restore/${backupId}`),
+
+  // 删除备份
+  deleteBackup: (backupId: string): Promise<{ message: string }> =>
+    api.delete(`/api/backup/${backupId}`),
+
+  // 下载备份
+  downloadBackup: (backupId: string): Promise<Blob> => {
+    return api.get(`/api/backup/download/${backupId}`, {
+      responseType: 'blob'
+    });
+  },
 };
 
 export default api;

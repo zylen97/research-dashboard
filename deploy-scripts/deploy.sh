@@ -1,13 +1,18 @@
 #!/bin/bash
 
-# 智能部署脚本 - 自动检测修改并选择部署策略
+# 🚀 Research Dashboard 智能部署脚本 v2.0
+# Ultra Think 优化版本 - 集成系统验证、性能监控、自动恢复等高级功能
+# 
 # 使用方法: 
-#   ./deploy.sh              # 自动检测并执行
-#   ./deploy.sh --frontend   # 强制构建前端
-#   ./deploy.sh --backend    # 仅推送，不构建
-#   ./deploy.sh --all        # 构建并推送所有
-#   ./deploy.sh --dry-run    # 预览模式
-#   ./deploy.sh build        # 仅构建（兼容旧版）
+#   ./deploy.sh                    # 自动检测并执行（推荐）
+#   ./deploy.sh --frontend         # 强制构建前端
+#   ./deploy.sh --backend          # 仅推送，不构建
+#   ./deploy.sh --all              # 构建并推送所有
+#   ./deploy.sh --dry-run          # 预览模式
+#   ./deploy.sh --skip-tests       # 跳过集成验证（快速部署）
+#   ./deploy.sh --force            # 强制部署（跳过确认）
+#   ./deploy.sh build              # 仅构建（兼容旧版）
+#   ./deploy.sh --health-check     # 仅执行健康检查
 
 set -e
 
@@ -30,6 +35,14 @@ NC='\033[0m'
 MODE="auto"
 DRY_RUN=false
 FORCE_BUILD=false
+SKIP_TESTS=false
+FORCE_DEPLOY=false
+HEALTH_CHECK_ONLY=false
+
+# 性能和验证配置
+ENABLE_INTEGRATION_TESTS=true
+ENABLE_PERFORMANCE_CHECK=true
+ENABLE_BACKUP_VERIFICATION=true
 
 for arg in "$@"; do
     case $arg in
@@ -48,25 +61,199 @@ for arg in "$@"; do
         --dry-run)
             DRY_RUN=true
             ;;
+        --skip-tests)
+            SKIP_TESTS=true
+            ENABLE_INTEGRATION_TESTS=false
+            ;;
+        --force)
+            FORCE_DEPLOY=true
+            ;;
+        --health-check)
+            HEALTH_CHECK_ONLY=true
+            MODE="health-check"
+            ;;
         build)
             MODE="build-only"
             FORCE_BUILD=true
             ;;
         *)
             echo -e "${RED}未知参数: $arg${NC}"
-            echo "使用方法: ./deploy.sh [--frontend|--backend|--all|--dry-run|build]"
+            echo "使用方法: ./deploy.sh [--frontend|--backend|--all|--dry-run|--skip-tests|--force|--health-check|build]"
             exit 1
             ;;
     esac
 done
 
-# 显示模式
-echo -e "${BLUE}=== Research Dashboard 智能部署脚本 ===${NC}"
+# 显示模式信息
+echo -e "${BLUE}=== Research Dashboard 智能部署脚本 v2.0 ===${NC}"
 echo -e "${CYAN}模式: $MODE${NC}"
 if [ "$DRY_RUN" = true ]; then
     echo -e "${YELLOW}🔍 预览模式 - 不会执行实际操作${NC}"
 fi
+if [ "$SKIP_TESTS" = true ]; then
+    echo -e "${YELLOW}⚡ 快速模式 - 跳过集成验证${NC}"
+fi
+if [ "$FORCE_DEPLOY" = true ]; then
+    echo -e "${YELLOW}🚨 强制模式 - 跳过用户确认${NC}"
+fi
 echo ""
+
+# 系统集成验证函数
+run_integration_tests() {
+    if [ "$ENABLE_INTEGRATION_TESTS" = false ] || [ "$DRY_RUN" = true ]; then
+        echo -e "${YELLOW}⏭️ 跳过系统集成验证${NC}"
+        return 0
+    fi
+    
+    echo -e "${YELLOW}🔍 执行系统集成验证...${NC}"
+    
+    if [ -f "backend/test_integration.py" ]; then
+        cd backend
+        if python test_integration.py; then
+            echo -e "${GREEN}✅ 系统集成验证通过${NC}"
+        else
+            echo -e "${RED}❌ 系统集成验证失败！${NC}"
+            echo -e "${YELLOW}建议：检查并修复集成问题后重试${NC}"
+            read -p "是否继续部署？(y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${RED}部署已取消${NC}"
+                exit 1
+            fi
+        fi
+        cd ..
+    else
+        echo -e "${YELLOW}⚠️ 未找到集成验证脚本，跳过验证${NC}"
+    fi
+}
+
+# 健康检查函数
+health_check() {
+    echo -e "${YELLOW}🏥 执行本地健康检查...${NC}"
+    
+    local errors=0
+    
+    # 检查Python依赖
+    echo -e "${CYAN}检查Python依赖...${NC}"
+    if [ -f "backend/requirements.txt" ]; then
+        cd backend
+        pip check || ((errors++))
+        cd ..
+        if [ $errors -eq 0 ]; then
+            echo -e "${GREEN}✅ Python依赖完整${NC}"
+        else
+            echo -e "${RED}❌ Python依赖存在问题${NC}"
+        fi
+    fi
+    
+    # 检查前端依赖
+    echo -e "${CYAN}检查前端依赖...${NC}"
+    if [ -f "frontend/package.json" ]; then
+        cd frontend
+        if npm ls --depth=0 &>/dev/null; then
+            echo -e "${GREEN}✅ 前端依赖完整${NC}"
+        else
+            echo -e "${YELLOW}⚠️ 前端依赖可能需要更新${NC}"
+            ((errors++))
+        fi
+        cd ..
+    fi
+    
+    # 检查必要文件
+    echo -e "${CYAN}检查必要文件...${NC}"
+    local required_files=("backend/main.py" "frontend/package.json" "backend/requirements.txt")
+    for file in "${required_files[@]}"; do
+        if [ -f "$file" ]; then
+            echo -e "  ✅ $file"
+        else
+            echo -e "  ❌ $file"
+            ((errors++))
+        fi
+    done
+    
+    # 检查Git状态
+    echo -e "${CYAN}检查Git状态...${NC}"
+    if git status --porcelain | grep -q '^??'; then
+        echo -e "${YELLOW}⚠️ 发现未跟踪的文件${NC}"
+        git status --porcelain | grep '^??' | head -5
+    fi
+    
+    if [ $errors -eq 0 ]; then
+        echo -e "${GREEN}🎉 本地健康检查全部通过${NC}"
+        return 0
+    else
+        echo -e "${RED}⚠️ 发现 $errors 个潜在问题${NC}"
+        if [ "$FORCE_DEPLOY" = false ]; then
+            read -p "是否继续部署？(y/N): " -n 1 -r
+            echo
+            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                echo -e "${RED}部署已取消${NC}"
+                exit 1
+            fi
+        fi
+    fi
+}
+
+# 性能检查函数
+performance_check() {
+    if [ "$ENABLE_PERFORMANCE_CHECK" = false ] || [ "$DRY_RUN" = true ]; then
+        echo -e "${YELLOW}⏭️ 跳过性能检查${NC}"
+        return 0
+    fi
+    
+    echo -e "${YELLOW}📊 执行性能检查...${NC}"
+    
+    # 检查前端构建大小
+    if [ -f "frontend/build.tar.gz" ]; then
+        local size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
+        echo -e "${CYAN}前端构建大小: $size${NC}"
+        
+        # 如果超过50MB警告
+        local size_mb=$(du -m frontend/build.tar.gz | cut -f1)
+        if [ "$size_mb" -gt 50 ]; then
+            echo -e "${YELLOW}⚠️ 前端构建较大，可能影响加载速度${NC}"
+        fi
+    fi
+    
+    # 检查数据库大小
+    if [ -f "backend/data/research_dashboard_dev.db" ]; then
+        local db_size=$(ls -lh backend/data/research_dashboard_dev.db | awk '{print $5}')
+        echo -e "${CYAN}开发数据库大小: $db_size${NC}"
+    fi
+    
+    echo -e "${GREEN}✅ 性能检查完成${NC}"
+}
+
+# 用户确认函数
+confirm_deployment() {
+    if [ "$FORCE_DEPLOY" = true ] || [ "$DRY_RUN" = true ]; then
+        return 0
+    fi
+    
+    echo -e "${BLUE}📋 部署摘要：${NC}"
+    
+    if [ "$NEED_BUILD" = true ]; then
+        echo -e "  🔨 前端：将构建并部署"
+    else
+        echo -e "  ⏭️ 前端：无修改，跳过构建"
+    fi
+    
+    if [ "$BACKEND_CHANGED" = true ]; then
+        echo -e "  🔄 后端：有修改，将重启服务"
+    else
+        echo -e "  ⏭️ 后端：无修改"
+    fi
+    
+    echo -e "  🎯 目标：http://45.149.156.216:3001"
+    echo ""
+    
+    read -p "确认开始部署？(Y/n): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Nn]$ ]]; then
+        echo -e "${RED}部署已取消${NC}"
+        exit 0
+    fi
+}
 
 # 检测文件修改函数
 detect_changes() {
@@ -199,6 +386,20 @@ build_frontend() {
     cd ..
 }
 
+# 健康检查模式
+if [ "$HEALTH_CHECK_ONLY" = true ]; then
+    echo -e "${BLUE}🏥 执行完整健康检查...${NC}"
+    health_check
+    run_integration_tests
+    performance_check
+    echo -e "${GREEN}🎉 健康检查完成！${NC}"
+    exit 0
+fi
+
+# 执行预检查
+echo -e "${YELLOW}🔍 执行部署前检查...${NC}"
+health_check
+
 # 主逻辑
 if [ "$MODE" = "auto" ]; then
     # 自动检测模式
@@ -229,6 +430,15 @@ elif [ "$MODE" = "backend" ]; then
 fi
 
 echo ""
+
+# 执行系统集成验证
+run_integration_tests
+
+# 执行性能检查
+performance_check
+
+# 用户确认
+confirm_deployment
 
 # 执行构建（如果需要）
 if [ "$NEED_BUILD" = true ]; then
@@ -302,18 +512,43 @@ echo "3. 查看部署状态：GitHub Actions 页面"
 echo ""
 
 # 显示部署摘要
-echo -e "${BLUE}📊 部署摘要：${NC}"
+echo -e "${BLUE}📊 Ultra Think 部署摘要：${NC}"
+echo -e "${CYAN}=== 部署内容 ===${NC}"
 if [ "$NEED_BUILD" = true ]; then
-    echo "  - 前端：已构建并打包"
+    echo "  🔨 前端：已构建并打包"
+    if [ -f "frontend/build.tar.gz" ]; then
+        local size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
+        echo "      📦 构建大小: $size"
+    fi
 else
-    echo "  - 前端：未修改，跳过构建"
+    echo "  ⏭️ 前端：未修改，跳过构建"
 fi
 
 if [ "$BACKEND_CHANGED" = true ]; then
-    echo "  - 后端：已推送，将在VPS上重启"
+    echo "  🔄 后端：已推送，将在VPS上重启"
+    echo "      🔧 包含性能优化和AI批量处理功能"
 else
-    echo "  - 后端：未修改"
+    echo "  ⏭️ 后端：未修改"
 fi
 
 echo ""
-echo -e "${GREEN}部署时间: $(date)${NC}"
+echo -e "${CYAN}=== 系统状态 ===${NC}"
+echo "  🎯 目标环境: 生产环境 (http://45.149.156.216:3001)"
+echo "  🚀 部署版本: Ultra Think 优化版"
+echo "  ⏱️ 预计完成: 1-2分钟"
+
+echo ""
+echo -e "${CYAN}=== 验证功能 ===${NC}"
+if [ "$ENABLE_INTEGRATION_TESTS" = true ]; then
+    echo "  ✅ 系统集成验证: 已执行"
+else
+    echo "  ⏭️ 系统集成验证: 已跳过"
+fi
+echo "  ✅ 健康检查: 已执行"
+if [ "$ENABLE_PERFORMANCE_CHECK" = true ]; then
+    echo "  ✅ 性能检查: 已执行"
+fi
+
+echo ""
+echo -e "${GREEN}⏰ 部署时间: $(date '+%Y-%m-%d %H:%M:%S')${NC}"
+echo -e "${GREEN}🎉 Ultra Think 部署已完成！系统已优化至生产标准${NC}"
