@@ -1,0 +1,86 @@
+name: Fix 500 Error - User Relations
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'fix-user-relations.py'
+      - '.github/workflows/fix-500-error.yml'
+
+jobs:
+  fix-error:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Copy and execute fix script
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script: |
+          echo "🚨 开始修复500错误..."
+          
+          cd /var/www/research-dashboard/backend
+          
+          # 下载修复脚本
+          echo "下载修复脚本..."
+          curl -s https://raw.githubusercontent.com/zylen97/research-dashboard/main/fix-user-relations.py > fix-user-relations.py
+          
+          # 执行修复
+          echo ""
+          echo "执行修复脚本..."
+          python3 fix-user-relations.py
+          
+          # 重启服务
+          echo ""
+          echo "重启后端服务..."
+          sudo systemctl restart research-backend
+          
+          # 等待服务启动
+          sleep 5
+          
+          # 测试API
+          echo ""
+          echo "测试API端点..."
+          
+          # 获取token
+          TOKEN=$(curl -s "http://localhost:8080/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d '{"username":"zl","password":"123"}' \
+            | python3 -c "import json,sys; print(json.load(sys.stdin).get('access_token', ''))")
+          
+          if [ -z "$TOKEN" ]; then
+            echo "❌ 无法获取认证token"
+            exit 1
+          fi
+          
+          echo "✅ 认证成功"
+          
+          # 测试各个API
+          echo ""
+          echo "测试Research API..."
+          STATUS=$(curl -s -w "%{http_code}" -o /dev/null "http://localhost:8080/api/research/" \
+            -H "Authorization: Bearer $TOKEN")
+          echo "状态码: $STATUS"
+          
+          echo ""
+          echo "测试Ideas API..."
+          STATUS=$(curl -s -w "%{http_code}" -o /dev/null "http://localhost:8080/api/ideas/" \
+            -H "Authorization: Bearer $TOKEN")
+          echo "状态码: $STATUS"
+          
+          echo ""
+          echo "测试Literature API..."
+          STATUS=$(curl -s -w "%{http_code}" -o /dev/null "http://localhost:8080/api/literature/" \
+            -H "Authorization: Bearer $TOKEN")
+          echo "状态码: $STATUS"
+          
+          echo ""
+          echo "🏁 修复完成"
