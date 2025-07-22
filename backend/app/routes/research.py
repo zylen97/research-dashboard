@@ -19,9 +19,11 @@ async def get_research_projects(
     status_filter: str = None,
     db: Session = Depends(get_db)
 ):
-    """获取研究项目列表（数据共享，简化版）"""
-    # 最简化查询，移除所有复杂逻辑
-    query = db.query(ResearchProject)
+    """获取研究项目列表（数据共享，包含交流记录）"""
+    # 基础查询 + 安全的关联加载
+    query = db.query(ResearchProject).options(
+        joinedload(ResearchProject.communication_logs)
+    )
     if status_filter:
         query = query.filter(ResearchProject.status == status_filter)
     projects = query.offset(skip).limit(limit).all()
@@ -29,8 +31,10 @@ async def get_research_projects(
 
 @router.get("/{project_id}", response_model=ResearchProjectSchema)
 async def get_research_project(project_id: int, db: Session = Depends(get_db)):
-    """获取单个研究项目详情"""
-    project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+    """获取单个研究项目详情（包含交流记录）"""
+    project = db.query(ResearchProject).options(
+        joinedload(ResearchProject.communication_logs)
+    ).filter(ResearchProject.id == project_id).first()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
