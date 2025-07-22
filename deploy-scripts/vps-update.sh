@@ -231,9 +231,15 @@ log_message "INFO" "执行数据库迁移..."
 cd backend || error_exit "无法进入backend目录"
 
 # 检查Python环境和依赖
-if ! python3 -c "import fastapi, sqlalchemy, pydantic" 2>/dev/null; then
+if ! python3 -c "import fastapi, sqlalchemy, pydantic, httpx" 2>/dev/null; then
     log_message "WARN" "检测到依赖问题，尝试安装..."
     pip3 install -r requirements.txt || error_exit "安装Python依赖失败"
+    
+    # 确保关键依赖已安装
+    if ! python3 -c "import httpx" 2>/dev/null; then
+        log_message "WARN" "httpx依赖缺失，单独安装..."
+        pip3 install httpx>=0.25.0 || error_exit "安装httpx失败"
+    fi
 fi
 
 # 执行数据库迁移

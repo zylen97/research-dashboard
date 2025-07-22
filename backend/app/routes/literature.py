@@ -12,12 +12,15 @@ from typing import List, Optional, Dict, Tuple
 import time
 from concurrent.futures import ThreadPoolExecutor
 
+# 第三方库导入
+import httpx
+
+# 全局HTTP客户端
+_global_http_client: Optional[httpx.AsyncClient] = None
+
 # 在模块初始化时注册清理函数
 import atexit
 atexit.register(lambda: asyncio.create_task(cleanup_http_client()) if _global_http_client else None)
-
-# 第三方库导入
-import httpx
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Request
 from pydantic import BaseModel
@@ -735,8 +738,7 @@ async def call_ai_api_with_retry(
     
     return None
 
-# 全局HTTP客户端，复用连接池
-_global_http_client: Optional[httpx.AsyncClient] = None
+# 全局HTTP客户端已在文件开头定义
 
 
 async def get_http_client() -> httpx.AsyncClient:
