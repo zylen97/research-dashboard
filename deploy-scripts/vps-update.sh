@@ -43,7 +43,23 @@ if [ ! -f ".env" ]; then
         cp .env.production .env
         echo -e "${GREEN}✅ 已使用生产环境配置${NC}"
     else
-        echo -e "${RED}警告: 未找到 .env.production 文件${NC}"
+        echo -e "${YELLOW}创建生产环境配置...${NC}"
+        cat > .env << 'EOF'
+# 生产环境配置
+ENVIRONMENT=production
+DATABASE_URL=sqlite:///./data/research_dashboard_prod.db
+SECRET_KEY=production-secret-key-change-this
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+HOST=0.0.0.0
+PORT=8080
+CORS_ORIGINS=http://45.149.156.216:3001,http://localhost:3001
+LOG_LEVEL=INFO
+LOG_FILE=./logs/production.log
+UPLOAD_DIR=./uploads/production
+MAX_UPLOAD_SIZE=10485760
+EOF
+        echo -e "${GREEN}✅ 已创建生产环境配置${NC}"
     fi
 fi
 cd ..
