@@ -65,6 +65,7 @@ class ResearchProject(ResearchProjectBase):
     created_at: datetime
     updated_at: datetime
     collaborators: List[Collaborator] = []
+    communication_logs: List['CommunicationLog'] = []  # 交流记录
     latest_communication: Optional[str] = None  # 最新交流进度摘要
     actual_start_date: Optional[datetime] = None    # 从交流日志计算的实际开始时间
     
