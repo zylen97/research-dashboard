@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, EmailStr
-from typing import List, Optional
+from pydantic import BaseModel, Field, EmailStr, field_validator
+from typing import List, Optional, Union
 from datetime import datetime
 
 # Collaborator schemas
@@ -166,8 +166,32 @@ class CommunicationLogBase(BaseModel):
     action_items: Optional[str] = None
     communication_date: datetime = Field(default_factory=datetime.utcnow)
 
-class CommunicationLogCreate(CommunicationLogBase):
-    pass
+class CommunicationLogCreate(BaseModel):
+    project_id: int
+    collaborator_id: Optional[int] = None
+    communication_type: str = Field(..., max_length=50)
+    title: str = Field(..., max_length=200)
+    content: str
+    outcomes: Optional[str] = None
+    action_items: Optional[str] = None
+    communication_date: Union[str, datetime] = Field(default_factory=datetime.utcnow)
+    
+    @field_validator('communication_date', mode='before')
+    def parse_communication_date(cls, v):
+        if v is None:
+            return datetime.utcnow()
+        if isinstance(v, str):
+            # 尝试解析日期字符串
+            try:
+                # 首先尝试解析 YYYY-MM-DD 格式
+                if len(v) == 10 and v.count('-') == 2:
+                    return datetime.strptime(v, '%Y-%m-%d')
+                # 尝试解析带时间的格式
+                return datetime.strptime(v, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                # 如果解析失败，返回当前时间
+                return datetime.utcnow()
+        return v
 
 class CommunicationLogUpdate(BaseModel):
     communication_type: Optional[str] = Field(None, max_length=50)
@@ -175,7 +199,22 @@ class CommunicationLogUpdate(BaseModel):
     content: Optional[str] = None
     outcomes: Optional[str] = None
     action_items: Optional[str] = None
-    communication_date: Optional[datetime] = None
+    communication_date: Optional[Union[str, datetime]] = None
+    
+    @field_validator('communication_date', mode='before')
+    def parse_communication_date(cls, v):
+        if v is None:
+            return None
+        if isinstance(v, str):
+            try:
+                # 首先尝试解析 YYYY-MM-DD 格式
+                if len(v) == 10 and v.count('-') == 2:
+                    return datetime.strptime(v, '%Y-%m-%d')
+                # 尝试解析带时间的格式
+                return datetime.strptime(v, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                return None
+        return v
 
 class CommunicationLog(CommunicationLogBase):
     id: int
