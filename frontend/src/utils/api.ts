@@ -151,7 +151,7 @@ export const retryApiCall = async <T>(
       lastError = error;
       
       // 如果是认证错误或客户端错误，不重试
-      if (error.response?.status < 500) {
+      if ((error as any).response?.status < 500) {
         throw error;
       }
       
@@ -193,9 +193,9 @@ export class ApiCancellation {
   }
   
   static cancelAll(): void {
-    for (const [key, controller] of this.controllers) {
+    this.controllers.forEach((controller) => {
       controller.abort();
-    }
+    });
     this.controllers.clear();
   }
 }

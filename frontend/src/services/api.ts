@@ -9,7 +9,7 @@ import {
   IdeasSummary, PaginationParams,
   BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
   User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
-  AIProvider, AIProviderCreate, AITestResponse, BackupStats, BackupItem,
+  AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
 } from '../types';
 

@@ -32,8 +32,6 @@ import {
   FileTextOutlined,
   UserOutlined,
   RobotOutlined,
-  LoadingOutlined,
-  InfoCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { literatureApi } from '../services/api';
@@ -54,8 +52,6 @@ const LiteratureDiscovery: React.FC = () => {
   const [convertingLiterature, setConvertingLiterature] = useState<Literature | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isBatchMatchingModalVisible, setIsBatchMatchingModalVisible] = useState(false);
-  const [predefinedPrompts, setPredefinedPrompts] = useState<any[]>([]);
-  const [aiProviders, setAiProviders] = useState<any[]>([]);
   const [matchingProgress, setMatchingProgress] = useState({ current: 0, total: 0 });
   const [form] = Form.useForm();
   const [validationForm] = Form.useForm();
@@ -74,8 +70,17 @@ const LiteratureDiscovery: React.FC = () => {
     queryKey: ['literature-prompts'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/literature/prompts');
-        return response.json();
+        const response = await fetch('/api/literature/prompts', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error('获取prompts失败:', error);
         return [];
@@ -88,8 +93,17 @@ const LiteratureDiscovery: React.FC = () => {
     queryKey: ['ai-providers'],
     queryFn: async () => {
       try {
-        const response = await fetch('/api/config/ai/providers');
-        return response.json();
+        const response = await fetch('/api/config/ai/providers', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const data = await response.json();
+        return Array.isArray(data) ? data : [];
       } catch (error) {
         console.error('获取AI providers失败:', error);
         return [];

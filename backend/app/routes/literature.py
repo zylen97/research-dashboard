@@ -888,8 +888,10 @@ async def call_ai_api(provider_config: dict, prompt: str) -> Optional[str]:
         return None
 
 @router.get("/prompts", response_model=List[dict])
-async def get_predefined_prompts():
+async def get_predefined_prompts(request: Request):
     """获取预定义的匹配提示词"""
+    # 确保用户已认证
+    current_user = request.state.current_user
     prompts = [
         {
             "id": "research_relevance",

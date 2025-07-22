@@ -180,7 +180,8 @@ async def get_ai_providers(
     db: Session = Depends(get_db)
 ):
     """获取所有AI提供商配置"""
-    current_user = require_admin(request)
+    # 普通用户也可以查看AI providers（只读），无需管理员权限
+    current_user = request.state.current_user
     
     configs = db.query(SystemConfig).filter(
         SystemConfig.category == "ai_api",

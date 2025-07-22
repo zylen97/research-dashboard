@@ -1,7 +1,5 @@
-import React from 'react';
-
 // 格式化文本，在数字后添加换行
-export const formatTextWithLineBreaks = (text: string | undefined): React.ReactNode => {
+export const formatTextWithLineBreaks = (text: string | undefined): any => {
   if (!text) return text;
   
   // 先清理掉所有现有的换行符和多余空格

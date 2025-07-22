@@ -80,13 +80,15 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
     filterIcon: (filtered: boolean) => (
       <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
     ),
-    onFilter: (value, record) =>
-      record[dataIndex]
-        ? record[dataIndex]
+    onFilter: (value, record) => {
+      const fieldValue = (record as any)[dataIndex];
+      return fieldValue
+        ? fieldValue
             .toString()
             .toLowerCase()
             .includes((value as string).toLowerCase())
-        : '',
+        : false;
+    },
     render: text =>
       searchedColumn === dataIndex ? (
         <Highlighter
@@ -112,12 +114,12 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
         <Space>
           <Avatar
             style={{
-              backgroundColor: record.is_advanced ? '#f56a00' : '#87d068',
+              backgroundColor: record.is_senior ? '#f56a00' : '#87d068',
             }}
             icon={<UserOutlined />}
             size="small"
           />
-          <span style={{ fontWeight: record.is_advanced ? 'bold' : 'normal' }}>
+          <span style={{ fontWeight: record.is_senior ? 'bold' : 'normal' }}>
             {text}
           </span>
           {localGroupMarks[record.id] && (
@@ -195,10 +197,10 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
         { text: '高级合作者', value: true },
         { text: '普通合作者', value: false },
       ],
-      onFilter: (value, record) => record.is_advanced === value,
+      onFilter: (value, record) => record.is_senior === value,
       render: (_, record) => (
         <Space>
-          {record.is_advanced ? (
+          {record.is_senior ? (
             <Tag color="gold">高级合作者</Tag>
           ) : (
             <Tag color="green">普通合作者</Tag>

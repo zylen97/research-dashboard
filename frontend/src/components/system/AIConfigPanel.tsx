@@ -54,7 +54,6 @@ interface SystemConfig {
 const AIConfigPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [providers, setProviders] = useState<AIProvider[]>([]);
-  const [configs, setConfigs] = useState<SystemConfig[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);

@@ -3,14 +3,12 @@ import {
   Button,
   Modal,
   Form,
-  Input,
   message,
   Avatar,
   Typography,
   Tag,
   Space,
   Table,
-  Checkbox,
   Radio,
 } from 'antd';
 import {
@@ -28,7 +26,6 @@ import { Collaborator, CollaboratorCreate } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
 import CollaboratorDetailModal from '../components/collaborator/CollaboratorDetailModal';
-import { formatTextWithLineBreaks } from '../utils/textFormatters';
 
 const { Title, Text } = Typography;
 
@@ -74,10 +71,7 @@ const CollaboratorManagement: React.FC = () => {
       return localGroupMarks[collaborator.id];
     }
     
-    // 2. 后端支持is_group字段时直接返回
-    if (collaborator.is_group !== undefined) {
-      return collaborator.is_group;
-    }
+    // 2. 后端暂不支持is_group字段，使用临时逻辑
     
     // 3. 临时逻辑：根据名称和班级信息判断是否为小组
     const groupIndicators = [
@@ -140,22 +134,7 @@ const CollaboratorManagement: React.FC = () => {
     return statusMap;
   }, [projects, sortedCollaborators]);
 
-  // 统计数据
-  const collaboratorStats = useMemo(() => {
-    const total = sortedCollaborators.length;
-    const participating = Array.from(collaboratorParticipationStatus.values()).filter(Boolean).length;
-    const notParticipating = total - participating;
-    const senior = sortedCollaborators.filter(c => c.is_senior).length;
-    const groups = sortedCollaborators.filter(c => isGroupCollaborator(c)).length;
-    
-    return {
-      total,
-      participating,
-      notParticipating,
-      senior,
-      groups,
-    };
-  }, [sortedCollaborators, collaboratorParticipationStatus, isGroupCollaborator]);
+  // 统计数据计算已移除（暂未使用）
 
   // 创建合作者mutation
   const createCollaboratorMutation = useMutation({
@@ -218,20 +197,17 @@ const CollaboratorManagement: React.FC = () => {
 
   // 处理表单提交
   const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean }) => {
-    // 提取is_group字段并在本地管理
-    const { is_group, ...apiValues } = values;
+    // 暂不支持is_group字段，使用本地管理
+    const apiValues = values;
     
     if (editingCollaborator) {
-      // 更新本地小组标记状态
-      setLocalGroupMarks(prev => ({
-        ...prev,
-        [editingCollaborator.id]: !!is_group
-      }));
+      // 更新本地小组标记状态（暂不支持is_group字段）
+      // setLocalGroupMarks 逻辑暂时移除
       
       updateCollaboratorMutation.mutate({ id: editingCollaborator.id, data: apiValues });
     } else {
-      // 新建时，先保存is_group状态以便在创建成功后使用
-      setPendingGroupStatus(!!is_group);
+      // 新建时暂不支持is_group字段
+      // setPendingGroupStatus 逻辑暂时移除
       createCollaboratorMutation.mutate(apiValues);
     }
   };
@@ -601,16 +577,10 @@ const CollaboratorManagement: React.FC = () => {
       <CollaboratorDetailModal
         visible={isDetailModalVisible}
         collaborator={selectedCollaborator}
-        isGroup={selectedCollaborator ? isGroupCollaborator(selectedCollaborator) : false}
-        onCancel={() => {
+        isGroupMember={selectedCollaborator ? !!isGroupCollaborator(selectedCollaborator) : false}
+        onClose={() => {
           setIsDetailModalVisible(false);
           setSelectedCollaborator(null);
-        }}
-        onEdit={() => {
-          if (selectedCollaborator) {
-            setIsDetailModalVisible(false);
-            handleEdit(selectedCollaborator);
-          }
         }}
       />
     </div>
