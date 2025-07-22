@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# 🔍 VPS部署验证脚本 v2.0 - Ultra Think 优化版
-# 全面验证部署状态、性能指标、AI功能、系统集成等
+# 🔧 502错误诊断脚本 - Ultra Think 紧急修复版
+# 专注诊断和修复502 Bad Gateway问题
 
 set -e
 
@@ -53,10 +53,123 @@ check_result() {
     fi
 }
 
-echo -e "${BLUE}=== Research Dashboard Ultra Think 部署验证 v2.0 ===${NC}"
+echo -e "${BLUE}=== Research Dashboard 502错误紧急诊断 ===${NC}"
 echo -e "${CYAN}开始时间: $(date '+%Y-%m-%d %H:%M:%S')${NC}"
 echo ""
-log_message "INFO" "开始Ultra Think部署验证"
+log_message "INFO" "开始502错误诊断"
+
+# 🚨 紧急502问题诊断
+echo -e "${RED}🚨 502 Bad Gateway 错误诊断${NC}"
+echo ""
+
+# 快速检查关键问题
+echo -e "${YELLOW}1. 快速问题诊断${NC}"
+
+# 后端服务状态
+if systemctl is-active --quiet research-backend; then
+    echo -e "  ${GREEN}✅ 后端服务运行中${NC}"
+else
+    echo -e "  ${RED}❌ 后端服务未运行 - 这是502错误的主要原因！${NC}"
+    echo -e "  ${CYAN}尝试启动服务...${NC}"
+    systemctl start research-backend || echo -e "    ${RED}启动失败${NC}"
+    sleep 5
+    if systemctl is-active --quiet research-backend; then
+        echo -e "    ${GREEN}✅ 服务启动成功${NC}"
+    else
+        echo -e "    ${RED}❌ 服务启动失败，查看错误日志：${NC}"
+        journalctl -u research-backend --no-pager -n 10
+    fi
+fi
+
+# 端口检查
+echo -e "  ${CYAN}检查端口8080（后端API）:${NC}"
+if netstat -tuln 2>/dev/null | grep ":8080 " > /dev/null; then
+    echo -e "    ${GREEN}✅ 8080端口已监听${NC}"
+else
+    echo -e "    ${RED}❌ 8080端口未监听 - 后端服务未正常启动${NC}"
+fi
+
+# API直接测试
+echo -e "  ${CYAN}测试后端API直接访问:${NC}"
+api_response=$(curl -s --connect-timeout 5 "http://localhost:8080" 2>/dev/null || echo "FAIL")
+if [ "$api_response" != "FAIL" ]; then
+    echo -e "    ${GREEN}✅ 后端API响应正常${NC}"
+else
+    echo -e "    ${RED}❌ 后端API无响应${NC}"
+fi
+
+# Nginx代理测试
+echo -e "  ${CYAN}测试Nginx API代理:${NC}"
+proxy_response=$(curl -s --connect-timeout 5 "http://localhost:3001/api/" 2>/dev/null || echo "FAIL")
+if [ "$proxy_response" != "FAIL" ]; then
+    echo -e "    ${GREEN}✅ Nginx代理工作正常${NC}"
+else
+    echo -e "    ${RED}❌ Nginx代理失败 - 检查配置${NC}"
+fi
+
+echo ""
+
+# 如果发现问题，立即尝试修复
+if ! systemctl is-active --quiet research-backend; then
+    echo -e "${YELLOW}🔧 尝试自动修复...${NC}"
+    
+    # 重新部署后端配置
+    cd "$PROJECT_ROOT/backend" || exit 1
+    
+    # 检查配置文件
+    if [ ! -f ".env" ]; then
+        echo -e "  ${CYAN}创建生产环境配置...${NC}"
+        cat > .env << 'EOF'
+ENVIRONMENT=production
+DATABASE_URL=sqlite:///./data/research_dashboard_prod.db
+SECRET_KEY=ultra-think-production-secret-key-2025-secure
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+HOST=0.0.0.0
+PORT=8080
+CORS_ORIGINS=http://45.149.156.216:3001,http://localhost:3001
+LOG_LEVEL=INFO
+LOG_FILE=./logs/production.log
+UPLOAD_DIR=./uploads/production
+MAX_UPLOAD_SIZE=10485760
+
+# AI批量处理配置
+AI_BATCH_SIZE_LIMIT=50
+AI_MAX_CONCURRENT=5
+AI_MAX_RETRIES=2
+
+# HTTP性能优化配置
+HTTP_MAX_CONNECTIONS=100
+HTTP_KEEPALIVE_CONNECTIONS=20
+ENABLE_HTTP2=true
+EOF
+        chmod 600 .env
+        echo -e "    ${GREEN}✅ 配置文件创建完成${NC}"
+    fi
+    
+    # 重启服务
+    echo -e "  ${CYAN}重启后端服务...${NC}"
+    systemctl restart research-backend
+    sleep 10
+    
+    if systemctl is-active --quiet research-backend; then
+        echo -e "    ${GREEN}✅ 服务重启成功${NC}"
+        
+        # 再次测试API
+        sleep 5
+        if curl -s --connect-timeout 5 "http://localhost:8080" > /dev/null; then
+            echo -e "    ${GREEN}🎉 502错误已修复！${NC}"
+        else
+            echo -e "    ${RED}❌ API仍无响应，需要进一步诊断${NC}"
+        fi
+    else
+        echo -e "    ${RED}❌ 服务重启失败${NC}"
+        echo -e "    ${CYAN}查看错误日志:${NC}"
+        journalctl -u research-backend --no-pager -n 15
+    fi
+fi
+
+echo ""
 
 # 1. 检查后端服务状态
 echo -e "${YELLOW}1. 🚀 后端服务状态检查${NC}"
