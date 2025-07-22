@@ -23,14 +23,25 @@ class BackupManager:
     def __init__(self):
         self.backend_dir = Path(__file__).parent.parent.parent
         
-        # 根据环境变量获取实际的数据库路径
+        # 从DATABASE_URL动态解析真实数据库路径
+        db_url = settings.DATABASE_URL
+        if db_url.startswith("sqlite:///"):
+            # 去掉 sqlite:/// 前缀，获取文件路径
+            db_file_path = db_url[10:]  # 去掉 "sqlite:///"
+            if db_file_path.startswith("./"):
+                # 相对路径，相对于backend目录
+                self.db_path = self.backend_dir / db_file_path[2:]
+            else:
+                # 绝对路径
+                self.db_path = Path(db_file_path)
+        else:
+            # 非SQLite数据库，使用默认路径
+            self.db_path = self.backend_dir / "research_dashboard.db"
+        
+        # 设置备份目录
         if settings.IS_PRODUCTION:
-            # 生产环境：data/research_dashboard_prod.db
-            self.db_path = self.backend_dir / "data" / "research_dashboard_prod.db"
             self.backup_dir = self.backend_dir / "backups" / "production"
         else:
-            # 开发环境：data/research_dashboard_dev.db
-            self.db_path = self.backend_dir / "data" / "research_dashboard_dev.db"
             self.backup_dir = self.backend_dir / "backups" / "dev"
         
         self.max_backups = 7  # 保留最近7个备份
