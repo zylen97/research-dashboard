@@ -13,6 +13,9 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
     - name: Execute emergency fix on VPS
       uses: appleboy/ssh-action@v0.1.5
       with:
@@ -28,18 +31,44 @@ jobs:
           # 备份当前数据库
           cp data/research_dashboard_prod.db data/research_dashboard_prod.db.emergency.$(date +%Y%m%d_%H%M%S)
           
-          # 检查当前迁移状态
-          echo "当前迁移记录："
-          sqlite3 data/research_dashboard_prod.db "SELECT * FROM migration_history ORDER BY executed_at DESC LIMIT 5;" || echo "无迁移记录"
-          
-          # 检查表结构
-          echo ""
-          echo "检查research_projects表结构："
-          sqlite3 data/research_dashboard_prod.db "PRAGMA table_info(research_projects);" | grep -E "(user_id|is_todo|todo_marked_at)" || echo "缺少关键字段"
-          
-          echo ""
-          echo "检查collaborators表结构："
-          sqlite3 data/research_dashboard_prod.db "PRAGMA table_info(collaborators);" | grep -E "(class_info|is_senior)" || echo "缺少关键字段"
+          # 使用Python检查数据库状态
+          echo "检查数据库状态..."
+          python3 -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('data/research_dashboard_prod.db')
+    cursor = conn.cursor()
+    
+    # 检查迁移历史
+    print('当前迁移记录：')
+    try:
+        cursor.execute('SELECT * FROM migration_history ORDER BY executed_at DESC LIMIT 5')
+        for row in cursor.fetchall():
+            print(f'  {row}')
+    except:
+        print('  无迁移记录表')
+    
+    # 检查research_projects表
+    print('\n检查research_projects表结构：')
+    cursor.execute('PRAGMA table_info(research_projects)')
+    columns = [col[1] for col in cursor.fetchall()]
+    print(f'  字段: {columns}')
+    print(f'  user_id: {\"user_id\" in columns}')
+    print(f'  is_todo: {\"is_todo\" in columns}')
+    print(f'  todo_marked_at: {\"todo_marked_at\" in columns}')
+    
+    # 检查collaborators表
+    print('\n检查collaborators表结构：')
+    cursor.execute('PRAGMA table_info(collaborators)')
+    columns = [col[1] for col in cursor.fetchall()]
+    print(f'  字段: {columns}')
+    print(f'  class_info: {\"class_info\" in columns}')
+    print(f'  is_senior: {\"is_senior\" in columns}')
+    
+    conn.close()
+except Exception as e:
+    print(f'错误: {e}')
+          "
           
           # 执行v1.7迁移
           echo ""
@@ -49,9 +78,25 @@ jobs:
           # 验证迁移结果
           echo ""
           echo "验证迁移结果..."
-          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '用户数' FROM users;"
-          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '项目数' FROM research_projects;"
-          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '合作者数' FROM collaborators;"
+          python3 -c "
+import sqlite3
+try:
+    conn = sqlite3.connect('data/research_dashboard_prod.db')
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT COUNT(*) FROM users')
+    print(f'用户数: {cursor.fetchone()[0]}')
+    
+    cursor.execute('SELECT COUNT(*) FROM research_projects')
+    print(f'项目数: {cursor.fetchone()[0]}')
+    
+    cursor.execute('SELECT COUNT(*) FROM collaborators')
+    print(f'合作者数: {cursor.fetchone()[0]}')
+    
+    conn.close()
+except Exception as e:
+    print(f'错误: {e}')
+          "
           
           # 重启服务
           echo ""
