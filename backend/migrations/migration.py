@@ -19,8 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 迁移版本号 - 修复缺失的字段（数据共享模式）
-MIGRATION_VERSION = "v1.7_fix_missing_fields_shared_data"
+# 迁移版本号 - 修复缺失的字段（数据共享模式）- 强制执行
+MIGRATION_VERSION = "v1.8_force_fix_missing_fields_500_errors"
 
 def backup_database(db_path):
     """创建数据库备份"""
