@@ -26,6 +26,10 @@ import {
   ClockCircleOutlined,
   FolderOpenOutlined,
   SaveOutlined,
+  TeamOutlined,
+  ProjectOutlined,
+  MessageOutlined,
+  ExclamationCircleOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
@@ -208,6 +212,58 @@ const DatabaseBackup: React.FC = () => {
           {text}
         </Space>
       ),
+    },
+    {
+      title: '合作者',
+      dataIndex: 'collaborators_count',
+      key: 'collaborators',
+      render: (count: number) => (
+        <Space>
+          <TeamOutlined />
+          <Tag color={count === 0 ? 'error' : 'success'}>
+            {count || 0}
+          </Tag>
+          {count === 0 && (
+            <Tooltip title="备份中没有合作者数据">
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+            </Tooltip>
+          )}
+        </Space>
+      ),
+      sorter: (a: BackupItem, b: BackupItem) => (a.collaborators_count || 0) - (b.collaborators_count || 0),
+    },
+    {
+      title: '项目',
+      dataIndex: 'projects_count',
+      key: 'projects',
+      render: (count: number) => (
+        <Space>
+          <ProjectOutlined />
+          <Tag color={count === 0 ? 'error' : 'success'}>
+            {count || 0}
+          </Tag>
+          {count === 0 && (
+            <Tooltip title="备份中没有项目数据">
+              <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+            </Tooltip>
+          )}
+        </Space>
+      ),
+      sorter: (a: BackupItem, b: BackupItem) => (a.projects_count || 0) - (b.projects_count || 0),
+    },
+    {
+      title: '日志',
+      dataIndex: 'logs_count',
+      key: 'logs',
+      render: (count: number) => (
+        <Space>
+          <MessageOutlined />
+          <Tag color={count === 0 ? 'warning' : 'processing'}>
+            {count || 0}
+          </Tag>
+        </Space>
+      ),
+      sorter: (a: BackupItem, b: BackupItem) => (a.logs_count || 0) - (b.logs_count || 0),
     },
     {
       title: '操作',

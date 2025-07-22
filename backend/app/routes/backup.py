@@ -46,7 +46,10 @@ async def list_backups(current_user: User = Depends(get_current_user)) -> Dict[s
                 "sizeFormatted": _format_size(backup["size"]),
                 "created": backup["created"].isoformat(),
                 "createdFormatted": backup["created"].strftime("%Y-%m-%d %H:%M:%S"),
-                "details": backup.get("details", "")
+                "details": backup.get("details", ""),
+                "collaborators_count": backup.get("collaborators_count", 0),
+                "projects_count": backup.get("projects_count", 0),
+                "logs_count": backup.get("logs_count", 0)
             })
         
         return {

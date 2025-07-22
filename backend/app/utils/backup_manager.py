@@ -5,6 +5,7 @@
 import os
 import shutil
 import sys
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -120,9 +121,46 @@ class BackupManager:
                         with open(info_file, 'r') as f:
                             info["details"] = f.read()
                     
+                    # 获取备份数据统计
+                    stats = self.get_backup_data_stats(db_file)
+                    info.update(stats)
+                    
                     backups.append(info)
         
         return backups
+    
+    def get_backup_data_stats(self, backup_db_path: Path) -> dict:
+        """获取备份数据库的统计信息"""
+        try:
+            conn = sqlite3.connect(backup_db_path)
+            cursor = conn.cursor()
+            
+            # 统计活跃合作者数量（排除已删除的）
+            cursor.execute("SELECT COUNT(*) FROM collaborators WHERE is_deleted = 0")
+            collaborators_count = cursor.fetchone()[0]
+            
+            # 统计项目数量  
+            cursor.execute("SELECT COUNT(*) FROM research_projects")
+            projects_count = cursor.fetchone()[0]
+            
+            # 统计交流日志数量
+            cursor.execute("SELECT COUNT(*) FROM communication_logs")
+            logs_count = cursor.fetchone()[0]
+            
+            conn.close()
+            
+            return {
+                "collaborators_count": collaborators_count,
+                "projects_count": projects_count,
+                "logs_count": logs_count
+            }
+        except Exception as e:
+            logger.warning(f"无法读取备份数据统计: {e}")
+            return {
+                "collaborators_count": 0,
+                "projects_count": 0,
+                "logs_count": 0
+            }
     
     def _cleanup_old_backups(self):
         """清理超过保留数量的旧备份"""
