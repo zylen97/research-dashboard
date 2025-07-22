@@ -57,7 +57,7 @@ app.add_middleware(
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
-# app.add_middleware(AuthMiddleware)  # 暂时注释掉，等前端准备好再启用
+app.add_middleware(AuthMiddleware)  # 启用认证中间件
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
