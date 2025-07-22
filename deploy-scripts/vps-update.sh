@@ -48,7 +48,21 @@ if [ ! -f ".env" ]; then
 fi
 cd ..
 
-# 4. 检查后端是否需要重启
+# 4. 执行数据库迁移（如果存在）
+echo -e "${YELLOW}检查数据库迁移...${NC}"
+cd backend
+if [ -d "migrations" ]; then
+    for migration in migrations/*.py; do
+        if [ -f "$migration" ] && [[ "$migration" != *"__"* ]]; then
+            echo "执行迁移: $(basename $migration)"
+            python3 "$migration" || echo "迁移执行完成或已跳过"
+        fi
+    done
+    echo -e "${GREEN}✅ 迁移检查完成${NC}"
+fi
+cd ..
+
+# 5. 检查后端是否需要重启
 BACKEND_CHANGED=$(git diff HEAD~1 --name-only | grep -c "backend/" || echo "0")
 if [ "$BACKEND_CHANGED" -gt 0 ]; then
     echo -e "${YELLOW}重启后端服务...${NC}"
