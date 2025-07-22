@@ -48,17 +48,14 @@ if [ ! -f ".env" ]; then
 fi
 cd ..
 
-# 4. 执行数据库迁移（如果存在）
-echo -e "${YELLOW}检查数据库迁移...${NC}"
+# 4. 执行数据库迁移
+echo -e "${YELLOW}执行数据库迁移...${NC}"
 cd backend
-if [ -d "migrations" ]; then
-    for migration in migrations/*.py; do
-        if [ -f "$migration" ] && [[ "$migration" != *"__"* ]]; then
-            echo "执行迁移: $(basename $migration)"
-            python3 "$migration" || echo "迁移执行完成或已跳过"
-        fi
-    done
-    echo -e "${GREEN}✅ 迁移检查完成${NC}"
+if [ -f "migrations/migration.py" ]; then
+    python3 migrations/migration.py
+    echo -e "${GREEN}✅ 数据库迁移完成${NC}"
+else
+    echo "未找到迁移脚本，跳过迁移"
 fi
 cd ..
 

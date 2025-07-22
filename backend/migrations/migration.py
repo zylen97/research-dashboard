@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """
-数据库迁移脚本：将用户名dz更新为dj
+通用数据库迁移脚本
+- 每次数据库修改时，更新此文件内容
+- 执行完成后自动标记为已完成
+- 下次部署时如无新迁移则跳过
 """
 
 import sqlite3
@@ -16,8 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 添加项目根目录到 Python 路径
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# 迁移版本号 - 每次修改此文件时递增
+MIGRATION_VERSION = "v1.0_update_dz_to_dj"
 
 def backup_database(db_path):
     """创建数据库备份"""
@@ -27,8 +30,45 @@ def backup_database(db_path):
     logger.info(f"数据库已备份到: {backup_path}")
     return backup_path
 
-def update_user_dz_to_dj():
-    """将用户名dz更新为dj"""
+def check_if_migration_completed(db_path):
+    """检查迁移是否已完成"""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        
+        # 创建迁移记录表（如果不存在）
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS migration_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                version TEXT UNIQUE,
+                executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        
+        # 检查当前版本是否已执行
+        cursor.execute("SELECT version FROM migration_history WHERE version = ?", (MIGRATION_VERSION,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        return result is not None
+    except Exception as e:
+        logger.error(f"检查迁移状态失败: {e}")
+        return False
+
+def mark_migration_completed(db_path):
+    """标记迁移为已完成"""
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+        cursor.execute("INSERT OR IGNORE INTO migration_history (version) VALUES (?)", (MIGRATION_VERSION,))
+        conn.commit()
+        conn.close()
+        logger.info(f"迁移版本 {MIGRATION_VERSION} 已标记为完成")
+    except Exception as e:
+        logger.error(f"标记迁移完成失败: {e}")
+
+def run_migration():
+    """执行当前迁移任务"""
     # 检查两个可能的数据库路径
     db_paths = [
         os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),
@@ -47,6 +87,11 @@ def update_user_dz_to_dj():
     
     logger.info(f"使用数据库文件: {db_path}")
     
+    # 检查是否已执行过
+    if check_if_migration_completed(db_path):
+        logger.info(f"迁移 {MIGRATION_VERSION} 已执行过，跳过")
+        return True
+    
     # 备份数据库
     backup_path = backup_database(db_path)
     
@@ -54,7 +99,11 @@ def update_user_dz_to_dj():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        logger.info("开始更新用户信息")
+        logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
+        
+        # ===========================================
+        # 🔧 当前迁移任务：将用户名dz更新为dj
+        # ===========================================
         
         # 检查是否存在dz用户
         cursor.execute("SELECT * FROM users WHERE username = 'dz'")
@@ -76,23 +125,28 @@ def update_user_dz_to_dj():
         else:
             logger.info("未找到dz用户，可能已经更新过或不存在")
         
+        # ===========================================
+        # 🔧 在这里添加其他迁移任务...
+        # ===========================================
+        
         # 提交更改
         conn.commit()
-        logger.info("用户名更新完成")
         
         # 验证更改
         cursor.execute("SELECT username, email, display_name FROM users WHERE username = 'dj'")
         dj_user = cursor.fetchone()
         if dj_user:
             logger.info(f"验证成功: {dj_user}")
-        else:
-            logger.warning("验证失败: 未找到dj用户")
+        
+        # 标记迁移完成
+        mark_migration_completed(db_path)
         
         conn.close()
+        logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         return True
         
     except Exception as e:
-        logger.error(f"更新用户名失败: {str(e)}")
+        logger.error(f"迁移执行失败: {str(e)}")
         logger.error(f"数据库已备份在: {backup_path}")
         if conn:
             conn.rollback()
@@ -100,10 +154,10 @@ def update_user_dz_to_dj():
         return False
 
 if __name__ == "__main__":
-    logger.info("=== 数据库迁移：将用户名dz更新为dj ===")
+    logger.info("=== 数据库迁移工具 ===")
+    logger.info(f"迁移版本: {MIGRATION_VERSION}")
     
-    # 执行迁移
-    success = update_user_dz_to_dj()
+    success = run_migration()
     
     if success:
         logger.info("迁移完成")
