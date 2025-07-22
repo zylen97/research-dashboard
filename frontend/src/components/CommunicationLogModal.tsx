@@ -79,7 +79,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     if (!project) return;
 
     const logData: CommunicationLogCreate = {
-      project_id: project.id,
       communication_type: 'meeting', // 默认值，后端需要
       title: values.title,
       content: values.content || '',

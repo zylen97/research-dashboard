@@ -205,7 +205,6 @@ export interface CommunicationLog {
 }
 
 export interface CommunicationLogCreate {
-  project_id: number;
   collaborator_id?: number;
   communication_type: string;
   title: string;

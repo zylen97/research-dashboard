@@ -167,7 +167,6 @@ class CommunicationLogBase(BaseModel):
     communication_date: datetime = Field(default_factory=datetime.utcnow)
 
 class CommunicationLogCreate(BaseModel):
-    project_id: int
     collaborator_id: Optional[int] = None
     communication_type: str = Field(..., max_length=50)
     title: str = Field(..., max_length=200)
