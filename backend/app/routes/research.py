@@ -33,8 +33,8 @@ async def get_research_projects(
         ).order_by(desc(CommunicationLog.communication_date)).first()
         
         if latest_log:
-            # 设置最新交流进度摘要
-            project.latest_communication = f"{latest_log.communication_date.strftime('%Y-%m-%d')} - {latest_log.content[:50]}..."
+            # 设置最新交流进度摘要：日期 - 标题
+            project.latest_communication = f"{latest_log.communication_date.strftime('%Y-%m-%d')} - {latest_log.title}"
             
         # 获取最早的交流日志作为实际开始时间
         first_log = db.query(CommunicationLog).filter(

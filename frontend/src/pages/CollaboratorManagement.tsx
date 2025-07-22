@@ -10,7 +10,6 @@ import {
   Avatar,
   Typography,
   Tag,
-  Upload,
   Space,
   Descriptions,
   Table,
@@ -25,7 +24,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   UserOutlined,
-  UploadOutlined,
   TeamOutlined,
   EyeOutlined,
   ReloadOutlined,
@@ -259,32 +257,6 @@ const CollaboratorManagement: React.FC = () => {
     },
   });
 
-  // 上传文件mutation
-  const uploadMutation = useMutation({
-    mutationFn: collaboratorApi.uploadCollaboratorsFile,
-    onSuccess: (response) => {
-      message.success(`成功导入 ${response.imported_count} 条合作者记录`);
-      if (response.errors.length > 0) {
-        Modal.warning({
-          title: '导入警告',
-          content: (
-            <div>
-              <p>部分数据导入失败：</p>
-              <ul>
-                {response.errors.map((error, index) => (
-                  <li key={index}>{error}</li>
-                ))}
-              </ul>
-            </div>
-          ),
-        });
-      }
-      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-    },
-    onError: (error) => {
-      message.error('文件上传失败：' + error.message);
-    },
-  });
 
   // 临时保存新建时的is_group状态
   const [pendingGroupStatus, setPendingGroupStatus] = useState<boolean>(false);
@@ -447,20 +419,6 @@ const CollaboratorManagement: React.FC = () => {
     setIsDetailModalVisible(true);
   };
 
-  // 文件上传配置
-  const uploadProps = {
-    beforeUpload: (file: File) => {
-      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                     file.type === 'application/vnd.ms-excel';
-      if (!isExcel) {
-        message.error('只能上传Excel文件！');
-        return false;
-      }
-      uploadMutation.mutate(file);
-      return false;
-    },
-    showUploadList: false,
-  };
 
   // 获取性别标签颜色
   const getGenderColor = (gender?: string) => {
@@ -493,11 +451,6 @@ const CollaboratorManagement: React.FC = () => {
           </Text>
         </div>
         <Space>
-          <Upload {...uploadProps}>
-            <Button icon={<UploadOutlined />} loading={uploadMutation.isPending}>
-              导入Excel
-            </Button>
-          </Upload>
           <Button 
             icon={<ReloadOutlined />}
             onClick={() => refetch()}

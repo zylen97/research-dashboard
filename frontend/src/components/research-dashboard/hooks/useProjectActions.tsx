@@ -79,8 +79,11 @@ export const useProjectActions = ({
       researchApi.createCommunicationLog(projectId, logData),
     onSuccess: () => {
       message.success('交流日志创建成功！');
-      // 刷新研究项目数据以更新latest_communication字段
-      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+      // 添加短暂延迟确保后端处理完成，然后刷新数据
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+        queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
+      }, 100);
     },
     onError: (error: any) => {
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || error.message;
@@ -94,8 +97,11 @@ export const useProjectActions = ({
       researchApi.updateCommunicationLog(projectId, logId, logData),
     onSuccess: () => {
       message.success('交流日志更新成功！');
-      // 刷新研究项目数据以更新latest_communication字段
-      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+      // 添加短暂延迟确保后端处理完成，然后刷新数据
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+        queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
+      }, 100);
     },
     onError: (error: any) => {
       message.error('更新失败：' + error.message);
@@ -108,8 +114,11 @@ export const useProjectActions = ({
       researchApi.deleteCommunicationLog(projectId, logId),
     onSuccess: () => {
       message.success('交流日志删除成功！');
-      // 刷新研究项目数据以更新latest_communication字段
-      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+      // 添加短暂延迟确保后端处理完成，然后刷新数据
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+        queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
+      }, 100);
     },
     onError: (error: any) => {
       message.error('删除失败：' + error.message);
