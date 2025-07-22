@@ -8,12 +8,15 @@ cd /var/www/research-dashboard/backend
 
 # 检查备份文件
 echo "📁 备份文件列表:"
-ls -lah backups/production/*.db 2>/dev/null | tail -5
+ls -lah backups/production/*.db 2>/dev/null | tail -5 || ls -lah backups/prod/*.db 2>/dev/null | tail -5
 
 echo -e "\n🔍 最新5个备份的数据对比:"
 
-# 获取最新5个备份
+# 获取最新5个备份（检查两个可能的路径）
 BACKUPS=($(ls -1t backups/production/*.db 2>/dev/null | head -5))
+if [ ${#BACKUPS[@]} -eq 0 ]; then
+    BACKUPS=($(ls -1t backups/prod/*.db 2>/dev/null | head -5))
+fi
 
 for backup in "${BACKUPS[@]}"; do
     name=$(basename "$backup")

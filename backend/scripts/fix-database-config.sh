@@ -24,13 +24,14 @@ cp research_dashboard.db /tmp/db_backup_$(date +%Y%m%d_%H%M%S)/research_dashboar
 cp data/research_dashboard_prod.db /tmp/db_backup_$(date +%Y%m%d_%H%M%S)/research_dashboard_prod.db.bak 2>/dev/null || echo "生产数据库备份跳过"
 echo "备份完成到: /tmp/db_backup_*"
 
-# 3. 修复方案A: 直接覆盖（快速方案）
-echo -e "\n🚀 3. 快速修复 - 使用含有数据的数据库覆盖当前数据库:"
+# 3. 数据恢复：将含有数据的数据库恢复到应用使用的位置
+echo -e "\n🚀 3. 数据恢复 - 将数据从data/目录恢复到应用使用的位置:"
 if [ -f "data/research_dashboard_prod.db" ]; then
     cp data/research_dashboard_prod.db research_dashboard.db
-    echo "✅ 数据库文件已覆盖"
+    echo "✅ 数据已从 data/research_dashboard_prod.db 恢复到 research_dashboard.db"
+    echo "✅ 现在应用和备份系统都使用同一个数据库文件"
 else
-    echo "❌ 生产数据库文件不存在"
+    echo "❌ 源数据库文件不存在"
     exit 1
 fi
 
