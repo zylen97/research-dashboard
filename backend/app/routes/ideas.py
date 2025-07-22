@@ -71,9 +71,6 @@ async def create_idea(
     db.add(db_idea)
     db.commit()
     db.refresh(db_idea)
-    
-    # 加载用户信息
-    db_idea.user = current_user
     return db_idea
 
 @router.put("/{idea_id}", response_model=IdeaSchema)

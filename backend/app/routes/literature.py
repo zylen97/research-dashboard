@@ -98,9 +98,6 @@ async def create_literature(
     db.add(db_literature)
     db.commit()
     db.refresh(db_literature)
-    
-    # 加载用户信息
-    db_literature.user = current_user
     return db_literature
 
 @router.put("/{literature_id}", response_model=LiteratureSchema)
@@ -441,7 +438,7 @@ async def batch_match_literature(
     
     # 批量获取文献数据，减少数据库查询次数
     literature_dict = await get_literature_batch(
-        db, matching_request.literature_ids, current_user.id
+        db, matching_request.literature_ids, 1  # user_id参数已无用，传入任意值
     )
     
     # 并发处理文献匹配

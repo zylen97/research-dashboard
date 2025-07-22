@@ -19,34 +19,12 @@ async def get_research_projects(
     status_filter: str = None,
     db: Session = Depends(get_db)
 ):
-    """获取研究项目列表"""
-    # 暂时移除joinedload避免关联错误
+    """获取研究项目列表（数据共享，简化版）"""
+    # 最简化查询，移除所有复杂逻辑
     query = db.query(ResearchProject)
     if status_filter:
         query = query.filter(ResearchProject.status == status_filter)
     projects = query.offset(skip).limit(limit).all()
-    
-    # 为每个项目获取最新交流进度和实际开始时间
-    for project in projects:
-        # 获取最新的交流日志
-        latest_log = db.query(CommunicationLog).filter(
-            CommunicationLog.project_id == project.id
-        ).order_by(desc(CommunicationLog.communication_date)).first()
-        
-        if latest_log:
-            # 设置最新交流进度摘要：日期 - 标题
-            project.latest_communication = f"{latest_log.communication_date.strftime('%Y-%m-%d')} - {latest_log.title}"
-            
-        # 获取最早的交流日志作为实际开始时间
-        first_log = db.query(CommunicationLog).filter(
-            CommunicationLog.project_id == project.id
-        ).order_by(CommunicationLog.communication_date).first()
-        
-        if first_log:
-            project.actual_start_date = first_log.communication_date
-        else:
-            project.actual_start_date = project.start_date
-    
     return projects
 
 @router.get("/{project_id}", response_model=ResearchProjectSchema)
