@@ -125,45 +125,34 @@ research-dashboard/
 ## 🚀 快速开始
 
 ### 环境要求
-- Python 3.8+
-- Node.js 16+
-- npm 或 yarn
-- Git (用于版本控制和部署)
-
-### 推荐开发环境
-- Python 3.9+ (更好的类型检查支持)
-- Node.js 18+ (最新LTS版本)
-- VS Code + 相关扩展
+- Python 3.8+ (推荐 3.9+)
+- Node.js 16+ (推荐 18 LTS)
+- Git 2.25+
 
 ### 本地开发
 
-1. **克隆项目**
+#### 一键启动（推荐）
 ```bash
 git clone https://github.com/zylen97/research-dashboard.git
 cd research-dashboard
+./start-dev.sh  # 自动安装依赖并启动前后端
 ```
 
-2. **安装依赖并启动**
+#### 手动启动
 ```bash
-# 使用一键启动脚本
-./start-dev.sh
-
-# 或分别启动前后端
 # 后端
-cd backend
-pip install -r requirements.txt
-python main.py
+cd backend && pip install -r requirements.txt && python main.py
 
 # 前端（新终端）
-cd frontend
-npm install
-npm start
+cd frontend && npm install && npm start
 ```
 
-3. **访问系统**
-- 前端：http://localhost:3001
-- 后端API：http://localhost:8080
-- API文档：http://localhost:8080/docs
+#### 访问地址
+- **开发前端**: http://localhost:3001
+- **开发API**: http://localhost:8080
+- **API文档**: http://localhost:8080/docs
+- **生产前端**: http://45.149.156.216:3001
+- **生产API**: http://45.149.156.216:8080
 
 ### 默认用户账号
 
@@ -257,22 +246,125 @@ npm start
 
 ## 🌐 生产环境部署
 
-### 自动部署
+### 智能部署系统
+
+#### 自动部署
 项目配置了GitHub Actions，每次推送到main分支会自动部署到VPS。
 
-### 手动部署
+#### 智能部署脚本
 ```bash
-# 使用部署脚本
-./deploy-scripts/deploy.sh --all  # 部署前后端
-./deploy-scripts/deploy.sh --frontend  # 仅部署前端
-./deploy-scripts/deploy.sh --backend   # 仅部署后端
+# 智能检测并部署（推荐）
+./deploy-scripts/deploy.sh              # 自动检测修改类型
+./deploy-scripts/deploy.sh --frontend   # 强制构建前端
+./deploy-scripts/deploy.sh --backend    # 仅推送后端
+./deploy-scripts/deploy.sh --all        # 构建并推送所有
+./deploy-scripts/deploy.sh --dry-run    # 预览模式
 ```
 
-### 服务器要求
-- Ubuntu 20.04+
-- Python 3.8+
-- Nginx
-- Git
+智能功能：
+- 🔍 自动检测前端/后端/文档修改
+- 🎯 根据修改内容决定是否构建
+- 📝 生成规范的提交信息（feat/fix/docs）
+- ⚡ 后端修改时跳过构建，节省时间
+- 👀 预览模式查看将执行的操作
+
+### 生产环境要求
+- **操作系统**: Ubuntu 20.04+ / CentOS 8+
+- **Python**: 3.8+ (推荐 3.9+)
+- **Node.js**: 16+ (推荐 18 LTS)
+- **Web服务器**: Nginx 1.18+
+- **进程管理**: Systemd 242+
+- **硬件配置**: 最小2GB内存，推荐4GB+ / 最小10GB存储，推荐50GB+
+- **网络**: 稳定的互联网连接
+
+### VPS管理脚本
+```bash
+# VPS状态检查
+./vps-check-status.sh
+
+# 手动更新VPS
+./deploy-scripts/vps-update.sh
+
+# 数据库备份管理
+./deployment/backup-restore.sh backup   # 创建备份
+./deployment/backup-restore.sh restore  # 恢复备份
+```
+
+## 📖 API接口文档
+
+### 核心API端点
+
+#### 认证系统
+```http
+POST /api/auth/login        # 用户登录
+GET  /api/auth/me          # 获取当前用户信息
+```
+
+#### 项目管理
+```http
+GET    /api/research/                    # 获取项目列表
+POST   /api/research/                    # 创建项目
+PUT    /api/research/{id}               # 更新项目
+DELETE /api/research/{id}               # 删除项目
+GET    /api/research/{id}/logs          # 获取项目日志
+POST   /api/research/{id}/logs          # 添加项目日志
+```
+
+#### 合作者管理
+```http
+GET  /api/collaborators/              # 获取合作者列表
+POST /api/collaborators/              # 创建合作者
+POST /api/collaborators/upload       # Excel批量上传
+POST /api/collaborators/create-batch # 批量创建
+```
+
+#### 文献管理
+```http
+GET  /api/literature/                      # 获取文献列表
+POST /api/literature/                      # 创建文献
+POST /api/literature/upload               # Excel批量上传
+POST /api/literature/batch-match          # AI批量匹配
+GET  /api/literature/prompts              # 获取AI提示模板
+GET  /api/literature/batch-match/stats    # 性能统计
+PUT  /api/literature/{id}/convert-to-idea # 转换为Idea
+```
+
+#### Idea管理
+```http
+GET  /api/ideas/                           # 获取Idea列表
+POST /api/ideas/                           # 创建Idea
+POST /api/ideas/{id}/convert-to-project   # 转换为项目
+GET  /api/ideas/stats/summary             # 统计汇总
+```
+
+#### 系统配置
+```http
+GET  /api/config/                    # 获取配置列表
+POST /api/config/                    # 创建配置
+GET  /api/config/ai/providers        # AI提供商配置
+POST /api/config/ai/providers        # 测试AI配置
+```
+
+#### 数据备份
+```http
+GET    /api/backup/stats           # 备份统计
+GET    /api/backup/list            # 备份列表
+POST   /api/backup/create          # 创建备份
+POST   /api/backup/restore/{id}    # 恢复备份
+DELETE /api/backup/{id}            # 删除备份
+```
+
+### API特性
+- **认证**: JWT Bearer Token，有效期7天
+- **响应格式**: 统一JSON格式，包含success、data、message字段
+- **分页**: 使用skip和limit参数，默认每页100条
+- **错误处理**: 详细的错误代码和说明
+- **性能**: API响应时间 < 2秒，支持5个并发请求
+- **安全**: AES加密存储敏感配置，完整的数据验证
+
+### 在线文档
+- **Swagger UI**: http://45.149.156.216:8080/docs
+- **OpenAPI Schema**: http://45.149.156.216:8080/openapi.json
 
 ## 🔧 高级配置
 
