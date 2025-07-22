@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 迁移版本号 - 每次修改此文件时递增
-MIGRATION_VERSION = "v1.0_update_dz_to_dj"
+MIGRATION_VERSION = "v1.1_delete_dz_user"
 
 def backup_database(db_path):
     """创建数据库备份"""
