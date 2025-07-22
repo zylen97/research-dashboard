@@ -174,10 +174,16 @@ export const createProjectColumns = ({
     key: 'communication_progress',
     width: 250,
     render: (record: ResearchProject) => {
-      // 使用communication_logs数组而不是latest_communication字段
+      // 使用communication_logs数组，正确排序获取最新记录
       const logs = record.communication_logs || [];
       if (logs.length > 0) {
-        const latestLog = logs[logs.length - 1]; // 获取最新的交流记录
+        // 按交流日期排序，获取最新的交流记录（带容错）
+        const sortedLogs = [...logs].sort((a, b) => {
+          const dateA = new Date(a.communication_date || a.created_at);
+          const dateB = new Date(b.communication_date || b.created_at);
+          return dateB.getTime() - dateA.getTime();
+        });
+        const latestLog = sortedLogs[0];
         const displayText = `${latestLog.communication_type}: ${latestLog.title}`;
         return (
           <Text ellipsis={{ tooltip: `${displayText} (共${logs.length}条记录)` }} style={{ fontSize: '13px' }}>
