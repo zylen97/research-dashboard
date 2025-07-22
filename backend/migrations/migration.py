@@ -20,7 +20,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # 迁移版本号 - 每次修改此文件时递增
-MIGRATION_VERSION = "v1.1_delete_dz_user"
+MIGRATION_VERSION = "v1.2_delete_dz_user_fix_path"
 
 def backup_database(db_path):
     """创建数据库备份"""
@@ -69,10 +69,11 @@ def mark_migration_completed(db_path):
 
 def run_migration():
     """执行当前迁移任务"""
-    # 检查两个可能的数据库路径
+    # 检查所有可能的数据库路径（按优先级排序）
     db_paths = [
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
     ]
     
     db_path = None
