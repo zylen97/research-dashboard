@@ -68,6 +68,7 @@ export interface ResearchProject {
   created_at: string;
   updated_at: string;
   collaborators: Collaborator[];
+  communication_logs: CommunicationLog[]; // 交流记录数组
   latest_communication?: string;
   actual_start_date?: string;
   is_todo: boolean; // 是否标记为待办事项

@@ -174,11 +174,15 @@ export const createProjectColumns = ({
     key: 'communication_progress',
     width: 250,
     render: (record: ResearchProject) => {
-      if (record.latest_communication) {
+      // 使用communication_logs数组而不是latest_communication字段
+      const logs = record.communication_logs || [];
+      if (logs.length > 0) {
+        const latestLog = logs[logs.length - 1]; // 获取最新的交流记录
+        const displayText = `${latestLog.communication_type}: ${latestLog.title}`;
         return (
-          <Text ellipsis={{ tooltip: record.latest_communication }} style={{ fontSize: '13px' }}>
+          <Text ellipsis={{ tooltip: `${displayText} (共${logs.length}条记录)` }} style={{ fontSize: '13px' }}>
             <MessageOutlined style={{ marginRight: 4, color: '#1890ff' }} />
-            {record.latest_communication}
+            {displayText}
           </Text>
         );
       }
