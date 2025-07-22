@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 简单API测试 - 直接查询数据库
+触发GitHub Actions调试
 """
 
 import sqlite3
