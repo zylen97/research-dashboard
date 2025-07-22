@@ -48,12 +48,11 @@ async def get_literature(
     validation_status: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取当前用户的文献列表"""
+    """获取文献列表（数据共享，user_id仅用于前端分类展示）"""
     current_user = request.state.current_user
     
-    query = db.query(Literature).options(joinedload(Literature.user)).filter(
-        Literature.user_id == current_user.id
-    )
+    # 所有数据共享，不过滤user_id
+    query = db.query(Literature).options(joinedload(Literature.user))
     
     if status_filter:
         query = query.filter(Literature.status == status_filter)
@@ -69,12 +68,12 @@ async def get_literature_item(
     literature_id: int, 
     db: Session = Depends(get_db)
 ):
-    """获取单个文献详情"""
+    """获取单个文献详情（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     literature = db.query(Literature).options(joinedload(Literature.user)).filter(
-        Literature.id == literature_id,
-        Literature.user_id == current_user.id
+        Literature.id == literature_id
     ).first()
     
     if not literature:
@@ -109,12 +108,12 @@ async def update_literature(
     literature_update: LiteratureUpdate,
     db: Session = Depends(get_db)
 ):
-    """更新文献信息"""
+    """更新文献信息（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     db_literature = db.query(Literature).filter(
-        Literature.id == literature_id,
-        Literature.user_id == current_user.id
+        Literature.id == literature_id
     ).first()
     
     if not db_literature:
@@ -130,8 +129,10 @@ async def update_literature(
     db.commit()
     db.refresh(db_literature)
     
-    # 加载用户信息
-    db_literature.user = current_user
+    # 重新查询加载用户信息
+    db_literature = db.query(Literature).options(joinedload(Literature.user)).filter(
+        Literature.id == literature_id
+    ).first()
     return db_literature
 
 @router.delete("/{literature_id}")
@@ -140,12 +141,12 @@ async def delete_literature(
     literature_id: int, 
     db: Session = Depends(get_db)
 ):
-    """删除文献"""
+    """删除文献（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     db_literature = db.query(Literature).filter(
-        Literature.id == literature_id,
-        Literature.user_id == current_user.id
+        Literature.id == literature_id
     ).first()
     
     if not db_literature:
@@ -258,9 +259,9 @@ async def validate_literature(
     current_user = request.state.current_user
     
     for literature_id in validation_request.literature_ids:
+        # 所有数据共享，不过滤user_id
         literature = db.query(Literature).filter(
-            Literature.id == literature_id,
-            Literature.user_id == current_user.id
+            Literature.id == literature_id
         ).first()
         if not literature:
             results.append(ValidationResult(
@@ -326,9 +327,9 @@ async def convert_literature_to_idea(
     
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     literature = db.query(Literature).filter(
-        Literature.id == literature_id,
-        Literature.user_id == current_user.id
+        Literature.id == literature_id
     ).first()
     if not literature:
         raise HTTPException(
@@ -478,9 +479,9 @@ async def get_literature_batch(db: Session, literature_ids: List[int], user_id: 
     Returns:
         文献ID到Literature对象的映射字典
     """
+    # 所有数据共享，不过滤user_id，只按ID获取文献
     literature_list = db.query(Literature).filter(
-        Literature.id.in_(literature_ids),
-        Literature.user_id == user_id
+        Literature.id.in_(literature_ids)
     ).all()
     
     return {lit.id: lit for lit in literature_list}

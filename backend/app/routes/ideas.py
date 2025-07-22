@@ -18,12 +18,12 @@ async def get_ideas(
     source_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取当前用户的idea列表"""
+    """获取idea列表（数据共享，user_id仅用于前端分类展示）"""
     # 从请求中获取当前用户
     current_user = request.state.current_user
     
-    # 查询当前用户的ideas，并加载关联的用户信息
-    query = db.query(Idea).options(joinedload(Idea.user)).filter(Idea.user_id == current_user.id)
+    # 所有数据共享，不过滤user_id
+    query = db.query(Idea).options(joinedload(Idea.user))
     
     if status_filter:
         query = query.filter(Idea.status == status_filter)
@@ -41,12 +41,12 @@ async def get_idea(
     idea_id: int, 
     db: Session = Depends(get_db)
 ):
-    """获取单个idea详情"""
+    """获取单个idea详情（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     idea = db.query(Idea).options(joinedload(Idea.user)).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not idea:
@@ -81,12 +81,12 @@ async def update_idea(
     idea_update: IdeaUpdate,
     db: Session = Depends(get_db)
 ):
-    """更新idea信息"""
+    """更新idea信息（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     db_idea = db.query(Idea).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not db_idea:
@@ -102,8 +102,10 @@ async def update_idea(
     db.commit()
     db.refresh(db_idea)
     
-    # 加载用户信息
-    db_idea.user = current_user
+    # 重新查询加载用户信息
+    db_idea = db.query(Idea).options(joinedload(Idea.user)).filter(
+        Idea.id == idea_id
+    ).first()
     return db_idea
 
 @router.delete("/{idea_id}")
@@ -112,12 +114,12 @@ async def delete_idea(
     idea_id: int, 
     db: Session = Depends(get_db)
 ):
-    """删除idea"""
+    """删除idea（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     db_idea = db.query(Idea).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not db_idea:
@@ -137,7 +139,7 @@ async def update_idea_priority(
     priority: str,
     db: Session = Depends(get_db)
 ):
-    """更新idea优先级"""
+    """更新idea优先级（数据共享）"""
     current_user = request.state.current_user
     
     if priority not in ["low", "medium", "high"]:
@@ -146,9 +148,9 @@ async def update_idea_priority(
             detail="Priority must be one of: low, medium, high"
         )
     
+    # 所有数据共享，不过滤user_id
     db_idea = db.query(Idea).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not db_idea:
@@ -168,7 +170,7 @@ async def update_idea_status(
     status_value: str,
     db: Session = Depends(get_db)
 ):
-    """更新idea状态"""
+    """更新idea状态（数据共享）"""
     current_user = request.state.current_user
     
     valid_statuses = ["pool", "in_development", "converted_to_project"]
@@ -178,9 +180,9 @@ async def update_idea_status(
             detail=f"Status must be one of: {', '.join(valid_statuses)}"
         )
     
+    # 所有数据共享，不过滤user_id
     db_idea = db.query(Idea).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not db_idea:
@@ -203,9 +205,9 @@ async def convert_idea_to_project(
     """将idea转换为研究项目"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     idea = db.query(Idea).filter(
-        Idea.id == idea_id,
-        Idea.user_id == current_user.id
+        Idea.id == idea_id
     ).first()
     
     if not idea:
@@ -264,30 +266,31 @@ async def get_ideas_summary(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """获取当前用户的idea统计摘要"""
+    """获取idea统计摘要（数据共享）"""
     from sqlalchemy import func
     
     current_user = request.state.current_user
     
-    # Count by status for current user
+    # 所有数据共享，不过滤user_id
+    # Count by status for all users
     status_counts = db.query(
         Idea.status,
         func.count(Idea.id).label('count')
-    ).filter(Idea.user_id == current_user.id).group_by(Idea.status).all()
+    ).group_by(Idea.status).all()
     
-    # Count by priority for current user
+    # Count by priority for all users
     priority_counts = db.query(
         Idea.priority,
         func.count(Idea.id).label('count')
-    ).filter(Idea.user_id == current_user.id).group_by(Idea.priority).all()
+    ).group_by(Idea.priority).all()
     
-    # Count by source for current user
+    # Count by source for all users
     source_counts = db.query(
         Idea.source,
         func.count(Idea.id).label('count')
-    ).filter(Idea.user_id == current_user.id).group_by(Idea.source).all()
+    ).group_by(Idea.source).all()
     
-    total_ideas = db.query(func.count(Idea.id)).filter(Idea.user_id == current_user.id).scalar()
+    total_ideas = db.query(func.count(Idea.id)).scalar()
     
     return {
         "total_ideas": total_ideas,
@@ -302,11 +305,11 @@ async def search_ideas(
     q: str,
     db: Session = Depends(get_db)
 ):
-    """搜索当前用户的ideas"""
+    """搜索ideas（数据共享）"""
     current_user = request.state.current_user
     
+    # 所有数据共享，不过滤user_id
     ideas = db.query(Idea).filter(
-        Idea.user_id == current_user.id,
         (Idea.title.contains(q) | 
          Idea.description.contains(q) |
          Idea.tags.contains(q))
