@@ -309,5 +309,6 @@ class BatchMatchingResponse(BaseModel):
     error_count: int
 
 # Update forward references
+ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
 Literature.model_rebuild()
 Idea.model_rebuild()
