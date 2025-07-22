@@ -1,0 +1,66 @@
+name: Emergency Database Fix
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/emergency-fix.yml'
+
+jobs:
+  fix-database:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Execute emergency fix on VPS
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USER }}
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script: |
+          echo "🚨 开始紧急数据库修复..."
+          
+          cd /var/www/research-dashboard/backend
+          
+          # 备份当前数据库
+          cp data/research_dashboard_prod.db data/research_dashboard_prod.db.emergency.$(date +%Y%m%d_%H%M%S)
+          
+          # 检查当前迁移状态
+          echo "当前迁移记录："
+          sqlite3 data/research_dashboard_prod.db "SELECT * FROM migration_history ORDER BY executed_at DESC LIMIT 5;" || echo "无迁移记录"
+          
+          # 检查表结构
+          echo ""
+          echo "检查research_projects表结构："
+          sqlite3 data/research_dashboard_prod.db "PRAGMA table_info(research_projects);" | grep -E "(user_id|is_todo|todo_marked_at)" || echo "缺少关键字段"
+          
+          echo ""
+          echo "检查collaborators表结构："
+          sqlite3 data/research_dashboard_prod.db "PRAGMA table_info(collaborators);" | grep -E "(class_info|is_senior)" || echo "缺少关键字段"
+          
+          # 执行v1.7迁移
+          echo ""
+          echo "执行v1.7迁移脚本..."
+          python3 migrations/migration.py || echo "迁移执行失败"
+          
+          # 验证迁移结果
+          echo ""
+          echo "验证迁移结果..."
+          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '用户数' FROM users;"
+          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '项目数' FROM research_projects;"
+          sqlite3 data/research_dashboard_prod.db "SELECT COUNT(*) as '合作者数' FROM collaborators;"
+          
+          # 重启服务
+          echo ""
+          echo "重启后端服务..."
+          sudo systemctl restart research-backend
+          
+          # 检查服务状态
+          sleep 3
+          sudo systemctl is-active research-backend && echo "✅ 服务重启成功" || echo "❌ 服务重启失败"
+          
+          echo ""
+          echo "🏁 紧急修复完成"
