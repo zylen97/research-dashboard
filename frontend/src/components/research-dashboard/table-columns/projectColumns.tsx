@@ -184,6 +184,13 @@ export const createProjectColumns = ({
           return dateB.getTime() - dateA.getTime();
         });
         const latestLog = sortedLogs[0];
+        if (!latestLog) {
+          return (
+            <Text style={{ fontSize: '13px', color: '#999' }}>
+              暂无交流记录
+            </Text>
+          );
+        }
         const displayText = `${latestLog.communication_type}: ${latestLog.title}`;
         return (
           <Text ellipsis={{ tooltip: `${displayText} (共${logs.length}条记录)` }} style={{ fontSize: '13px' }}>
