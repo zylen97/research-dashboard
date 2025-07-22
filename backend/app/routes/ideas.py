@@ -23,7 +23,8 @@ async def get_ideas(
     current_user = request.state.current_user
     
     # 所有数据共享，不过滤user_id
-    query = db.query(Idea).options(joinedload(Idea.user))
+    # 暂时移除joinedload避免关联错误
+    query = db.query(Idea)
     
     if status_filter:
         query = query.filter(Idea.status == status_filter)
@@ -45,7 +46,8 @@ async def get_idea(
     current_user = request.state.current_user
     
     # 所有数据共享，不过滤user_id
-    idea = db.query(Idea).options(joinedload(Idea.user)).filter(
+    # 暂时移除joinedload避免关联错误
+    idea = db.query(Idea).filter(
         Idea.id == idea_id
     ).first()
     
@@ -103,7 +105,8 @@ async def update_idea(
     db.refresh(db_idea)
     
     # 重新查询加载用户信息
-    db_idea = db.query(Idea).options(joinedload(Idea.user)).filter(
+    # 暂时移除joinedload避免关联错误
+    db_idea = db.query(Idea).filter(
         Idea.id == idea_id
     ).first()
     return db_idea

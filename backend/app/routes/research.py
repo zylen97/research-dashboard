@@ -20,7 +20,8 @@ async def get_research_projects(
     db: Session = Depends(get_db)
 ):
     """获取研究项目列表"""
-    query = db.query(ResearchProject).options(joinedload(ResearchProject.collaborators))
+    # 暂时移除joinedload避免关联错误
+    query = db.query(ResearchProject)
     if status_filter:
         query = query.filter(ResearchProject.status == status_filter)
     projects = query.offset(skip).limit(limit).all()

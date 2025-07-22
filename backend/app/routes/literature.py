@@ -52,7 +52,8 @@ async def get_literature(
     current_user = request.state.current_user
     
     # 所有数据共享，不过滤user_id
-    query = db.query(Literature).options(joinedload(Literature.user))
+    # 暂时移除joinedload避免关联错误
+    query = db.query(Literature)
     
     if status_filter:
         query = query.filter(Literature.status == status_filter)
@@ -72,7 +73,8 @@ async def get_literature_item(
     current_user = request.state.current_user
     
     # 所有数据共享，不过滤user_id
-    literature = db.query(Literature).options(joinedload(Literature.user)).filter(
+    # 暂时移除joinedload避免关联错误
+    literature = db.query(Literature).filter(
         Literature.id == literature_id
     ).first()
     
@@ -130,7 +132,8 @@ async def update_literature(
     db.refresh(db_literature)
     
     # 重新查询加载用户信息
-    db_literature = db.query(Literature).options(joinedload(Literature.user)).filter(
+    # 暂时移除joinedload避免关联错误
+    db_literature = db.query(Literature).filter(
         Literature.id == literature_id
     ).first()
     return db_literature
