@@ -12,7 +12,6 @@ import {
   DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ThemeToggle from './ThemeToggle';
 import { useAuth } from '../contexts/AuthContext';
 
 const { Header, Sider, Content } = Layout;
@@ -200,9 +199,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
           {/* 工具栏和用户信息 */}
           <Space size="middle">
-            {/* 主题切换按钮 */}
-            <ThemeToggle />
-            
             {/* 用户信息 */}
             <Dropdown
               menu={{ 
@@ -226,12 +222,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               }}>
                 <Avatar icon={<UserOutlined />} style={{ marginRight: mobileView ? 0 : 8 }} />
                 {!mobileView && (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 500 }}>{user?.display_name}</span>
-                    <span style={{ fontSize: '12px', color: '#666', lineHeight: 1 }}>
-                      {user?.email}
-                    </span>
-                  </div>
+                  <span style={{ fontSize: '14px', fontWeight: 500, marginLeft: 8 }}>{user?.display_name}</span>
                 )}
               </div>
             </Dropdown>

@@ -7,7 +7,6 @@ import LiteratureDiscovery from './pages/LiteratureDiscovery';
 import IdeaManagement from './pages/IdeaManagement';
 import AuthPage from './pages/AuthPage';
 import DatabaseBackup from './pages/DatabaseBackup';
-import { ThemeProvider } from './theme/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
@@ -49,11 +48,9 @@ const ProtectedRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <ProtectedRoutes />
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ProtectedRoutes />
+    </AuthProvider>
   );
 };
 

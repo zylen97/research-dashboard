@@ -102,28 +102,41 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 当前迁移任务：将用户名dz更新为dj
+        # 🔧 当前迁移任务：彻底删除dz用户
         # ===========================================
         
         # 检查是否存在dz用户
-        cursor.execute("SELECT * FROM users WHERE username = 'dz'")
+        cursor.execute("SELECT id, username FROM users WHERE username = 'dz'")
         dz_user = cursor.fetchone()
         
         if dz_user:
-            logger.info("找到dz用户，开始更新...")
+            logger.info(f"找到dz用户(ID: {dz_user[0]})，开始删除...")
             
-            # 更新用户信息
-            cursor.execute("""
-                UPDATE users 
-                SET username = 'dj', 
-                    email = 'dj@example.com', 
-                    display_name = 'DJ'
-                WHERE username = 'dz'
-            """)
+            # 彻底删除dz用户
+            cursor.execute("DELETE FROM users WHERE username = 'dz'")
             
-            logger.info("用户信息已更新: dz -> dj")
+            logger.info("dz用户已彻底删除")
         else:
-            logger.info("未找到dz用户，可能已经更新过或不存在")
+            logger.info("未找到dz用户，可能已经删除或不存在")
+        
+        # 确保只有一个dj用户存在
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'dj'")
+        dj_count = cursor.fetchone()[0]
+        
+        if dj_count > 1:
+            logger.warning(f"发现多个dj用户 ({dj_count}个)，清理重复用户...")
+            # 保留最新的dj用户，删除其他的
+            cursor.execute("""
+                DELETE FROM users 
+                WHERE username = 'dj' 
+                AND id NOT IN (
+                    SELECT id FROM (
+                        SELECT id FROM users WHERE username = 'dj' 
+                        ORDER BY id DESC LIMIT 1
+                    ) AS latest
+                )
+            """)
+            logger.info("重复的dj用户已清理")
         
         # ===========================================
         # 🔧 在这里添加其他迁移任务...
@@ -133,10 +146,15 @@ def run_migration():
         conn.commit()
         
         # 验证更改
-        cursor.execute("SELECT username, email, display_name FROM users WHERE username = 'dj'")
+        cursor.execute("SELECT id, username, email, display_name FROM users WHERE username = 'dj'")
         dj_user = cursor.fetchone()
         if dj_user:
-            logger.info(f"验证成功: {dj_user}")
+            logger.info(f"验证dj用户存在: {dj_user}")
+        
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = 'dz'")
+        dz_count = cursor.fetchone()[0]
+        if dz_count == 0:
+            logger.info("验证成功: dz用户已完全删除")
         
         # 标记迁移完成
         mark_migration_completed(db_path)
