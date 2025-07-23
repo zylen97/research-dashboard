@@ -1,13 +1,11 @@
 import React from 'react';
 import { Form, Input, Select, FormInstance } from 'antd';
-import { Collaborator } from '../../types';
 
 const { TextArea } = Input;
 const { Option } = Select;
 
 interface CollaboratorFormProps {
   form: FormInstance;
-  editingCollaborator: Collaborator | null;
 }
 
 export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ form }) => {

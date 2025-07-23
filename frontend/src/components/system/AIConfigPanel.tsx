@@ -68,8 +68,9 @@ const AIConfigPanel: React.FC = () => {
     try {
       const response = await api.get('/config/ai/providers');
       setProviders(response.data);
-    } catch (error: any) {
-      message.error('获取AI提供商配置失败：' + (error.response?.data?.detail || error.message));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error('获取AI提供商配置失败：' + errorMessage);
     } finally {
       setLoading(false);
     }
@@ -93,8 +94,9 @@ const AIConfigPanel: React.FC = () => {
       form.resetFields();
       setEditingProvider(null);
       fetchProviders();
-    } catch (error: any) {
-      message.error('操作失败：' + (error.response?.data?.detail || error.message));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error('操作失败：' + errorMessage);
     }
   };
 
@@ -113,8 +115,9 @@ const AIConfigPanel: React.FC = () => {
       } else {
         message.error(`测试失败：${response.data.message}`);
       }
-    } catch (error: any) {
-      message.error('测试失败：' + (error.response?.data?.detail || error.message));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error('测试失败：' + errorMessage);
     } finally {
       setTestingProvider(null);
     }
@@ -135,8 +138,9 @@ const AIConfigPanel: React.FC = () => {
         message.success('删除成功');
         fetchProviders();
       }
-    } catch (error: any) {
-      message.error('删除失败：' + (error.response?.data?.detail || error.message));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      message.error('删除失败：' + errorMessage);
     }
   };
 
@@ -188,7 +192,7 @@ const AIConfigPanel: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      render: (_: any, record: AIProvider) => (
+      render: (_: unknown, record: AIProvider) => (
         <Space>
           <Tooltip title="测试连接">
             <Button

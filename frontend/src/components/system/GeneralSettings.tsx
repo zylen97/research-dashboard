@@ -16,10 +16,6 @@ const GeneralSettings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchGeneralSettings();
-  }, []);
-
   const fetchGeneralSettings = async () => {
     setLoading(true);
     try {
@@ -46,6 +42,10 @@ const GeneralSettings: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchGeneralSettings();
+  }, []);
 
   const handleSave = async (values: GeneralConfig) => {
     setSaving(true);

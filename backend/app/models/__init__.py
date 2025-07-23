@@ -1,13 +1,13 @@
 from .database import (
-    Base, 
-    engine, 
-    SessionLocal, 
-    get_db, 
+    Base,
+    engine,
+    SessionLocal,
+    get_db,
     create_tables,
     Collaborator,
-    ResearchProject, 
-    Literature, 
-    Idea, 
+    ResearchProject,
+    Literature,
+    Idea,
     CommunicationLog,
     AuditLog,
     User,
@@ -21,57 +21,57 @@ from .schemas import (
     CollaboratorCreate,
     CollaboratorUpdate,
     Collaborator as CollaboratorSchema,
-    
+
     # Research Project schemas
     ResearchProjectBase,
     ResearchProjectCreate,
     ResearchProjectUpdate,
     ResearchProject as ResearchProjectSchema,
-    
+
     # Literature schemas
     LiteratureBase,
     LiteratureCreate,
     LiteratureUpdate,
     Literature as LiteratureSchema,
-    
+
     # Idea schemas
     IdeaBase,
     IdeaCreate,
     IdeaUpdate,
     Idea as IdeaSchema,
-    
+
     # Communication Log schemas
     CommunicationLogBase,
     CommunicationLogCreate,
     CommunicationLogUpdate,
     CommunicationLog as CommunicationLogSchema,
-    
+
     # User schemas
     UserBase,
     UserCreate,
     UserUpdate,
     UserLogin,
     User as UserSchema,
-    
+
     # Auth schemas
     Token,
-    
+
     # Utility schemas
     FileUploadResponse,
     ValidationRequest,
     ValidationResult,
-    
+
     # System Config schemas
     SystemConfigBase,
     SystemConfigCreate,
     SystemConfigUpdate,
     SystemConfig as SystemConfigSchema,
-    
+
     # AI Provider schemas
     AIProviderConfig,
     AITestRequest,
     AITestResponse,
-    
+
     # Batch AI Matching schemas
     BatchMatchingRequest,
     MatchingResult,

@@ -191,7 +191,14 @@ export const createProjectColumns = ({
             </Text>
           );
         }
-        const displayText = `${latestLog.communication_type}: ${latestLog.title}`;
+        // 格式化日期显示
+        const communicationDate = new Date(latestLog.communication_date);
+        const dateStr = communicationDate.toLocaleDateString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).replace(/\//g, '-');
+        const displayText = `${dateStr}: ${latestLog.title}`;
         return (
           <Text ellipsis={{ tooltip: `${displayText} (共${logs.length}条记录)` }} style={{ fontSize: '13px' }}>
             <MessageOutlined style={{ marginRight: 4, color: '#1890ff' }} />

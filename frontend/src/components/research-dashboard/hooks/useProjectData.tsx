@@ -77,7 +77,7 @@ export const useProjectData = () => {
       // 3. 都不是待办项目时，按创建时间倒序
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
-  }, [projects, localTodoMarks, getProjectTodoStatus]);
+  }, [projects, getProjectTodoStatus]);
 
   // 更新本地待办状态
   const updateLocalTodoStatus = (projectId: number, todoStatus: TodoStatus) => {

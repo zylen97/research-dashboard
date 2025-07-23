@@ -31,10 +31,6 @@ const SecuritySettings: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchSecuritySettings();
-  }, []);
-
   const fetchSecuritySettings = async () => {
     setLoading(true);
     try {
@@ -65,6 +61,10 @@ const SecuritySettings: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchSecuritySettings();
+  }, []);
 
   const handleSave = async (values: SecurityConfig) => {
     setSaving(true);

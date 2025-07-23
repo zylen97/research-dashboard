@@ -7,6 +7,7 @@ build/
 dist/
 */build/
 */dist/
+frontend/build.tar.gz
 
 # Environment variables
 .env
@@ -110,6 +111,7 @@ backend/data/
 backend/research_dashboard.db.backup*
 backend/research_dashboard.db.backup_*
 backend/backups/local/
+backend/backups/dev/
 !backend/backups/.gitkeep
 !backend/backups/README.md
 
