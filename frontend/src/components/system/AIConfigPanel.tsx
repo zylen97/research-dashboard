@@ -4,30 +4,20 @@ import {
   Form,
   Input,
   Button,
-  Select,
-  Table,
   Space,
   message,
-  Spin,
-  Tag,
-  Popconfirm,
-  InputNumber,
-  Switch,
-  Tooltip,
   Row,
   Col,
   Typography,
   Avatar,
-  List
+  List,
+  Alert
 } from 'antd';
 import {
-  EditOutlined,
-  DeleteOutlined,
   ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
-  EyeInvisibleOutlined,
   SendOutlined,
   MessageOutlined,
   RobotOutlined,
@@ -35,19 +25,14 @@ import {
 } from '@ant-design/icons';
 import api from '../../services/api';
 
-const { Option } = Select;
 const { Text } = Typography;
 const { TextArea } = Input;
 
-interface AIProvider {
-  id?: number;
-  provider: string;
+interface AIConfig {
   api_key: string;
   api_url?: string;
   model?: string;
-  max_tokens?: number;
-  temperature?: number;
-  is_active?: boolean;
+  is_connected?: boolean;
 }
 
 interface SystemConfig {
@@ -72,90 +57,111 @@ interface ChatMessage {
 
 const AIConfigPanel: React.FC = () => {
   const [form] = Form.useForm();
-  const [providers, setProviders] = useState<AIProvider[]>([]);
+  const [config, setConfig] = useState<AIConfig | null>(null);
   const [loading, setLoading] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
-  const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  const [testing, setTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
   
   // 聊天功能状态
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [selectedChatProvider, setSelectedChatProvider] = useState<string>('');
 
   useEffect(() => {
-    fetchProviders();
+    fetchConfig();
   }, []);
 
-  const fetchProviders = async () => {
+  const fetchConfig = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/config/ai/providers');
-      setProviders(response.data);
+      const response = await api.get('/config/', {
+        params: { category: 'ai_config' }
+      });
+      const configData = response.data.find((c: SystemConfig) => c.key === 'main_ai_config');
+      if (configData) {
+        const parsedConfig = JSON.parse(configData.value);
+        setConfig(parsedConfig);
+        form.setFieldsValue(parsedConfig);
+        setConnectionStatus(parsedConfig.is_connected ? 'success' : null);
+      }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error('获取AI提供商配置失败：' + errorMessage);
+      console.error('获取AI配置失败:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (values: AIProvider) => {
+  const handleSubmit = async (values: AIConfig) => {
     try {
-      if (editingProvider) {
-        // 更新现有配置
-        await api.put(`/config/${editingProvider.id}`, {
-          value: JSON.stringify(values),
-          is_active: values.is_active
-        });
-        message.success('AI配置更新成功');
-      } else {
-        // 创建新配置
-        await api.post('/config/ai/providers', values);
-        message.success('AI配置创建成功');
-      }
-      form.resetFields();
-      setEditingProvider(null);
-      fetchProviders();
+      // 保存配置
+      await api.post('/config/', {
+        key: 'main_ai_config',
+        value: JSON.stringify(values),
+        category: 'ai_config',
+        description: 'Main AI Configuration',
+        is_active: true
+      });
+      
+      setConfig(values);
+      message.success('AI配置保存成功');
+      
+      // 自动测试连接
+      await testConnection(values);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error('操作失败：' + errorMessage);
+      message.error('保存配置失败：' + errorMessage);
     }
   };
 
-  const handleTest = async (provider: AIProvider) => {
-    setTestingProvider(provider.provider);
+  const testConnection = async (configToTest?: AIConfig) => {
+    const testConfig = configToTest || config;
+    if (!testConfig?.api_key) {
+      message.error('请先填写API密钥');
+      return;
+    }
+    
+    setTesting(true);
     try {
       const response = await api.post('/config/ai/test', {
-        provider: provider.provider,
-        api_key: provider.api_key,
-        api_url: provider.api_url,
+        provider: 'openai', // 固定使用OpenAI接口格式
+        api_key: testConfig.api_key,
+        api_url: testConfig.api_url,
         test_prompt: '你好，请回复"API连接成功"'
       });
       
       if (response.data.success) {
-        message.success(`${provider.provider} API连接测试成功`);
+        message.success('API连接测试成功');
+        setConnectionStatus('success');
+        
+        // 更新配置状态
+        const updatedConfig = { ...testConfig, is_connected: true };
+        await api.put('/config/', {
+          key: 'main_ai_config',
+          value: JSON.stringify(updatedConfig)
+        });
+        setConfig(updatedConfig);
       } else {
-        message.error(`测试失败：${response.data.message}`);
+        message.error(`连接测试失败：${response.data.message}`);
+        setConnectionStatus('error');
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error('测试失败：' + errorMessage);
+      message.error('连接测试失败：' + errorMessage);
+      setConnectionStatus('error');
     } finally {
-      setTestingProvider(null);
+      setTesting(false);
     }
   };
 
   // 处理发送聊天消息
   const handleSendMessage = async () => {
-    if (!chatInput.trim() || !selectedChatProvider) {
-      message.warning('请输入消息并选择AI提供商');
+    if (!chatInput.trim()) {
+      message.warning('请输入消息');
       return;
     }
 
-    const selectedProvider = (providers || []).find(p => p.provider === selectedChatProvider);
-    if (!selectedProvider) {
-      message.error('请先配置并启用AI提供商');
+    if (!config?.api_key) {
+      message.error('请先配置AI密钥');
       return;
     }
 
@@ -174,9 +180,9 @@ const AIConfigPanel: React.FC = () => {
 
     try {
       const response = await api.post('/config/ai/test', {
-        provider: selectedProvider.provider,
-        api_key: selectedProvider.api_key,
-        api_url: selectedProvider.api_url,
+        provider: 'openai',
+        api_key: config.api_key,
+        api_url: config.api_url,
         test_prompt: chatInput
       });
 
@@ -187,7 +193,7 @@ const AIConfigPanel: React.FC = () => {
         type: 'assistant',
         content: response.data.response_content || response.data.message || '收到回复',
         timestamp: new Date().toLocaleTimeString(),
-        provider: selectedProvider.provider,
+        provider: 'AI',
         responseTime,
         error: !response.data.success
       };
@@ -204,7 +210,7 @@ const AIConfigPanel: React.FC = () => {
         type: 'assistant',
         content: `连接失败: ${errorMessage}`,
         timestamp: new Date().toLocaleTimeString(),
-        provider: selectedProvider.provider,
+        provider: 'AI',
         error: true
       };
 
@@ -220,252 +226,131 @@ const AIConfigPanel: React.FC = () => {
     setChatMessages([]);
   };
 
-  const handleDelete = async (provider: AIProvider) => {
+  // 清空配置
+  const handleClearConfig = async () => {
     try {
-      // 这里需要先获取配置的ID
-      const configsResponse = await api.get('/config/', {
-        params: { category: 'ai_api' }
-      });
-      const config = configsResponse.data.find((c: SystemConfig) => 
-        c.key === `ai_provider_${provider.provider}`
-      );
+      form.resetFields();
+      setConfig(null);
+      setConnectionStatus(null);
       
-      if (config) {
-        await api.delete(`/config/${config.id}`);
-        message.success('删除成功');
-        fetchProviders();
-      }
+      await api.delete('/config/', {
+        params: { key: 'main_ai_config' }
+      });
+      
+      message.success('配置已清空');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      message.error('删除失败：' + errorMessage);
+      message.error('清空失败：' + errorMessage);
     }
   };
 
-  const columns = [
-    {
-      title: '提供商',
-      dataIndex: 'provider',
-      key: 'provider',
-      render: (text: string) => (
-        <Space>
-          <ApiOutlined />
-          <span style={{ fontWeight: 'bold' }}>{text}</span>
-        </Space>
-      )
-    },
-    {
-      title: 'API密钥',
-      dataIndex: 'api_key',
-      key: 'api_key',
-      render: (text: string) => (
-        <Space>
-          <EyeInvisibleOutlined />
-          <span style={{ fontFamily: 'monospace' }}>{text}</span>
-        </Space>
-      )
-    },
-    {
-      title: 'API地址',
-      dataIndex: 'api_url',
-      key: 'api_url',
-      render: (text: string) => text || '默认'
-    },
-    {
-      title: '默认模型',
-      dataIndex: 'model',
-      key: 'model',
-      render: (text: string) => text || '-'
-    },
-    {
-      title: '状态',
-      dataIndex: 'is_active',
-      key: 'is_active',
-      render: (active: boolean) => (
-        active ? 
-          <Tag color="success" icon={<CheckCircleOutlined />}>启用</Tag> :
-          <Tag color="default" icon={<CloseCircleOutlined />}>禁用</Tag>
-      )
-    },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_: unknown, record: AIProvider) => (
-        <Space>
-          <Tooltip title="测试连接">
-            <Button
-              type="link"
-              icon={<ReloadOutlined spin={testingProvider === record.provider} />}
-              onClick={() => handleTest(record)}
-              loading={testingProvider === record.provider}
-            />
-          </Tooltip>
-          <Tooltip title="编辑">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              onClick={() => {
-                setEditingProvider(record);
-                form.setFieldsValue(record);
-              }}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="确定要删除这个配置吗？"
-            onConfirm={() => handleDelete(record)}
-            okText="确定"
-            cancelText="取消"
-          >
-            <Tooltip title="删除">
-              <Button type="link" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      )
+  // 获取连接状态显示
+  const getConnectionStatus = () => {
+    if (connectionStatus === 'success') {
+      return {
+        status: 'success' as const,
+        message: 'API连接正常',
+        icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
+      };
     }
-  ];
+    if (connectionStatus === 'error') {
+      return {
+        status: 'error' as const,
+        message: 'API连接失败',
+        icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+      };
+    }
+    return {
+      status: 'warning' as const,
+      message: '请配置并测试API连接',
+      icon: <ApiOutlined style={{ color: '#faad14' }} />
+    };
+  };
 
   return (
     <div>
       <Row gutter={16}>
         {/* 左侧：AI配置表单 */}
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             title={
               <Space>
                 <ApiOutlined />
-                <span>{editingProvider ? '编辑AI配置' : '添加AI配置'}</span>
+                <span>AI配置</span>
               </Space>
             }
             size="small"
+            extra={
+              <Space>
+                {getConnectionStatus().icon}
+                <Text type={connectionStatus === 'success' ? 'success' : connectionStatus === 'error' ? 'danger' : 'warning'}>
+                  {getConnectionStatus().message}
+                </Text>
+              </Space>
+            }
           >
+            {connectionStatus && (
+              <Alert
+                message={getConnectionStatus().message}
+                type={getConnectionStatus().status}
+                style={{ marginBottom: 16 }}
+                showIcon
+              />
+            )}
+            
             <Form
               form={form}
               layout="vertical"
               onFinish={handleSubmit}
-              initialValues={{
-                is_active: true,
-                temperature: 0.7,
-                max_tokens: 2000
-              }}
             >
-              <Form.Item
-                name="provider"
-                label="提供商"
-                rules={[{ required: true, message: '请选择提供商' }]}
-              >
-                <Select placeholder="选择AI提供商" disabled={!!editingProvider}>
-                  <Option value="openai">OpenAI</Option>
-                  <Option value="anthropic">Anthropic</Option>
-                  <Option value="deepseek">DeepSeek</Option>
-                  <Option value="qwen">通义千问</Option>
-                  <Option value="custom">自定义</Option>
-                </Select>
-              </Form.Item>
-
               <Form.Item
                 name="api_key"
                 label="API密钥"
                 rules={[{ required: true, message: '请输入API密钥' }]}
+                tooltip="支持OpenAI兼容接口的API密钥"
               >
                 <Input.Password 
-                  placeholder="输入API密钥" 
+                  placeholder="sk-xxxxxxxxxxxxxxxxxxxx" 
                   autoComplete="off"
                 />
               </Form.Item>
 
               <Form.Item
                 name="api_url"
-                label="API地址（可选）"
-                tooltip="留空使用默认地址"
+                label="API地址"
+                tooltip="留空使用OpenAI默认地址"
               >
-                <Input placeholder="https://api.example.com/v1" />
+                <Input placeholder="https://api.openai.com/v1" />
               </Form.Item>
 
               <Form.Item
                 name="model"
-                label="默认模型（可选）"
+                label="默认模型"
+                tooltip="如：gpt-4, gpt-3.5-turbo等"
               >
-                <Input placeholder="例如：gpt-4, claude-3-opus" />
-              </Form.Item>
-
-              <Row gutter={8}>
-                <Col span={12}>
-                  <Form.Item
-                    name="max_tokens"
-                    label="最大Token"
-                  >
-                    <InputNumber
-                      min={100}
-                      max={32000}
-                      style={{ width: '100%' }}
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="temperature"
-                    label="温度参数"
-                  >
-                    <InputNumber
-                      min={0}
-                      max={2}
-                      step={0.1}
-                      style={{ width: '100%' }}
-                      size="small"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item
-                name="is_active"
-                label="启用状态"
-                valuePropName="checked"
-              >
-                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+                <Input placeholder="gpt-4" />
               </Form.Item>
 
               <Form.Item>
-                <Space style={{ width: '100%' }}>
+                <Space>
                   <Button type="primary" htmlType="submit" loading={loading}>
-                    {editingProvider ? '更新' : '创建'}
+                    保存并测试
                   </Button>
-                  {editingProvider && (
-                    <Button onClick={() => {
-                      setEditingProvider(null);
-                      form.resetFields();
-                    }}>
-                      取消编辑
-                    </Button>
-                  )}
+                  <Button onClick={() => testConnection()} loading={testing} disabled={!config}>
+                    <ReloadOutlined />
+                    测试连接
+                  </Button>
+                  <Button onClick={handleClearConfig} disabled={!config}>
+                    清空配置
+                  </Button>
                 </Space>
               </Form.Item>
             </Form>
           </Card>
         </Col>
 
-        {/* 中间：当前配置列表 */}
-        <Col xs={24} md={8}>
-          <Card
-            title="当前配置"
-            size="small"
-          >
-            <Spin spinning={loading}>
-              <Table
-                dataSource={providers}
-                columns={columns}
-                rowKey="provider"
-                pagination={false}
-                size="small"
-                scroll={{ y: 400 }}
-              />
-            </Spin>
-          </Card>
-        </Col>
-
         {/* 右侧：AI聊天测试 */}
-        <Col xs={24} md={8}>
+        <Col xs={24} md={12}>
           <Card
             title={
               <Space>
@@ -474,24 +359,9 @@ const AIConfigPanel: React.FC = () => {
               </Space>
             }
             extra={
-              <Space>
-                <Select
-                  placeholder="选择AI提供商"
-                  value={selectedChatProvider}
-                  onChange={setSelectedChatProvider}
-                  style={{ width: 120 }}
-                  size="small"
-                >
-                  {(providers || []).filter(p => p.is_active).map(provider => (
-                    <Option key={provider.provider} value={provider.provider}>
-                      {provider.provider}
-                    </Option>
-                  ))}
-                </Select>
-                <Button size="small" onClick={handleClearChat}>
-                  清空
-                </Button>
-              </Space>
+              <Button size="small" onClick={handleClearChat}>
+                清空
+              </Button>
             }
           >
             <div style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
@@ -592,22 +462,22 @@ const AIConfigPanel: React.FC = () => {
                     }
                   }}
                   rows={2}
-                  disabled={!selectedChatProvider || chatLoading}
+                  disabled={!config?.api_key || chatLoading}
                 />
                 <Button
                   type="primary"
                   icon={<SendOutlined />}
                   onClick={handleSendMessage}
                   loading={chatLoading}
-                  disabled={!selectedChatProvider || !chatInput.trim()}
+                  disabled={!config?.api_key || !chatInput.trim()}
                 >
                   发送
                 </Button>
               </div>
 
-              {!selectedChatProvider && (providers || []).filter(p => p.is_active).length === 0 && (
+              {!config?.api_key && (
                 <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
-                  请先配置并启用至少一个AI提供商
+                  请先配置API密钥后再使用聊天测试
                 </Text>
               )}
             </div>
