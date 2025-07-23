@@ -157,7 +157,7 @@ const AIConfigPanel: React.FC = () => {
       return;
     }
 
-    const selectedProvider = providers.find(p => p.provider === selectedChatProvider);
+    const selectedProvider = (providers || []).find(p => p.provider === selectedChatProvider);
     if (!selectedProvider) {
       message.error('请先配置并启用AI提供商');
       return;
@@ -380,7 +380,7 @@ const AIConfigPanel: React.FC = () => {
                   style={{ width: 120 }}
                   size="small"
                 >
-                  {providers.filter(p => p.is_active).map(provider => (
+                  {(providers || []).filter(p => p.is_active).map(provider => (
                     <Option key={provider.provider} value={provider.provider}>
                       {provider.provider}
                     </Option>
@@ -503,7 +503,7 @@ const AIConfigPanel: React.FC = () => {
                 </Button>
               </div>
 
-              {!selectedChatProvider && providers.filter(p => p.is_active).length === 0 && (
+              {!selectedChatProvider && (providers || []).filter(p => p.is_active).length === 0 && (
                 <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
                   请先配置并启用至少一个AI提供商
                 </Text>
