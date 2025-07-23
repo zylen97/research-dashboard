@@ -1,34 +1,39 @@
-结合前端和后端和数据库进行如下开发：
+1.研究看板中增加待办是独立的吗，每个用户增加自己的待办，互相看不到彼此的待办，增加这个功能
+2.系统设置中的api密钥，api地址和默认模型，全都都必填，api密钥默认用sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY,api地址用https://api.chatanywhere.tech/v1，模型用claude-3-7-sonnet-20250219
 
-idea发掘面板：
+claude-sonnet-4-20250514
 
-1.无法上传xlsx，报错：POST http://localhost:8001/api/folders/create 500 (Internal Server Error)
-dispatchXhrRequest @ axios.js?v=e6383e6c:1651
-xhr @ axios.js?v=e6383e6c:1531
-dispatchRequest @ axios.js?v=e6383e6c:2006
-Promise.then
-_request @ axios.js?v=e6383e6c:2209
-request @ axios.js?v=e6383e6c:2118
-httpMethod @ axios.js?v=e6383e6c:2256
-wrap @ axios.js?v=e6383e6c:8
-createFolder @ folderApi.ts:16
-handleSaveFolder @ LiteratureManagement.tsx:199
-await in handleSaveFolder
-handleOk @ antd.js?v=e6383e6c:19355
-(anonymous) @ antd.js?v=e6383e6c:13632
-callCallback2 @ chunk-PJEEZAML.js?v=e6383e6c:3674
-invokeGuardedCallbackDev @ chunk-PJEEZAML.js?v=e6383e6c:3699
-invokeGuardedCallback @ chunk-PJEEZAML.js?v=e6383e6c:3733
-invokeGuardedCallbackAndCatchFirstError @ chunk-PJEEZAML.js?v=e6383e6c:3736
-executeDispatch @ chunk-PJEEZAML.js?v=e6383e6c:7014
-processDispatchQueueItemsInOrder @ chunk-PJEEZAML.js?v=e6383e6c:7034
-processDispatchQueue @ chunk-PJEEZAML.js?v=e6383e6c:7043
-dispatchEventsForPlugins @ chunk-PJEEZAML.js?v=e6383e6c:7051
-(anonymous) @ chunk-PJEEZAML.js?v=e6383e6c:7174
-batchedUpdates$1 @ chunk-PJEEZAML.js?v=e6383e6c:18913
-batchedUpdates @ chunk-PJEEZAML.js?v=e6383e6c:3579
-dispatchEventForPluginEventSystem @ chunk-PJEEZAML.js?v=e6383e6c:7173
-dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-PJEEZAML.js?v=e6383e6c:5478
-dispatchEvent @ chunk-PJEEZAML.js?v=e6383e6c:5472
-dispatchDiscreteEvent @ chunk-PJEEZAML.js?v=e6383e6c:5449Understand this error
-2.功能说明部分，删除，不需要
+claude-opus-4-20250514-thinking
+
+claude-opus-4-20250514
+
+deepseek-v3
+
+deepseek-r1
+
+gpt-4.1
+
+gpt-4o
+
+gpt-4o
+
+gpt-4o-mini
+
+把这些模型，做一个下拉选项，然后选择
+
+3.idea管理面板，显示加载idea失败，报错：Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+api.ts:60 API Error: cF
+(anonymous) @ api.ts:60Understand this error
+api.ts:81 请求的资源不存在
+(anonymous) @ api.ts:81Understand this error
+IdeasManagement.tsx:46 加载Ideas失败: cF
+f @ IdeasManagement.tsx:46Understand this error
+api/ideas-management/collaborators/senior:1  Failed to load resource: the server responded with a status of 404 (Not Found)Understand this error
+api.ts:60 API Error: cF
+(anonymous) @ api.ts:60Understand this error
+api.ts:81 请求的资源不存在
+(anonymous) @ api.ts:81Understand this error
+IdeasManagement.tsx:58 加载合作者失败: cF
+修复
+
+4.除了上述问题，全面检查软件数据库的api接口，和后端的匹配问题，仔细检查，不要漏过任何一项！！！

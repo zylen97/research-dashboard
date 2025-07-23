@@ -225,9 +225,26 @@ export const researchApi = {
   updateProgress: (id: number, progress: number): Promise<{ message: string; progress: number }> =>
     api.put(`/api/research/${id}/progress`, null, { params: { progress } }),
 
-  // 切换待办状态
-  toggleTodoStatus: (id: number, is_todo: boolean): Promise<ResearchProject> =>
-    api.put(`/api/research/${id}`, { is_todo }),
+  // 获取用户的待办项目列表
+  getUserTodos: (): Promise<ResearchProject[]> =>
+    api.get('/api/research/todos'),
+
+  // 将项目标记为待办
+  markAsTodo: (projectId: number, priority?: number, notes?: string): Promise<{ message: string }> =>
+    api.post(`/api/research/${projectId}/todo`, { priority, notes }),
+
+  // 取消项目的待办标记
+  unmarkTodo: (projectId: number): Promise<{ message: string }> =>
+    api.delete(`/api/research/${projectId}/todo`),
+
+  // 获取项目的待办状态
+  getTodoStatus: (projectId: number): Promise<{
+    is_todo: boolean;
+    marked_at: string | null;
+    priority: number | null;
+    notes: string | null;
+  }> =>
+    api.get(`/api/research/${projectId}/todo-status`),
 };
 
 
@@ -361,7 +378,7 @@ export const ideasApi = {
     limit?: number;
     importance_filter?: number;
   }): Promise<import('../types').Idea[]> =>
-    api.get('/api/ideas-management/', { params }),
+    api.get('/api/ideas-management', { params }),
 
   // 获取单个Idea
   getIdea: (id: number): Promise<import('../types').Idea> =>
@@ -369,7 +386,7 @@ export const ideasApi = {
 
   // 创建Idea
   createIdea: (data: import('../types').IdeaCreate): Promise<import('../types').Idea> =>
-    api.post('/api/ideas-management/', data),
+    api.post('/api/ideas-management', data),
 
   // 更新Idea  
   updateIdea: (id: number, data: import('../types').IdeaUpdate): Promise<import('../types').Idea> =>

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """
-通用数据库迁移脚本
-- 每次数据库修改时，更新此文件内容
-- 执行完成后自动标记为已完成
-- 下次部署时如无新迁移则跳过
+用户独立待办功能数据库迁移
+- 创建user_project_todos表
+- 支持每个用户有自己独立的待办项目列表
 """
 
 import sqlite3
@@ -13,7 +12,8 @@ import logging
 from datetime import datetime
 
 # 导入迁移工具
-from migration_utils import setup_migration_logging, find_database_path, backup_database, get_table_columns, table_exists
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from migrations.migration_utils import setup_migration_logging, find_database_path, backup_database, get_table_columns, table_exists
 
 logger = setup_migration_logging()
 
@@ -116,7 +116,45 @@ def run_migration():
         else:
             logger.info("user_project_todos表已存在，跳过创建")
         
-        # 步骤2：验证表结构
+        # 步骤2：迁移现有的is_todo数据（如果有）
+        logger.info("检查是否需要迁移现有待办数据...")
+        
+        # 检查research_projects表是否有is_todo字段
+        project_columns = get_table_columns(cursor, 'research_projects')
+        if 'is_todo' in project_columns:
+            # 获取所有标记为待办的项目
+            cursor.execute("""
+                SELECT id, todo_marked_at 
+                FROM research_projects 
+                WHERE is_todo = 1
+            """)
+            todo_projects = cursor.fetchall()
+            
+            if todo_projects:
+                logger.info(f"发现 {len(todo_projects)} 个待办项目需要迁移")
+                
+                # 获取第一个用户（假设是主用户）
+                cursor.execute("SELECT id FROM users LIMIT 1")
+                user_result = cursor.fetchone()
+                
+                if user_result:
+                    user_id = user_result[0]
+                    
+                    # 为每个待办项目创建用户关联
+                    for project_id, marked_at in todo_projects:
+                        cursor.execute("""
+                            INSERT OR IGNORE INTO user_project_todos 
+                            (user_id, project_id, marked_at, priority) 
+                            VALUES (?, ?, ?, ?)
+                        """, (user_id, project_id, marked_at or datetime.utcnow(), 1))
+                    
+                    logger.info(f"✅ 成功迁移 {len(todo_projects)} 个待办项目")
+                else:
+                    logger.warning("未找到用户，跳过待办数据迁移")
+            else:
+                logger.info("没有需要迁移的待办数据")
+        
+        # 步骤3：验证表结构
         logger.info("验证user_project_todos表结构...")
         
         todos_columns = get_table_columns(cursor, 'user_project_todos')
@@ -136,25 +174,6 @@ def run_migration():
         else:
             logger.info("✅ user_project_todos表结构验证成功")
         
-        # 步骤3：确保ideas表存在（v1.13迁移）
-        if not table_exists(cursor, 'ideas'):
-            logger.info("创建ideas表...")
-            cursor.execute("""
-                CREATE TABLE ideas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    research_question TEXT NOT NULL,
-                    research_method TEXT,
-                    source_literature TEXT,
-                    importance INTEGER DEFAULT 3,
-                    description TEXT,
-                    collaborator_id INTEGER,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
-                )
-            """)
-            logger.info("✅ ideas表创建成功")
-        
         # 提交更改
         conn.commit()
         conn.close()
@@ -168,67 +187,22 @@ def run_migration():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # 安全地获取表数据统计
-        project_count = 0
-        collaborator_count = 0
-        user_count = 0
-        ideas_count = 0
+        # 统计数据
+        cursor.execute("SELECT COUNT(*) FROM user_project_todos")
+        todo_count = cursor.fetchone()[0]
         
-        try:
-            cursor.execute("SELECT COUNT(*) FROM research_projects")
-            project_count = cursor.fetchone()[0]
-        except:
-            pass
-            
-        try:
-            cursor.execute("SELECT COUNT(*) FROM collaborators")
-            collaborator_count = cursor.fetchone()[0]
-        except:
-            pass
-            
-        try:
-            cursor.execute("SELECT COUNT(*) FROM users")
-            user_count = cursor.fetchone()[0]
-        except:
-            pass
-            
-        try:
-            cursor.execute("SELECT COUNT(*) FROM ideas")
-            ideas_count = cursor.fetchone()[0]
-        except:
-            pass
-            
-        try:
-            cursor.execute("SELECT COUNT(*) FROM user_project_todos")
-            todos_count = cursor.fetchone()[0]
-        except:
-            todos_count = 0
-        
-        # 验证表是否成功创建
-        ideas_table_created = table_exists(cursor, 'ideas')
-        todos_table_created = table_exists(cursor, 'user_project_todos')
+        cursor.execute("SELECT COUNT(DISTINCT user_id) FROM user_project_todos")
+        user_with_todos = cursor.fetchone()[0]
         
         conn.close()
         
         logger.info("=" * 60)
         logger.info("🎉 用户独立待办功能添加完成！")
         logger.info(f"📊 系统数据统计:")
-        logger.info(f"   - 用户: {user_count}")
-        logger.info(f"   - 项目: {project_count}")
-        logger.info(f"   - 合作者: {collaborator_count}")
-        logger.info(f"   - Ideas: {ideas_count}")
-        logger.info(f"   - 待办记录: {todos_count}")
-        
-        if ideas_table_created:
-            logger.info("✅ ideas表存在")
-        if todos_table_created:
-            logger.info("✅ user_project_todos表创建成功")
-        else:
-            logger.error("❌ user_project_todos表创建失败")
-        
-        logger.info("✅ 用户独立待办功能已成功添加")
-        logger.info("✅ 每个用户现在有自己的待办项目列表")
-        logger.info("✅ 待办数据持久化存储，不会丢失")
+        logger.info(f"   - 待办记录: {todo_count}")
+        logger.info(f"   - 有待办的用户: {user_with_todos}")
+        logger.info("✅ 用户现在可以拥有自己独立的待办项目列表")
+        logger.info("✅ 待办数据将持久化存储，不会因清除缓存而丢失")
         logger.info("=" * 60)
         
         return True

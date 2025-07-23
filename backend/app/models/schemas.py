@@ -273,5 +273,8 @@ class Idea(IdeaBase):
         from_attributes = True
 
 
+# Schema aliases for compatibility
+IdeaSchema = Idea
+
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference

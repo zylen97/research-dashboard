@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, validation, audit, auth, backup, config
-from app.routes import idea_discovery, ideas
+from app.routes import research, collaborators, validation, audit, auth, backup, config, ideas
+from app.routes import idea_discovery
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 from app.core.config import settings

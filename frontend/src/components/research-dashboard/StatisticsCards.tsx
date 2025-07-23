@@ -5,7 +5,12 @@ import { ResearchProject } from '../../types';
 
 interface StatisticsCardsProps {
   projects: ResearchProject[];
-  getProjectTodoStatus: (project: ResearchProject) => { is_todo: boolean; todo_marked_at: string };
+  getProjectTodoStatus: (project: ResearchProject) => { 
+    is_todo: boolean; 
+    marked_at: string | null;
+    priority: number | null;
+    notes: string | null;
+  };
 }
 
 interface ProjectStats {

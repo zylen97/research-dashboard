@@ -18,7 +18,12 @@ export interface ProjectTableActions {
 
 export interface ProjectColumnProps {
   actions: ProjectTableActions;
-  getProjectTodoStatus: (project: ResearchProject) => { is_todo: boolean; todo_marked_at: string };
+  getProjectTodoStatus: (project: ResearchProject) => { 
+    is_todo: boolean; 
+    marked_at: string | null;
+    priority: number | null;
+    notes: string | null;
+  };
   currentPage: number;
   pageSize: number;
 }

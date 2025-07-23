@@ -5,24 +5,20 @@ import { ResearchProject } from '../../../types';
 
 export interface TodoStatus {
   is_todo: boolean;
-  todo_marked_at: string;
+  marked_at: string | null;
+  priority: number | null;
+  notes: string | null;
 }
 
 export const useProjectData = () => {
-  // 本地管理待办状态（后端支持前的临时方案）
-  const [localTodoMarks, setLocalTodoMarks] = useState<Record<number, TodoStatus>>(() => {
-    try {
-      const saved = localStorage.getItem('project-todo-marks');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
+  // 获取用户的待办项目列表
+  const { data: userTodos = [], refetch: refetchTodos } = useQuery({
+    queryKey: ['user-todos'],
+    queryFn: () => researchApi.getUserTodos(),
   });
 
-  // 持久化本地待办状态
-  useEffect(() => {
-    localStorage.setItem('project-todo-marks', JSON.stringify(localTodoMarks));
-  }, [localTodoMarks]);
+  // 缓存待办状态
+  const [todoStatusCache, setTodoStatusCache] = useState<Record<number, TodoStatus>>({});
 
   // 获取研究项目数据
   const { data: projects = [], isLoading: isProjectsLoading, refetch: refetchProjects } = useQuery({
@@ -36,25 +32,31 @@ export const useProjectData = () => {
     queryFn: () => collaboratorApi.getCollaborators(),
   });
 
+  // 更新待办缓存
+  useEffect(() => {
+    const cache: Record<number, TodoStatus> = {};
+    userTodos.forEach((todo: any) => {
+      cache[todo.id] = {
+        is_todo: true,
+        marked_at: todo.user_todo_marked_at || todo.marked_at,
+        priority: todo.user_todo_priority || todo.priority || 0,
+        notes: todo.user_todo_notes || todo.notes || null
+      };
+    });
+    setTodoStatusCache(cache);
+  }, [userTodos]);
+
   // 获取项目的待办状态
   const getProjectTodoStatus = useCallback((project: ResearchProject): TodoStatus => {
-    // 1. 优先使用本地标记状态
-    const localMark = localTodoMarks[project.id];
-    if (localMark !== undefined) {
-      return localMark;
+    // 从缓存中获取
+    const cached = todoStatusCache[project.id];
+    if (cached) {
+      return cached;
     }
     
-    // 2. 后端支持is_todo字段时直接返回
-    if (project.is_todo !== undefined) {
-      return {
-        is_todo: project.is_todo,
-        todo_marked_at: project.todo_marked_at || new Date().toISOString()
-      };
-    }
-    
-    // 3. 默认不是待办状态
-    return { is_todo: false, todo_marked_at: '' };
-  }, [localTodoMarks]);
+    // 默认不是待办状态
+    return { is_todo: false, marked_at: null, priority: null, notes: null };
+  }, [todoStatusCache]);
 
   // 按待办状态排序项目：待办项目置顶
   const sortedProjects = useMemo(() => {
@@ -66,10 +68,15 @@ export const useProjectData = () => {
       if (aTodoStatus.is_todo && !bTodoStatus.is_todo) return -1;
       if (!aTodoStatus.is_todo && bTodoStatus.is_todo) return 1;
       
-      // 2. 都是待办项目时，按标记时间倒序（最新标记的在最前面）
+      // 2. 都是待办项目时，先按优先级排序（高优先级在前），再按标记时间倒序
       if (aTodoStatus.is_todo && bTodoStatus.is_todo) {
-        if (aTodoStatus.todo_marked_at && bTodoStatus.todo_marked_at) {
-          return new Date(bTodoStatus.todo_marked_at).getTime() - new Date(aTodoStatus.todo_marked_at).getTime();
+        // 优先级比较
+        if (aTodoStatus.priority !== bTodoStatus.priority) {
+          return (bTodoStatus.priority || 0) - (aTodoStatus.priority || 0);
+        }
+        // 标记时间比较
+        if (aTodoStatus.marked_at && bTodoStatus.marked_at) {
+          return new Date(bTodoStatus.marked_at).getTime() - new Date(aTodoStatus.marked_at).getTime();
         }
         return 0;
       }
@@ -79,9 +86,9 @@ export const useProjectData = () => {
     });
   }, [projects, getProjectTodoStatus]);
 
-  // 更新本地待办状态
+  // 更新本地待办状态缓存（乐观更新）
   const updateLocalTodoStatus = (projectId: number, todoStatus: TodoStatus) => {
-    setLocalTodoMarks(prev => ({
+    setTodoStatusCache(prev => ({
       ...prev,
       [projectId]: todoStatus
     }));
@@ -89,7 +96,7 @@ export const useProjectData = () => {
 
   // 恢复本地待办状态（API失败时使用）
   const revertLocalTodoStatus = (projectId: number, previousStatus: TodoStatus) => {
-    setLocalTodoMarks(prev => ({
+    setTodoStatusCache(prev => ({
       ...prev,
       [projectId]: previousStatus
     }));
@@ -97,7 +104,7 @@ export const useProjectData = () => {
 
   // 统一的刷新函数
   const refetch = async () => {
-    await Promise.all([refetchProjects(), refetchCollaborators()]);
+    await Promise.all([refetchProjects(), refetchCollaborators(), refetchTodos()]);
   };
 
   return {
@@ -105,7 +112,8 @@ export const useProjectData = () => {
     projects,
     sortedProjects,
     collaborators,
-    localTodoMarks,
+    todoStatusCache,
+    userTodos,
     
     // 状态
     isProjectsLoading,

@@ -2,11 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from typing import List, Optional
+from datetime import datetime
 from ..models import (
-    get_db, ResearchProject, Collaborator, CommunicationLog,
+    get_db, ResearchProject, Collaborator, CommunicationLog, UserProjectTodo, User,
     ResearchProjectSchema, ResearchProjectCreate, ResearchProjectUpdate,
     CommunicationLogSchema, CommunicationLogCreate, CommunicationLogUpdate
 )
+from ..utils.auth import get_current_user
 from ..utils import DataValidator
 from ..utils.security_validators import SecurityValidator
 
@@ -294,3 +296,136 @@ async def check_project_dependencies(project_id: int, db: Session = Depends(get_
             detail="Research project not found"
         )
     return dependencies
+
+
+# ============ 用户独立待办功能 API ============
+
+@router.get("/todos", response_model=List[ResearchProjectSchema])
+async def get_user_todos(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取当前用户的所有待办项目"""
+    # 查询用户的所有待办项目
+    todos = db.query(UserProjectTodo).filter(
+        UserProjectTodo.user_id == current_user.id
+    ).order_by(desc(UserProjectTodo.marked_at)).all()
+    
+    # 获取对应的项目信息
+    project_ids = [todo.project_id for todo in todos]
+    projects = db.query(ResearchProject).filter(
+        ResearchProject.id.in_(project_ids)
+    ).options(
+        joinedload(ResearchProject.senior_collaborator),
+        joinedload(ResearchProject.postgrad_collaborator),
+        joinedload(ResearchProject.undergrad_collaborator)
+    ).all()
+    
+    # 按照待办标记时间排序
+    project_dict = {p.id: p for p in projects}
+    sorted_projects = []
+    for todo in todos:
+        if todo.project_id in project_dict:
+            project = project_dict[todo.project_id]
+            # 添加用户待办信息到项目对象（临时属性）
+            project.user_todo_marked_at = todo.marked_at
+            project.user_todo_priority = todo.priority
+            project.user_todo_notes = todo.notes
+            sorted_projects.append(project)
+    
+    return sorted_projects
+
+
+@router.post("/{project_id}/todo")
+async def mark_project_as_todo(
+    project_id: int,
+    priority: int = 0,
+    notes: Optional[str] = None,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """将项目标记为待办"""
+    # 验证项目存在
+    project = db.query(ResearchProject).filter(ResearchProject.id == project_id).first()
+    if not project:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Research project not found"
+        )
+    
+    # 检查是否已经标记为待办
+    existing_todo = db.query(UserProjectTodo).filter(
+        UserProjectTodo.user_id == current_user.id,
+        UserProjectTodo.project_id == project_id
+    ).first()
+    
+    if existing_todo:
+        # 更新现有待办
+        existing_todo.marked_at = datetime.utcnow()
+        existing_todo.priority = priority
+        existing_todo.notes = notes
+        existing_todo.updated_at = datetime.utcnow()
+    else:
+        # 创建新待办
+        new_todo = UserProjectTodo(
+            user_id=current_user.id,
+            project_id=project_id,
+            priority=priority,
+            notes=notes
+        )
+        db.add(new_todo)
+    
+    db.commit()
+    return {"message": "Project marked as todo successfully"}
+
+
+@router.delete("/{project_id}/todo")
+async def unmark_project_as_todo(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """取消项目的待办标记"""
+    # 查找用户的待办记录
+    todo = db.query(UserProjectTodo).filter(
+        UserProjectTodo.user_id == current_user.id,
+        UserProjectTodo.project_id == project_id
+    ).first()
+    
+    if not todo:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Todo not found for this project"
+        )
+    
+    db.delete(todo)
+    db.commit()
+    return {"message": "Project todo unmarked successfully"}
+
+
+@router.get("/{project_id}/todo-status")
+async def get_project_todo_status(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取项目的待办状态"""
+    todo = db.query(UserProjectTodo).filter(
+        UserProjectTodo.user_id == current_user.id,
+        UserProjectTodo.project_id == project_id
+    ).first()
+    
+    if todo:
+        return {
+            "is_todo": True,
+            "marked_at": todo.marked_at,
+            "priority": todo.priority,
+            "notes": todo.notes
+        }
+    else:
+        return {
+            "is_todo": False,
+            "marked_at": None,
+            "priority": None,
+            "notes": None
+        }

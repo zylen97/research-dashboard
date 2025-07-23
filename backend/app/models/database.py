@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -164,6 +164,29 @@ class Idea(Base):
     
     # Relationships
     collaborator = relationship("Collaborator")
+
+
+class UserProjectTodo(Base):
+    """用户项目待办关联模型"""
+    __tablename__ = "user_project_todos"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    project_id = Column(Integer, ForeignKey('research_projects.id', ondelete='CASCADE'), nullable=False)
+    marked_at = Column(DateTime, default=datetime.utcnow)
+    priority = Column(Integer, default=0)  # 优先级
+    notes = Column(Text)  # 备注
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="project_todos")
+    project = relationship("ResearchProject", backref="user_todos")
+    
+    # 唯一约束
+    __table_args__ = (
+        UniqueConstraint('user_id', 'project_id', name='_user_project_uc'),
+    )
 
 
 # Create database tables

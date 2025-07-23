@@ -54,22 +54,41 @@ export const useProjectActions = ({
     },
   });
 
-  // 切换待办状态 mutation
-  const toggleTodoMutation = useMutation({
-    mutationFn: ({ id, is_todo }: { id: number; is_todo: boolean }) =>
-      researchApi.toggleTodoStatus(id, is_todo),
-    onSuccess: (_, variables) => {
-      message.success(variables.is_todo ? '已标记为待办事项！' : '已取消待办标记！');
+  // 标记为待办 mutation
+  const markAsTodoMutation = useMutation({
+    mutationFn: ({ id, priority = 0, notes }: { id: number; priority?: number; notes?: string | undefined }) =>
+      researchApi.markAsTodo(id, priority, notes),
+    onSuccess: () => {
+      message.success('已标记为待办事项！');
+      queryClient.invalidateQueries({ queryKey: ['user-todos'] });
       queryClient.invalidateQueries({ queryKey: ['research-projects'] });
     },
     onError: (error: any, variables) => {
       // 如果API调用失败，恢复本地状态
-      const currentTodoStatus = getProjectTodoStatus({ id: variables.id } as ResearchProject);
       revertLocalTodoStatus(variables.id, {
-        is_todo: !variables.is_todo, // 恢复到之前的状态
-        todo_marked_at: currentTodoStatus.todo_marked_at
+        is_todo: false,
+        marked_at: null,
+        priority: null,
+        notes: null
       });
-      message.error('更新失败：' + error.message);
+      message.error('标记失败：' + error.message);
+    },
+  });
+
+  // 取消待办 mutation
+  const unmarkTodoMutation = useMutation({
+    mutationFn: (id: number) => researchApi.unmarkTodo(id),
+    onSuccess: () => {
+      message.success('已取消待办标记！');
+      queryClient.invalidateQueries({ queryKey: ['user-todos'] });
+      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+    },
+    onError: (error: any, variables, context: any) => {
+      // 如果API调用失败，恢复本地状态
+      if (context?.previousStatus) {
+        revertLocalTodoStatus(variables, context.previousStatus);
+      }
+      message.error('取消失败：' + error.message);
     },
   });
 
@@ -164,21 +183,40 @@ export const useProjectActions = ({
   };
 
   // 处理切换待办状态
-  const handleToggleTodo = (project: ResearchProject) => {
+  const handleToggleTodo = (project: ResearchProject, priority?: number, notes?: string) => {
     const currentTodoStatus = getProjectTodoStatus(project);
-    const newTodoStatus = !currentTodoStatus.is_todo;
+    const previousStatus = { ...currentTodoStatus };
     
-    // 更新本地待办状态
-    updateLocalTodoStatus(project.id, {
-      is_todo: newTodoStatus,
-      todo_marked_at: newTodoStatus ? new Date().toISOString() : ''
-    });
-    
-    // 仍然调用API以保持后端同步（即使后端可能不完全支持）
-    toggleTodoMutation.mutate({
-      id: project.id,
-      is_todo: newTodoStatus,
-    });
+    if (!currentTodoStatus.is_todo) {
+      // 标记为待办
+      updateLocalTodoStatus(project.id, {
+        is_todo: true,
+        marked_at: new Date().toISOString(),
+        priority: priority || 0,
+        notes: notes || null
+      });
+      
+      markAsTodoMutation.mutate({
+        id: project.id,
+        priority: priority || 0,
+        notes: notes
+      });
+    } else {
+      // 取消待办
+      updateLocalTodoStatus(project.id, {
+        is_todo: false,
+        marked_at: null,
+        priority: null,
+        notes: null
+      });
+      
+      unmarkTodoMutation.mutateAsync(project.id, {
+        onError: () => {
+          // 传递之前的状态以便回滚
+          return { previousStatus };
+        }
+      });
+    }
   };
 
   return {
@@ -186,7 +224,8 @@ export const useProjectActions = ({
     createProjectMutation,
     updateProjectMutation,
     deleteProjectMutation,
-    toggleTodoMutation,
+    markAsTodoMutation,
+    unmarkTodoMutation,
     createLogMutation,
     updateLogMutation,
     deleteLogMutation,
@@ -199,6 +238,6 @@ export const useProjectActions = ({
     isCreating: createProjectMutation.isPending,
     isUpdating: updateProjectMutation.isPending,
     isDeleting: deleteProjectMutation.isPending,
-    isToggling: toggleTodoMutation.isPending,
+    isToggling: markAsTodoMutation.isPending || unmarkTodoMutation.isPending,
   };
 };

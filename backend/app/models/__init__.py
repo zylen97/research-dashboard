@@ -11,6 +11,7 @@ from .database import (
     User,
     SystemConfig,
     Idea,
+    UserProjectTodo,
     project_collaborators
 )
 
@@ -68,7 +69,7 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig", "Idea",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig", "Idea", "UserProjectTodo",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
