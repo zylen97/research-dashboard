@@ -158,3 +158,21 @@ backend/uploads/
 # Lock files
 package-lock.json
 yarn.lock
+
+# VPS临时和调试文件 - 防止Git冲突
+*-check.sh
+*-backup.sh  
+*-debug.sh
+*-temp.sh
+vps-*.sh
+debug-*.sh
+check-*.sh
+temp-*.sh
+
+# 部署过程中的临时文件
+.deploy*
+deployment*
+*.deploy.tmp
+*_check.sh
+*_backup.sh
+DEPLOYMENT_TEST.md

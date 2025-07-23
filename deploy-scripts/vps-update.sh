@@ -123,7 +123,51 @@ log_message "INFO" "开始 Ultra Think 部署更新"
 # 0. 部署前备份
 backup_database
 
-# 1. 拉取最新代码
+# 1. 预清理潜在Git冲突文件
+clean_potential_conflicts() {
+    log_message "INFO" "清理潜在Git冲突文件..."
+    
+    # 定义冲突文件模式
+    local CONFLICT_PATTERNS=(
+        "*-check*.sh"
+        "*-backup*.sh" 
+        "*-debug*.sh"
+        "*-temp*.sh"
+        "vps-*.sh"
+        ".deploy_*"
+        "deployment_*"
+        "*.deploy.tmp"
+        "*_check.sh"
+        "*_backup.sh"
+        "DEPLOYMENT_TEST.md"
+    )
+    
+    # 清理匹配的文件
+    for pattern in "${CONFLICT_PATTERNS[@]}"; do
+        find "$PROJECT_ROOT" -name "$pattern" -type f -delete 2>/dev/null && \
+            log_message "INFO" "已清理文件模式: $pattern" || true
+    done
+    
+    # 确保工作目录干净
+    git reset --hard HEAD 2>/dev/null || true
+    git clean -fd 2>/dev/null || true
+    
+    log_message "INFO" "Git冲突文件清理完成"
+}
+
+# 初始化VPS临时目录
+init_vps_temp_dir() {
+    local VPS_TEMP_DIR="/tmp/research-dashboard"
+    mkdir -p "$VPS_TEMP_DIR"/{scripts,logs,temp}
+    chmod 755 "$VPS_TEMP_DIR"
+    log_message "INFO" "VPS临时目录已初始化: $VPS_TEMP_DIR"
+}
+
+# 执行预清理和初始化
+init_vps_temp_dir
+clean_potential_conflicts
+
+# 2. 拉取最新代码
 log_message "INFO" "拉取最新代码..."
 cd "$PROJECT_ROOT" || error_exit "无法进入项目目录"
 
