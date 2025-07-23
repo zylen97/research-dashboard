@@ -19,7 +19,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 迁移版本号 - 添加文献文件夹功能
+# 迁移版本号 - 添加文献文件夹功能  
 MIGRATION_VERSION = "v1.11_add_literature_folders"
 
 def backup_database(db_path):
@@ -206,44 +206,8 @@ def run_migration():
                 
                 logger.info(f"✅ 已为用户 {username} 创建根文件夹")
         
-        # 步骤4：创建一些基础分类文件夹
-        logger.info("开始创建基础分类文件夹...")
-        
-        # 为每个用户创建常用的分类文件夹
-        basic_categories = [
-            ("待阅读", "新导入的文献，等待阅读"),
-            ("已阅读", "已经阅读完成的文献"),
-            ("重要文献", "标记为重要的文献"),
-            ("参考文献", "用作参考的文献")
-        ]
-        
-        for user_id, username in users:
-            # 获取根文件夹ID
-            cursor.execute("""
-                SELECT id FROM literature_folders 
-                WHERE user_id = ? AND is_root = 1 
-                LIMIT 1
-            """, (user_id,))
-            
-            root_folder = cursor.fetchone()
-            if root_folder:
-                root_folder_id = root_folder[0]
-                
-                for i, (category_name, category_desc) in enumerate(basic_categories):
-                    # 检查分类文件夹是否已存在
-                    cursor.execute("""
-                        SELECT id FROM literature_folders 
-                        WHERE parent_id = ? AND name = ?
-                    """, (root_folder_id, category_name))
-                    
-                    if not cursor.fetchone():
-                        cursor.execute("""
-                            INSERT INTO literature_folders 
-                            (name, parent_id, user_id, group_name, description, sort_order)
-                            VALUES (?, ?, ?, ?, ?, ?)
-                        """, (category_name, root_folder_id, user_id, username, category_desc, i + 1))
-                
-                logger.info(f"✅ 已为用户 {username} 创建基础分类文件夹")
+        # 步骤4：跳过创建预设文件夹，让用户自己创建需要的结构
+        logger.info("✅ 根文件夹创建完成，用户可自行创建所需的文件夹结构")
         
         # 提交更改
         conn.commit()
@@ -325,7 +289,7 @@ def run_migration():
                 logger.info(f"   - {username}: {folder_count}个文件夹 (包含{root_folders}个根文件夹)")
         
         logger.info("✅ 文献文件夹功能已就绪，支持层级组织和分组管理")
-        logger.info("✅ 每个用户已自动创建根文件夹和基础分类文件夹")
+        logger.info("✅ 每个用户已创建根文件夹，可自行创建所需的文件夹结构")
         logger.info("✅ literature表已支持文件夹关联")
         logger.info("=" * 60)
         
