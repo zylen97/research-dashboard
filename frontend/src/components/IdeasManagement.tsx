@@ -128,12 +128,39 @@ const IdeasManagement: React.FC = () => {
 
   // 重要性显示
   const renderImportance = (importance: number) => {
-    const colors = ['#ff4d4f', '#ff7a45', '#ffa940', '#52c41a', '#1890ff'];
-    const labels = ['很低', '低', '中等', '高', '很高'];
+    let color: string;
+    let label: string;
+    
+    switch (importance) {
+      case 1:
+        color = '#ff4d4f';
+        label = '很低';
+        break;
+      case 2:
+        color = '#ff7a45';
+        label = '低';
+        break;
+      case 3:
+        color = '#ffa940';
+        label = '中等';
+        break;
+      case 4:
+        color = '#52c41a';
+        label = '高';
+        break;
+      case 5:
+        color = '#1890ff';
+        label = '很高';
+        break;
+      default:
+        color = '#ffa940';
+        label = '中等';
+    }
+    
     return (
       <Space>
         <Rate disabled value={importance} style={{ fontSize: '16px' }} />
-        <Tag color={colors[importance - 1]}>{labels[importance - 1]}</Tag>
+        <Tag color={color as any}>{label}</Tag>
       </Space>
     );
   };
