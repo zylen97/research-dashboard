@@ -31,13 +31,11 @@ import {
   BookOutlined,
   BulbOutlined,
   FileTextOutlined,
-  UserOutlined,
   RobotOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { literatureApi } from '../services/api';
 import { Literature, LiteratureCreate, ValidationRequest } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 import type { ColumnsType } from 'antd/es/table';
 
 const { Title, Text, Paragraph } = Typography;
@@ -46,7 +44,6 @@ const { Option } = Select;
 const { TabPane } = Tabs;
 
 const LiteratureDiscovery: React.FC = () => {
-  const { user } = useAuth();
   const [selectedGroup, setSelectedGroup] = useState('zl');
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
@@ -491,18 +488,21 @@ const LiteratureDiscovery: React.FC = () => {
             </Tooltip>
           )}
           <Popconfirm
-            title="确认删除"
-            description="确定要删除这篇文献吗？"
+            title="确认删除文献"
+            description={`确定要永久删除文献《${record.title}》吗？删除后无法恢复。`}
             onConfirm={() => handleDelete(record)}
-            okText="删除"
+            okText="确认删除"
             cancelText="取消"
             okType="danger"
+            placement="left"
           >
-            <Tooltip title="删除">
+            <Tooltip title="删除文献">
               <Button 
                 type="text" 
                 danger 
                 icon={<DeleteOutlined />}
+                loading={deleteLiteratureMutation.isPending}
+                size="small"
               />
             </Tooltip>
           </Popconfirm>
@@ -549,12 +549,6 @@ const LiteratureDiscovery: React.FC = () => {
           </Space>
           <Space>
             <Tag color="blue">共 {groupLiterature.length} 篇文献</Tag>
-            {user && (
-              <Tag color="green">
-                <UserOutlined style={{ marginRight: 4 }} />
-                {user.display_name}
-              </Tag>
-            )}
           </Space>
         </div>
 

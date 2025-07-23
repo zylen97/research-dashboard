@@ -14,7 +14,12 @@ import {
   Popconfirm,
   InputNumber,
   Switch,
-  Tooltip
+  Tooltip,
+  Row,
+  Col,
+  Typography,
+  Avatar,
+  List
 } from 'antd';
 import {
   PlusOutlined,
@@ -24,11 +29,17 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
-  EyeInvisibleOutlined
+  EyeInvisibleOutlined,
+  SendOutlined,
+  MessageOutlined,
+  RobotOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import api from '../../services/api';
 
 const { Option } = Select;
+const { Text } = Typography;
+const { TextArea } = Input;
 
 interface AIProvider {
   id?: number;
@@ -51,6 +62,16 @@ interface SystemConfig {
   is_active: boolean;
 }
 
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+  provider?: string;
+  responseTime?: number;
+  error?: boolean;
+}
+
 const AIConfigPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [providers, setProviders] = useState<AIProvider[]>([]);
@@ -58,6 +79,12 @@ const AIConfigPanel: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
+  
+  // 聊天功能状态
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [selectedChatProvider, setSelectedChatProvider] = useState<string>('');
 
   useEffect(() => {
     fetchProviders();
@@ -121,6 +148,80 @@ const AIConfigPanel: React.FC = () => {
     } finally {
       setTestingProvider(null);
     }
+  };
+
+  // 处理发送聊天消息
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !selectedChatProvider) {
+      message.warning('请输入消息并选择AI提供商');
+      return;
+    }
+
+    const selectedProvider = providers.find(p => p.provider === selectedChatProvider);
+    if (!selectedProvider) {
+      message.error('请先配置并启用AI提供商');
+      return;
+    }
+
+    const userMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      content: chatInput,
+      timestamp: new Date().toLocaleTimeString()
+    };
+
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setChatLoading(true);
+
+    const startTime = Date.now();
+
+    try {
+      const response = await api.post('/config/ai/test', {
+        provider: selectedProvider.provider,
+        api_key: selectedProvider.api_key,
+        api_url: selectedProvider.api_url,
+        test_prompt: chatInput
+      });
+
+      const responseTime = Date.now() - startTime;
+
+      const assistantMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: response.data.response_content || response.data.message || '收到回复',
+        timestamp: new Date().toLocaleTimeString(),
+        provider: selectedProvider.provider,
+        responseTime,
+        error: !response.data.success
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
+
+      if (!response.data.success) {
+        message.error(`AI响应错误: ${response.data.message}`);
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : '未知错误';
+      const errorResponseMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'assistant',
+        content: `连接失败: ${errorMessage}`,
+        timestamp: new Date().toLocaleTimeString(),
+        provider: selectedProvider.provider,
+        error: true
+      };
+
+      setChatMessages(prev => [...prev, errorResponseMessage]);
+      message.error('发送失败: ' + errorMessage);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // 清空聊天记录
+  const handleClearChat = () => {
+    setChatMessages([]);
   };
 
   const handleDelete = async (provider: AIProvider) => {
@@ -230,31 +331,187 @@ const AIConfigPanel: React.FC = () => {
 
   return (
     <div>
-      <Card
-        title="AI模型配置"
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingProvider(null);
-              form.resetFields();
-              setModalVisible(true);
-            }}
+      <Row gutter={24}>
+        {/* 左侧：AI配置管理 */}
+        <Col xs={24} lg={14}>
+          <Card
+            title="AI模型配置"
+            extra={
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingProvider(null);
+                  form.resetFields();
+                  setModalVisible(true);
+                }}
+              >
+                添加配置
+              </Button>
+            }
           >
-            添加配置
-          </Button>
-        }
-      >
-        <Spin spinning={loading}>
-          <Table
-            dataSource={providers}
-            columns={columns}
-            rowKey="provider"
-            pagination={false}
-          />
-        </Spin>
-      </Card>
+            <Spin spinning={loading}>
+              <Table
+                dataSource={providers}
+                columns={columns}
+                rowKey="provider"
+                pagination={false}
+                size="small"
+              />
+            </Spin>
+          </Card>
+        </Col>
+
+        {/* 右侧：AI聊天测试 */}
+        <Col xs={24} lg={10}>
+          <Card
+            title={
+              <Space>
+                <MessageOutlined />
+                <span>AI聊天测试</span>
+              </Space>
+            }
+            extra={
+              <Space>
+                <Select
+                  placeholder="选择AI提供商"
+                  value={selectedChatProvider}
+                  onChange={setSelectedChatProvider}
+                  style={{ width: 120 }}
+                  size="small"
+                >
+                  {providers.filter(p => p.is_active).map(provider => (
+                    <Option key={provider.provider} value={provider.provider}>
+                      {provider.provider}
+                    </Option>
+                  ))}
+                </Select>
+                <Button size="small" onClick={handleClearChat}>
+                  清空
+                </Button>
+              </Space>
+            }
+          >
+            <div style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
+              {/* 聊天消息显示区域 */}
+              <div 
+                style={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  border: '1px solid #f0f0f0', 
+                  borderRadius: '6px',
+                  padding: '12px',
+                  marginBottom: '12px',
+                  backgroundColor: '#fafafa'
+                }}
+              >
+                {chatMessages.length === 0 ? (
+                  <div style={{ 
+                    textAlign: 'center', 
+                    color: '#999', 
+                    marginTop: '50px',
+                    fontSize: '14px'
+                  }}>
+                    <RobotOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
+                    <div>选择AI提供商开始对话测试</div>
+                  </div>
+                ) : (
+                  <List
+                    dataSource={chatMessages}
+                    renderItem={(message) => (
+                      <List.Item style={{ padding: '8px 0', border: 'none' }}>
+                        <div style={{ width: '100%' }}>
+                          <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'flex-start',
+                            justifyContent: message.type === 'user' ? 'flex-end' : 'flex-start'
+                          }}>
+                            {message.type === 'assistant' && (
+                              <Avatar 
+                                size="small" 
+                                icon={<RobotOutlined />}
+                                style={{ 
+                                  backgroundColor: message.error ? '#ff4d4f' : '#1890ff',
+                                  marginRight: '8px'
+                                }}
+                              />
+                            )}
+                            <div style={{ 
+                              maxWidth: '80%',
+                              backgroundColor: message.type === 'user' ? '#1890ff' : 
+                                             message.error ? '#fff2f0' : '#f6f6f6',
+                              color: message.type === 'user' ? 'white' : 
+                                     message.error ? '#ff4d4f' : '#333',
+                              padding: '8px 12px',
+                              borderRadius: '8px',
+                              fontSize: '14px',
+                              border: message.error ? '1px solid #ffccc7' : 'none'
+                            }}>
+                              <div>{message.content}</div>
+                              <div style={{ 
+                                fontSize: '12px', 
+                                opacity: 0.7, 
+                                marginTop: '4px',
+                                textAlign: 'right'
+                              }}>
+                                {message.timestamp}
+                                {message.responseTime && ` · ${message.responseTime}ms`}
+                                {message.provider && ` · ${message.provider}`}
+                              </div>
+                            </div>
+                            {message.type === 'user' && (
+                              <Avatar 
+                                size="small" 
+                                icon={<UserOutlined />}
+                                style={{ 
+                                  backgroundColor: '#52c41a',
+                                  marginLeft: '8px'
+                                }}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </List.Item>
+                    )}
+                  />
+                )}
+              </div>
+
+              {/* 输入区域 */}
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <TextArea
+                  placeholder="输入消息测试AI响应..."
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  onPressEnter={(e) => {
+                    if (!e.shiftKey) {
+                      e.preventDefault();
+                      handleSendMessage();
+                    }
+                  }}
+                  rows={2}
+                  disabled={!selectedChatProvider || chatLoading}
+                />
+                <Button
+                  type="primary"
+                  icon={<SendOutlined />}
+                  onClick={handleSendMessage}
+                  loading={chatLoading}
+                  disabled={!selectedChatProvider || !chatInput.trim()}
+                >
+                  发送
+                </Button>
+              </div>
+
+              {!selectedChatProvider && providers.filter(p => p.is_active).length === 0 && (
+                <Text type="secondary" style={{ fontSize: '12px', marginTop: '8px' }}>
+                  请先配置并启用至少一个AI提供商
+                </Text>
+              )}
+            </div>
+          </Card>
+        </Col>
+      </Row>
 
       <Modal
         title={editingProvider ? '编辑AI配置' : '添加AI配置'}
