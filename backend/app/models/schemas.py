@@ -243,6 +243,35 @@ class AITestResponse(BaseModel):
     message: str
     response: Optional[str] = None
 
+# Idea schemas
+class IdeaBase(BaseModel):
+    research_question: str = Field(..., description="研究问题")
+    research_method: Optional[str] = Field(None, description="研究方法")
+    source_literature: Optional[str] = Field(None, description="来源文献")
+    importance: int = Field(default=3, ge=1, le=5, description="重要性评级 1-5")
+    description: Optional[str] = Field(None, description="额外描述")
+    collaborator_id: Optional[int] = Field(None, description="负责人ID")
+
+class IdeaCreate(IdeaBase):
+    pass
+
+class IdeaUpdate(BaseModel):
+    research_question: Optional[str] = None
+    research_method: Optional[str] = None
+    source_literature: Optional[str] = None
+    importance: Optional[int] = Field(None, ge=1, le=5)
+    description: Optional[str] = None
+    collaborator_id: Optional[int] = None
+
+class Idea(IdeaBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    collaborator: Optional['Collaborator'] = None
+    
+    class Config:
+        from_attributes = True
+
 
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference

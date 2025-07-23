@@ -147,7 +147,23 @@ class SystemConfig(Base):
         Index('idx_config_category_active', 'category', 'is_active'),
         Index('idx_config_encrypted_active', 'is_encrypted', 'is_active'),
     )
+
+class Idea(Base):
+    """Ideas管理模型"""
+    __tablename__ = "ideas"
     
+    id = Column(Integer, primary_key=True, index=True)
+    research_question = Column(Text, nullable=False)  # 研究问题
+    research_method = Column(Text)  # 研究方法
+    source_literature = Column(Text)  # 来源文献
+    importance = Column(Integer, default=3)  # 重要性 (1-5)
+    description = Column(Text)  # 额外描述
+    collaborator_id = Column(Integer, ForeignKey('collaborators.id'), nullable=True)  # 负责人
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    collaborator = relationship("Collaborator")
 
 
 # Create database tables

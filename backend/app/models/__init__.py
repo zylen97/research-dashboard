@@ -10,6 +10,7 @@ from .database import (
     AuditLog,
     User,
     SystemConfig,
+    Idea,
     project_collaborators
 )
 
@@ -57,11 +58,17 @@ from .schemas import (
     AITestRequest,
     AITestResponse,
 
+    # Idea schemas
+    IdeaBase,
+    IdeaCreate,
+    IdeaUpdate,
+    Idea as IdeaSchema,
+
 )
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig", "Idea",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
@@ -71,4 +78,5 @@ __all__ = [
     "FileUploadResponse",
     "SystemConfigBase", "SystemConfigCreate", "SystemConfigUpdate", "SystemConfigSchema",
     "AIProviderConfig", "AITestRequest", "AITestResponse",
+    "IdeaBase", "IdeaCreate", "IdeaUpdate", "IdeaSchema",
 ]

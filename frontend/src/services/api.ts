@@ -353,4 +353,35 @@ export const ideaDiscoveryApi = {
     api.get('/api/ideas/health'),
 };
 
+// Ideas管理 API
+export const ideasApi = {
+  // 获取Ideas列表
+  getIdeas: (params?: {
+    skip?: number;
+    limit?: number;
+    importance_filter?: number;
+  }): Promise<import('../types').Idea[]> =>
+    api.get('/api/ideas-management/', { params }),
+
+  // 获取单个Idea
+  getIdea: (id: number): Promise<import('../types').Idea> =>
+    api.get(`/api/ideas-management/${id}`),
+
+  // 创建Idea
+  createIdea: (data: import('../types').IdeaCreate): Promise<import('../types').Idea> =>
+    api.post('/api/ideas-management/', data),
+
+  // 更新Idea  
+  updateIdea: (id: number, data: import('../types').IdeaUpdate): Promise<import('../types').Idea> =>
+    api.put(`/api/ideas-management/${id}`, data),
+
+  // 删除Idea
+  deleteIdea: (id: number): Promise<{ message: string }> =>
+    api.delete(`/api/ideas-management/${id}`),
+
+  // 获取高级合作者列表
+  getSeniorCollaborators: (): Promise<import('../types').Collaborator[]> =>
+    api.get('/api/ideas-management/collaborators/senior'),
+};
+
 export default api;

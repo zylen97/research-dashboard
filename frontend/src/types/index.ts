@@ -149,6 +149,41 @@ export interface FileUploadResponse {
 export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as const;
 export const PROJECT_STATUSES = ['active', 'completed', 'paused'] as const;
 
+// Ideas管理类型
+export interface Idea {
+  id: number;
+  research_question: string;
+  research_method?: string;
+  source_literature?: string;
+  importance: number; // 1-5
+  description?: string;
+  collaborator_id?: number;
+  collaborator?: {
+    id: number;
+    name: string;
+  };
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IdeaCreate {
+  research_question: string;
+  research_method?: string;
+  source_literature?: string;
+  importance?: number; // 1-5, default 3
+  description?: string;
+  collaborator_id?: number;
+}
+
+export interface IdeaUpdate {
+  research_question?: string;
+  research_method?: string;
+  source_literature?: string;
+  importance?: number; // 1-5
+  description?: string;
+  collaborator_id?: number;
+}
+
 // 导出API相关类型
 
 // 用户类型

@@ -17,8 +17,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 删除文献管理功能  
-MIGRATION_VERSION = "v1.12_remove_literature_system"
+# 迁移版本号 - 添加Ideas管理功能  
+MIGRATION_VERSION = "v1.13_add_ideas_management"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -82,56 +82,74 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.12迁移任务：删除文献管理功能
+        # 🔧 v1.13迁移任务：添加Ideas管理功能
         # ===========================================
         
-        logger.info("开始删除文献管理功能...")
+        logger.info("开始添加Ideas管理功能...")
         
-        # 步骤1：删除literature表
-        if table_exists(cursor, 'literature'):
-            logger.info("发现literature表，准备删除...")
+        # 步骤1：处理ideas表
+        if table_exists(cursor, 'ideas'):
+            logger.info("发现旧的ideas表，准备重建...")
             
-            # 先获取文献数据统计
-            cursor.execute("SELECT COUNT(*) FROM literature")
-            literature_count = cursor.fetchone()[0]
+            # 备份旧数据（如果需要的话）
+            cursor.execute("SELECT COUNT(*) FROM ideas")
+            old_ideas_count = cursor.fetchone()[0]
+            logger.info(f"旧ideas表包含 {old_ideas_count} 条记录")
             
-            # 删除literature表
-            cursor.execute("DROP TABLE IF EXISTS literature")
-            logger.info(f"✅ literature表删除成功 (包含{literature_count}条记录)")
+            # 删除旧表
+            cursor.execute("DROP TABLE ideas")
+            logger.info("✅ 旧ideas表已删除")
+        
+        logger.info("创建新的ideas表...")
+        
+        cursor.execute("""
+            CREATE TABLE ideas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                research_question TEXT NOT NULL,
+                research_method TEXT,
+                source_literature TEXT,
+                importance INTEGER DEFAULT 3 CHECK(importance >= 1 AND importance <= 5),
+                description TEXT,
+                collaborator_id INTEGER,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
+            )
+        """)
+        
+        # 创建索引以优化查询
+        cursor.execute("CREATE INDEX idx_ideas_importance ON ideas(importance)")
+        cursor.execute("CREATE INDEX idx_ideas_collaborator ON ideas(collaborator_id)")
+        cursor.execute("CREATE INDEX idx_ideas_created ON ideas(created_at)")
+        
+        logger.info("✅ 新ideas表创建成功")
+        
+        # 步骤2：验证表结构
+        logger.info("验证ideas表结构...")
+        
+        ideas_columns = get_table_columns(cursor, 'ideas')
+        expected_columns = [
+            'id', 'research_question', 'research_method', 'source_literature', 
+            'importance', 'description', 'collaborator_id', 'created_at', 'updated_at'
+        ]
+        
+        missing_columns = []
+        for col in expected_columns:
+            if col not in ideas_columns:
+                missing_columns.append(col)
+        
+        if missing_columns:
+            logger.error(f"❌ ideas表缺少必要列: {missing_columns}")
+            raise Exception(f"数据库结构验证失败，缺少列: {missing_columns}")
         else:
-            logger.info("literature表不存在，跳过删除")
+            logger.info("✅ ideas表结构验证成功")
         
-        # 步骤2：删除literature_folders表
-        if table_exists(cursor, 'literature_folders'):
-            logger.info("发现literature_folders表，准备删除...")
-            
-            # 先获取文件夹数据统计
-            cursor.execute("SELECT COUNT(*) FROM literature_folders")
-            folder_count = cursor.fetchone()[0]
-            
-            # 删除literature_folders表
-            cursor.execute("DROP TABLE IF EXISTS literature_folders")
-            logger.info(f"✅ literature_folders表删除成功 (包含{folder_count}条记录)")
+        # 步骤3：验证外键约束
+        logger.info("验证外键约束...")
+        if table_exists(cursor, 'collaborators'):
+            logger.info("✅ collaborators表存在，外键约束有效")
         else:
-            logger.info("literature_folders表不存在，跳过删除")
-        
-        # 步骤3：清理其他文献相关数据（如果有的话）
-        logger.info("清理其他可能的文献相关数据...")
-        
-        # 删除可能存在的文献相关索引（SQLite会自动删除表时删除索引，这里只是确保）
-        logger.info("✅ 所有文献相关的索引已随表删除")
-        
-        # 步骤4：验证清理结果
-        remaining_literature_tables = []
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%literature%'")
-        results = cursor.fetchall()
-        for (table_name,) in results:
-            remaining_literature_tables.append(table_name)
-        
-        if remaining_literature_tables:
-            logger.warning(f"⚠️ 发现残留的文献相关表: {remaining_literature_tables}")
-        else:
-            logger.info("✅ 所有文献相关表已成功删除")
+            logger.warning("⚠️ collaborators表不存在，外键约束可能无效")
         
         # 提交更改
         conn.commit()
@@ -146,10 +164,11 @@ def run_migration():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        # 安全地获取表数据
+        # 安全地获取表数据统计
         project_count = 0
         collaborator_count = 0
         user_count = 0
+        ideas_count = 0
         
         try:
             cursor.execute("SELECT COUNT(*) FROM research_projects")
@@ -168,32 +187,34 @@ def run_migration():
             user_count = cursor.fetchone()[0]
         except:
             pass
-        
-        # 验证文献相关表确实被删除
-        remaining_tables = []
+            
         try:
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND (name = 'literature' OR name = 'literature_folders')")
-            remaining_tables = [row[0] for row in cursor.fetchall()]
+            cursor.execute("SELECT COUNT(*) FROM ideas")
+            ideas_count = cursor.fetchone()[0]
         except:
             pass
+        
+        # 验证ideas表是否成功创建
+        ideas_table_created = table_exists(cursor, 'ideas')
         
         conn.close()
         
         logger.info("=" * 60)
-        logger.info("🎉 文献管理功能删除完成！")
+        logger.info("🎉 Ideas管理功能添加完成！")
         logger.info(f"📊 系统数据统计:")
         logger.info(f"   - 用户: {user_count}")
         logger.info(f"   - 项目: {project_count}")
         logger.info(f"   - 合作者: {collaborator_count}")
+        logger.info(f"   - Ideas: {ideas_count}")
         
-        if remaining_tables:
-            logger.warning(f"⚠️ 发现未删除的文献相关表: {remaining_tables}")
+        if ideas_table_created:
+            logger.info("✅ ideas表创建成功")
         else:
-            logger.info("✅ 所有文献相关表已成功删除")
+            logger.error("❌ ideas表创建失败")
         
-        logger.info("✅ 文献管理功能已完全移除")
-        logger.info("✅ 系统现专注于Idea管理和发掘功能")
-        logger.info("✅ 数据库结构已优化，减少了存储开销")
+        logger.info("✅ Ideas管理功能已成功添加")
+        logger.info("✅ 用户现在可以创建和管理研究想法")
+        logger.info("✅ 支持重要性评级和负责人分配")
         logger.info("=" * 60)
         
         return True
