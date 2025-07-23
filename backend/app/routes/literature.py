@@ -1232,9 +1232,11 @@ async def batch_move_literature_to_folder(
 
 @router.get("/prompts")
 async def get_prompts(
-    current_user: User = Depends(get_current_user)
+    request: Request,
+    db: Session = Depends(get_db)
 ):
     """获取AI分析的提示词模板"""
+    current_user = request.state.current_user
     prompts = [
         {
             "id": 1,
