@@ -1081,5 +1081,150 @@ async def get_batch_matching_stats():
             "性能监控和统计",
             "动态配置管理",
             "智能响应解析"
-        ]
+        ],
+        "message": "Performance statistics retrieved successfully"
     }
+
+
+# 文献和文件夹关联功能
+@router.put("/{literature_id}/move")
+async def move_literature_to_folder(
+    literature_id: int,
+    move_data: dict,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """将文献移动到指定文件夹"""
+    current_user = request.state.current_user
+    folder_id = move_data.get('folder_id')
+    
+    try:
+        # 验证文献存在
+        literature = db.query(Literature).filter(
+            Literature.id == literature_id
+        ).first()
+        
+        if not literature:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Literature not found"
+            )
+        
+        # 如果指定了文件夹，验证文件夹存在且属于当前用户
+        if folder_id:
+            from ..models.database import LiteratureFolder
+            folder = db.query(LiteratureFolder).filter(
+                LiteratureFolder.id == folder_id,
+                LiteratureFolder.user_id == current_user.id
+            ).first()
+            
+            if not folder:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Folder not found or access denied"
+                )
+        
+        # 移动文献
+        literature.folder_id = folder_id
+        db.commit()
+        
+        return {
+            "success": True,
+            "message": "Literature moved successfully",
+            "literature_id": literature_id,
+            "folder_id": folder_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to move literature: {str(e)}"
+        )
+
+
+# 批量移动文献到文件夹
+class BatchMoveRequest(BaseModel):
+    literature_ids: List[int]
+    folder_id: Optional[int] = None  # None表示移到根目录（无文件夹）
+
+
+class BatchMoveResponse(BaseModel):
+    success: bool
+    message: str
+    updated_count: int
+    failed_ids: List[int] = []
+    errors: List[str] = []
+
+
+@router.post("/batch-move", response_model=BatchMoveResponse)
+async def batch_move_literature_to_folder(
+    move_request: BatchMoveRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """批量移动文献到指定文件夹"""
+    current_user = request.state.current_user
+    
+    try:
+        # 如果指定了文件夹，验证文件夹存在且属于当前用户
+        if move_request.folder_id:
+            from ..models.database import LiteratureFolder
+            folder = db.query(LiteratureFolder).filter(
+                LiteratureFolder.id == move_request.folder_id,
+                LiteratureFolder.user_id == current_user.id
+            ).first()
+            
+            if not folder:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Folder not found or access denied"
+                )
+        
+        updated_count = 0
+        failed_ids = []
+        errors = []
+        
+        for literature_id in move_request.literature_ids:
+            try:
+                # 查找文献
+                literature = db.query(Literature).filter(
+                    Literature.id == literature_id
+                ).first()
+                
+                if not literature:
+                    failed_ids.append(literature_id)
+                    errors.append(f"Literature {literature_id} not found")
+                    continue
+                
+                # 移动文献
+                literature.folder_id = move_request.folder_id
+                updated_count += 1
+                
+            except Exception as e:
+                failed_ids.append(literature_id)
+                errors.append(f"Literature {literature_id}: {str(e)}")
+        
+        if updated_count > 0:
+            db.commit()
+        
+        response = BatchMoveResponse(
+            success=updated_count > 0,
+            message=f"Successfully moved {updated_count} literature items",
+            updated_count=updated_count,
+            failed_ids=failed_ids,
+            errors=errors
+        )
+        
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Batch move failed: {str(e)}"
+        )

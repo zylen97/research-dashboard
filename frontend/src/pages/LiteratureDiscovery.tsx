@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Card,
   Table,
@@ -10,6 +10,7 @@ import {
   Tag,
   Typography,
   Space,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   Tooltip,
   message,
   Row,
@@ -19,6 +20,7 @@ import {
   Select,
   Progress,
   Alert,
+  Layout,
   Tabs,
 } from 'antd';
 import {
@@ -32,19 +34,29 @@ import {
   BulbOutlined,
   FileTextOutlined,
   RobotOutlined,
+  PlusOutlined,
+  FolderOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { literatureApi } from '../services/api';
-import { Literature, LiteratureCreate, ValidationRequest } from '../types';
+import { literatureApi, folderApi } from '../services/api';
+import { Literature, LiteratureCreate, ValidationRequest, FolderTreeNode } from '../types';
 import type { ColumnsType } from 'antd/es/table';
+import FolderTree from '../components/common/FolderTree';
+import LiteratureDetail from '../components/common/LiteratureDetail';
 
 const { Title, Text, Paragraph } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { Sider, Content } = Layout;
 
 const LiteratureDiscovery: React.FC = () => {
   const [selectedGroup, setSelectedGroup] = useState('zl');
+  const [selectedFolderId, setSelectedFolderId] = useState<number | null>(null);
+  const [selectedFolderData, setSelectedFolderData] = useState<FolderTreeNode | null>(null);
+  const [selectedLiterature, setSelectedLiterature] = useState<Literature | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
   const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
@@ -53,6 +65,8 @@ const LiteratureDiscovery: React.FC = () => {
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isBatchMatchingModalVisible, setIsBatchMatchingModalVisible] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState({ current: 0, total: 0 });
+  const [leftCollapsed, setLeftCollapsed] = useState(false);
+  const [rightCollapsed, setRightCollapsed] = useState(false);
   const [form] = Form.useForm();
   const [validationForm] = Form.useForm();
   const [batchMatchingForm] = Form.useForm();
@@ -63,6 +77,15 @@ const LiteratureDiscovery: React.FC = () => {
   const { data: literature = [], isLoading } = useQuery({
     queryKey: ['literature'],
     queryFn: () => literatureApi.getLiterature(),
+  });
+
+  // 获取当前选中文件夹的文献数据
+  const { data: folderLiterature = [], isLoading: isFolderLiteratureLoading } = useQuery({
+    queryKey: ['folder-literature', selectedFolderId],
+    queryFn: () => selectedFolderId 
+      ? folderApi.getFolderLiterature(selectedFolderId) 
+      : Promise.resolve([]),
+    enabled: !!selectedFolderId,
   });
 
   // 获取预定义prompts
@@ -111,6 +134,30 @@ const LiteratureDiscovery: React.FC = () => {
     },
   });
 
+  // 计算当前显示的文献列表
+  const displayedLiterature = useMemo(() => {
+    // 如果选中了文件夹，显示文件夹内的文献
+    if (selectedFolderId) {
+      return folderLiterature;
+    }
+    
+    // 否则根据分组筛选文献
+    return literature.filter(item => {
+      if (!item.group_name) return selectedGroup === 'zl'; // 默认分组
+      return item.group_name === selectedGroup;
+    });
+  }, [literature, folderLiterature, selectedFolderId, selectedGroup]);
+
+  // 统计数据
+  const stats = useMemo(() => {
+    const total = displayedLiterature.length;
+    const validated = displayedLiterature.filter(item => item.validation_status === 'validated').length;
+    const pending = displayedLiterature.filter(item => item.validation_status === 'pending').length;
+    const converted = displayedLiterature.filter(item => item.status === 'converted_to_idea').length;
+    
+    return { total, validated, pending, converted };
+  }, [displayedLiterature]);
+
   // 创建文献mutation
   const createLiteratureMutation = useMutation({
     mutationFn: literatureApi.createLiterature,
@@ -119,6 +166,9 @@ const LiteratureDiscovery: React.FC = () => {
       setIsModalVisible(false);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('创建失败：' + error.message);
@@ -135,6 +185,9 @@ const LiteratureDiscovery: React.FC = () => {
       setEditingLiterature(null);
       form.resetFields();
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('更新失败：' + error.message);
@@ -146,7 +199,11 @@ const LiteratureDiscovery: React.FC = () => {
     mutationFn: literatureApi.deleteLiterature,
     onSuccess: () => {
       message.success('文献删除成功！');
+      setSelectedLiterature(null);
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('删除失败：' + error.message);
@@ -160,7 +217,6 @@ const LiteratureDiscovery: React.FC = () => {
       if (response.success) {
         message.success(response.message);
         if (response.errors.length > 0) {
-          // 如果有部分失败，显示详细信息
           Modal.warning({
             title: '部分删除失败',
             content: (
@@ -180,7 +236,11 @@ const LiteratureDiscovery: React.FC = () => {
         message.error(response.message);
       }
       setSelectedRowKeys([]);
+      setSelectedLiterature(null);
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('批量删除失败：' + error.message);
@@ -209,6 +269,9 @@ const LiteratureDiscovery: React.FC = () => {
         });
       }
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('文件上传失败：' + error.message);
@@ -232,6 +295,9 @@ const LiteratureDiscovery: React.FC = () => {
       validationForm.resetFields();
       setSelectedRowKeys([]);
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('验证失败：' + error.message);
@@ -248,6 +314,9 @@ const LiteratureDiscovery: React.FC = () => {
       setConvertingLiterature(null);
       convertForm.resetFields();
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('转换失败：' + error.message);
@@ -277,6 +346,9 @@ const LiteratureDiscovery: React.FC = () => {
       setSelectedRowKeys([]);
       setMatchingProgress({ current: 0, total: 0 });
       queryClient.invalidateQueries({ queryKey: ['literature'] });
+      if (selectedFolderId) {
+        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
+      }
     },
     onError: (error) => {
       message.error('批量匹配失败：' + error.message);
@@ -298,143 +370,140 @@ const LiteratureDiscovery: React.FC = () => {
     }
   };
 
+  // 处理文件夹选择
+  const handleFolderSelect = (folderId: number | null, folderData?: FolderTreeNode) => {
+    setSelectedFolderId(folderId);
+    setSelectedFolderData(folderData || null);
+    setSelectedLiterature(null);
+    setSelectedRowKeys([]);
+  };
+
+  // 处理行选择
+  const handleRowSelect = (literature: Literature) => {
+    setSelectedLiterature(literature);
+  };
+
   // 处理表单提交
-  const handleSubmit = async (values: LiteratureCreate) => {
+  const handleSubmit = (values: any) => {
+    const data: LiteratureCreate = {
+      ...values,
+      citation_count: values.citation_count || 0,
+    };
+
     if (editingLiterature) {
-      updateLiteratureMutation.mutate({ id: editingLiterature.id, data: values });
+      updateLiteratureMutation.mutate({
+        id: editingLiterature.id,
+        data: {
+          ...data,
+          folder_id: selectedFolderId, // 如果在文件夹中创建，自动关联
+        },
+      });
     } else {
-      createLiteratureMutation.mutate(values);
+      createLiteratureMutation.mutate({
+        ...data,
+        folder_id: selectedFolderId, // 如果在文件夹中创建，自动关联
+      });
     }
   };
 
   // 处理验证提交
-  const handleValidation = async (values: { prompt: string }) => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要验证的文献');
-      return;
-    }
-
-    const request: ValidationRequest = {
+  const handleValidation = (values: any) => {
+    const data: ValidationRequest = {
       literature_ids: selectedRowKeys as number[],
       prompt: values.prompt,
     };
-
-    validateMutation.mutate(request);
+    validateMutation.mutate(data);
   };
 
-  // 处理编辑
-  const handleEdit = (record: Literature) => {
-    setEditingLiterature(record);
-    form.setFieldsValue(record);
-    setIsModalVisible(true);
+  // 处理转换提交
+  const handleConvertSubmit = (values: any) => {
+    if (!convertingLiterature) return;
+    
+    convertToIdeaMutation.mutate({
+      id: convertingLiterature.id,
+      ideaData: {
+        ...values,
+        group_name: selectedGroup, // 继承当前分组
+      },
+    });
   };
 
-  // 处理删除
-  const handleDelete = (record: Literature) => {
-    deleteLiteratureMutation.mutate(record.id);
+  // 处理批量匹配
+  const handleBatchMatching = (values: any) => {
+    setMatchingProgress({ current: 0, total: selectedRowKeys.length });
+    
+    batchMatchingMutation.mutate({
+      literature_ids: selectedRowKeys as number[],
+      prompt_template: values.prompt_template,
+      ai_provider: values.ai_provider,
+    });
   };
 
   // 处理批量删除
   const handleBatchDelete = () => {
     if (selectedRowKeys.length === 0) {
-      message.warning('请选择要删除的文献');
+      message.warning('请先选择要删除的文献');
       return;
     }
 
     Modal.confirm({
-      title: '批量删除确认',
-      content: (
-        <div>
-          <p>您确定要删除选中的 <strong>{selectedRowKeys.length}</strong> 篇文献吗？</p>
-          <p style={{ color: '#ff4d4f', fontSize: '14px' }}>
-            <strong>注意：此操作不可撤销！</strong>
-          </p>
-        </div>
-      ),
-      okText: '确认删除',
-      okType: 'danger',
-      cancelText: '取消',
+      title: '批量删除文献',
+      content: `确定要删除选中的 ${selectedRowKeys.length} 篇文献吗？此操作不可撤销。`,
       onOk: () => {
         batchDeleteMutation.mutate({
-          literature_ids: selectedRowKeys as number[]
+          literature_ids: selectedRowKeys as number[],
         });
       },
     });
   };
 
+  // 处理编辑文献
+  const handleEditLiterature = (literature: Literature) => {
+    setEditingLiterature(literature);
+    form.setFieldsValue(literature);
+    setIsModalVisible(true);
+  };
+
+  // 处理删除文献
+  const handleDeleteLiterature = (literature: Literature) => {
+    Modal.confirm({
+      title: '删除文献',
+      content: `确定要删除文献"${literature.title}"吗？`,
+      onOk: () => {
+        deleteLiteratureMutation.mutate(literature.id);
+      },
+    });
+  };
+
   // 处理转换为idea
-  const handleConvertToIdea = (record: Literature) => {
-    setConvertingLiterature(record);
+  const handleConvertToIdea = (literature: Literature) => {
+    setConvertingLiterature(literature);
     convertForm.setFieldsValue({
-      title: record.title,
-      description: record.abstract || `基于文献: ${record.title}`,
-      tags: record.keywords,
-      priority: 'medium',
+      title: `基于"${literature.title}"的研究idea`,
+      description: literature.abstract ? 
+        `基于文献"${literature.title}"提出的研究想法。\n\n原文摘要：${literature.abstract}` :
+        `基于文献"${literature.title}"提出的研究想法。`,
     });
     setIsConvertModalVisible(true);
   };
 
-  // 处理转换提交
-  const handleConvertSubmit = (values: any) => {
-    if (convertingLiterature) {
-      convertToIdeaMutation.mutate({
-        id: convertingLiterature.id,
-        ideaData: values,
-      });
-    }
-  };
-
-  // 处理批量AI匹配
-  const handleBatchMatching = (values: { prompt_template: string; ai_provider: string }) => {
-    if (selectedRowKeys.length === 0) {
-      message.warning('请选择要匹配的文献');
-      return;
-    }
-
-    setMatchingProgress({ current: 0, total: selectedRowKeys.length });
-    
-    const data = {
-      literature_ids: selectedRowKeys as number[],
-      prompt_template: values.prompt_template,
-      ai_provider: values.ai_provider,
-    };
-
-    batchMatchingMutation.mutate(data);
-  };
-
-  // 文件上传配置
-  const uploadProps = {
-    beforeUpload: (file: File) => {
-      const isExcel = file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
-                     file.type === 'application/vnd.ms-excel';
-      if (!isExcel) {
-        message.error('只能上传Excel文件！');
-        return false;
-      }
-      uploadMutation.mutate(file);
-      return false;
-    },
-    showUploadList: false,
-  };
-
-  // 文献表格列配置
+  // 表格列定义
   const columns: ColumnsType<Literature> = [
     {
       title: '标题',
       dataIndex: 'title',
       key: 'title',
-      width: 300,
-      render: (text: string) => (
-        <Tooltip title={text}>
-          <div style={{ 
-            overflow: 'hidden', 
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            maxWidth: '280px'
-          }}>
-            {text}
-          </div>
-        </Tooltip>
+      ellipsis: true,
+      render: (text, record) => (
+        <a 
+          onClick={() => handleRowSelect(record)}
+          style={{ 
+            fontWeight: selectedLiterature?.id === record.id ? 'bold' : 'normal',
+            color: selectedLiterature?.id === record.id ? '#1890ff' : undefined
+          }}
+        >
+          {text}
+        </a>
       ),
     },
     {
@@ -442,14 +511,14 @@ const LiteratureDiscovery: React.FC = () => {
       dataIndex: 'authors',
       key: 'authors',
       width: 200,
-      render: (text: string) => text || '-',
+      ellipsis: true,
     },
     {
       title: '期刊',
       dataIndex: 'journal',
       key: 'journal',
       width: 150,
-      render: (text: string) => text || '-',
+      ellipsis: true,
     },
     {
       title: '年份',
@@ -464,263 +533,339 @@ const LiteratureDiscovery: React.FC = () => {
       key: 'citation_count',
       width: 80,
       sorter: (a, b) => a.citation_count - b.citation_count,
-      render: (count: number) => count.toLocaleString(),
     },
     {
       title: '验证状态',
       dataIndex: 'validation_status',
       key: 'validation_status',
-      width: 120,
-      render: (status: string, record: Literature) => {
+      width: 100,
+      render: (status) => {
         const statusInfo = getValidationStatus(status);
         return (
           <Tag color={statusInfo.color} icon={statusInfo.icon}>
             {statusInfo.text}
-            {record.validation_score && ` (${Math.round(record.validation_score * 100)}%)`}
           </Tag>
         );
-      },
-      filters: [
-        { text: '已验证', value: 'validated' },
-        { text: '已拒绝', value: 'rejected' },
-        { text: '待验证', value: 'pending' },
-      ],
-      onFilter: (value, record) => record.validation_status === value,
-    },
-    {
-      title: 'AI分析结果',
-      dataIndex: 'validation_reason',
-      key: 'ai_response',
-      width: 250,
-      render: (reason: string) => {
-        if (!reason) return '-';
-        return (
-          <Tooltip title={reason} placement="top">
-            <div style={{ 
-              overflow: 'hidden', 
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-              maxWidth: '230px',
-              fontSize: '12px',
-              color: '#666'
-            }}>
-              <RobotOutlined style={{ marginRight: 4, color: '#1890ff' }} />
-              {reason}
-            </div>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: '状态',
-      dataIndex: 'status',
-      key: 'status',
-      width: 100,
-      render: (status: string) => {
-        const statusMap: Record<string, { color: string; text: string }> = {
-          imported: { color: 'default', text: '已导入' },
-          reviewed: { color: 'processing', text: '已审查' },
-          converted_to_idea: { color: 'success', text: '已转换' },
-        };
-        const info = statusMap[status] || { color: 'default', text: status };
-        return <Tag color={info.color}>{info.text}</Tag>;
       },
     },
     {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: 120,
       render: (_, record) => (
-        <Space size="small">
+        <Space size={0}>
           <Tooltip title="编辑">
-            <Button 
-              type="text" 
-              icon={<EditOutlined />} 
-              onClick={() => handleEdit(record)}
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditLiterature(record);
+              }}
             />
           </Tooltip>
-          {record.validation_status === 'validated' && record.status !== 'converted_to_idea' && (
-            <Tooltip title="转换为Idea">
-              <Button
-                type="text"
-                icon={<BulbOutlined />}
-                onClick={() => handleConvertToIdea(record)}
-                loading={convertToIdeaMutation.isPending}
-              />
-            </Tooltip>
-          )}
+          <Tooltip title="转为Idea">
+            <Button
+              type="text"
+              icon={<BulbOutlined />}
+              size="small"
+              disabled={record.status === 'converted_to_idea'}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleConvertToIdea(record);
+              }}
+            />
+          </Tooltip>
           <Popconfirm
-            title="确认删除文献"
-            description={`确定要永久删除文献《${record.title}》吗？删除后无法恢复。`}
-            onConfirm={() => handleDelete(record)}
-            okText="确认删除"
+            title="确定删除这篇文献吗？"
+            onConfirm={() => handleDeleteLiterature(record)}
+            okText="确定"
             cancelText="取消"
-            okType="danger"
-            placement="left"
           >
-            <Tooltip title="删除文献">
-              <Button 
-                type="text" 
-                danger 
-                icon={<DeleteOutlined />}
-                loading={deleteLiteratureMutation.isPending}
-                size="small"
-              />
-            </Tooltip>
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+              onClick={(e) => e.stopPropagation()}
+            />
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  // 文献表组件
-  const LiteratureTable: React.FC<{ group: string }> = ({ group }) => {
-    const groupLiterature = literature.filter(lit => {
-      // 如果文献没有group_name字段，默认属于zl组
-      const litGroup = lit.group_name || 'zl';
-      return litGroup === group;
-    });
-
-    // 统计数据
-    const stats = {
-      total: groupLiterature.length,
-      validated: groupLiterature.filter(l => l.validation_status === 'validated').length,
-      rejected: groupLiterature.filter(l => l.validation_status === 'rejected').length,
-      pending: groupLiterature.filter(l => l.validation_status === 'pending').length,
-      converted: groupLiterature.filter(l => l.status === 'converted_to_idea').length,
-    };
-
-    return (
-      <div>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between' }}>
-          <Space>
-            <Upload {...uploadProps}>
-              <Button icon={<UploadOutlined />} loading={uploadMutation.isPending}>
-                导入文献
-              </Button>
-            </Upload>
-            <Button
-              type="primary"
-              icon={<RobotOutlined />}
-              disabled={selectedRowKeys.length === 0}
-              onClick={() => setIsBatchMatchingModalVisible(true)}
-              loading={batchMatchingMutation.isPending}
-            >
-              AI批量匹配 ({selectedRowKeys.length})
-            </Button>
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              disabled={selectedRowKeys.length === 0}
-              onClick={handleBatchDelete}
-              loading={batchDeleteMutation.isPending}
-            >
-              批量删除 ({selectedRowKeys.length})
-            </Button>
-          </Space>
-          <Space>
-            <Tag color="blue">共 {groupLiterature.length} 篇文献</Tag>
-          </Space>
-        </div>
-
-        {/* 统计卡片 */}
-        <Row gutter={12} style={{ marginBottom: 16 }}>
-          <Col xs={12} sm={8} lg={6}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic title="总文献数" value={stats.total} prefix={<FileTextOutlined style={{ fontSize: 14 }} />} />
-            </Card>
-          </Col>
-          <Col xs={12} sm={8} lg={6}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic 
-                title="已验证" 
-                value={stats.validated} 
-                valueStyle={{ color: '#52c41a' }}
-                prefix={<CheckCircleOutlined style={{ fontSize: 14 }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={8} lg={6}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic 
-                title="待验证" 
-                value={stats.pending} 
-                valueStyle={{ color: '#1890ff' }}
-                prefix={<SyncOutlined style={{ fontSize: 14 }} />}
-              />
-            </Card>
-          </Col>
-          <Col xs={12} sm={8} lg={6}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic 
-                title="已转换" 
-                value={stats.converted} 
-                valueStyle={{ color: '#722ed1' }}
-                prefix={<BulbOutlined style={{ fontSize: 14 }} />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        {/* 文献表格 */}
-        <div className="table-container">
-          <Table
-            size="small"
-            columns={columns}
-            dataSource={groupLiterature}
-            rowKey="id"
-            loading={isLoading}
-            pagination={{
-              total: groupLiterature.length,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
-            }}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-            }}
-            scroll={{ x: 1200 }}
-          />
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div>
+    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* 页面标题 */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Title level={3} style={{ margin: 0 }}>
-            <BookOutlined style={{ marginRight: 8 }} />
-            Idea发掘系统
-          </Title>
+      <div className="page-header" style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Title level={3} style={{ margin: 0 }}>
+              <BookOutlined style={{ marginRight: 8 }} />
+              文献管理系统
+            </Title>
+          </div>
+          
+          {/* 分组切换 */}
+          <Tabs 
+            type="card"
+            size="small"
+            onChange={(key) => {
+              setSelectedGroup(key);
+              setSelectedFolderId(null);
+              setSelectedLiterature(null);
+              setSelectedRowKeys([]);
+            }}
+            activeKey={selectedGroup}
+          >
+            <TabPane tab="ZL" key="zl" />
+            <TabPane tab="YQ" key="yq" />
+            <TabPane tab="ZZ" key="zz" />
+            <TabPane tab="DJ" key="dj" />
+          </Tabs>
         </div>
       </div>
 
-      {/* 文献管理 - 分组模式 */}
-      <Tabs 
-        type="card"
-        onChange={(key) => {
-          setSelectedGroup(key);
-          setSelectedRowKeys([]);
-        }}
-        activeKey={selectedGroup}
-      >
-        <TabPane tab="ZL" key="zl">
-          <LiteratureTable group="zl" />
-        </TabPane>
-        <TabPane tab="YQ" key="yq">
-          <LiteratureTable group="yq" />
-        </TabPane>
-        <TabPane tab="ZZ" key="zz">
-          <LiteratureTable group="zz" />
-        </TabPane>
-        <TabPane tab="DJ" key="dj">
-          <LiteratureTable group="dj" />
-        </TabPane>
-      </Tabs>
+      {/* 三栏布局 */}
+      <Layout style={{ flex: 1 }}>
+        {/* 左侧文件夹树 */}
+        <Sider
+          collapsible
+          collapsed={leftCollapsed}
+          onCollapse={setLeftCollapsed}
+          width={280}
+          collapsedWidth={0}
+          trigger={null}
+          style={{ 
+            background: 'white',
+            borderRight: '1px solid #f0f0f0'
+          }}
+        >
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text strong>
+                <FolderOutlined style={{ marginRight: 8 }} />
+                文件夹
+              </Text>
+              <Button
+                type="text"
+                size="small"
+                icon={leftCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setLeftCollapsed(!leftCollapsed)}
+              />
+            </div>
+          </div>
+          
+          <div style={{ padding: 16, height: 'calc(100% - 60px)' }}>
+            <FolderTree
+              selectedFolderId={selectedFolderId}
+              onFolderSelect={handleFolderSelect}
+              showLiteratureCount={true}
+              allowEdit={true}
+              height={400}
+            />
+          </div>
+        </Sider>
+
+        {/* 中间文献列表 */}
+        <Content style={{ padding: 16, background: 'white', overflow: 'hidden' }}>
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* 操作栏和统计 */}
+            <div style={{ marginBottom: 16 }}>
+              {/* 面包屑 */}
+              <div style={{ marginBottom: 12 }}>
+                <Space>
+                  <Text type="secondary">当前位置：</Text>
+                  <Text strong>{selectedGroup.toUpperCase()}</Text>
+                  {selectedFolderData && (
+                    <>
+                      <Text type="secondary"> / </Text>
+                      <Text strong>{selectedFolderData.name}</Text>
+                    </>
+                  )}
+                </Space>
+              </div>
+
+              {/* 操作按钮 */}
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: 12 
+              }}>
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<PlusOutlined />}
+                    onClick={() => {
+                      setEditingLiterature(null);
+                      form.resetFields();
+                      setIsModalVisible(true);
+                    }}
+                  >
+                    新增文献
+                  </Button>
+                  <Upload
+                    accept=".xlsx,.xls,.csv"
+                    showUploadList={false}
+                    beforeUpload={(file) => {
+                      uploadMutation.mutate(file);
+                      return false;
+                    }}
+                  >
+                    <Button icon={<UploadOutlined />} loading={uploadMutation.isPending}>
+                      导入Excel
+                    </Button>
+                  </Upload>
+                  <Button
+                    icon={<CheckCircleOutlined />}
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={() => setIsValidationModalVisible(true)}
+                  >
+                    批量验证 ({selectedRowKeys.length})
+                  </Button>
+                  <Button
+                    type="primary"
+                    icon={<RobotOutlined />}
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={() => setIsBatchMatchingModalVisible(true)}
+                    loading={batchMatchingMutation.isPending}
+                  >
+                    AI批量匹配 ({selectedRowKeys.length})
+                  </Button>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    disabled={selectedRowKeys.length === 0}
+                    onClick={handleBatchDelete}
+                    loading={batchDeleteMutation.isPending}
+                  >
+                    批量删除 ({selectedRowKeys.length})
+                  </Button>
+                </Space>
+                
+                <Space>
+                  <Tag color="blue">共 {stats.total} 篇文献</Tag>
+                </Space>
+              </div>
+
+              {/* 统计卡片 */}
+              <Row gutter={12}>
+                <Col span={6}>
+                  <Card size="small" className="statistics-card">
+                    <Statistic 
+                      title="总数" 
+                      value={stats.total} 
+                      prefix={<FileTextOutlined />} 
+                      valueStyle={{ fontSize: 16 }}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small" className="statistics-card">
+                    <Statistic 
+                      title="已验证" 
+                      value={stats.validated} 
+                      valueStyle={{ color: '#52c41a', fontSize: 16 }}
+                      prefix={<CheckCircleOutlined />}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small" className="statistics-card">
+                    <Statistic 
+                      title="待验证" 
+                      value={stats.pending} 
+                      valueStyle={{ color: '#1890ff', fontSize: 16 }}
+                      prefix={<SyncOutlined />}
+                    />
+                  </Card>
+                </Col>
+                <Col span={6}>
+                  <Card size="small" className="statistics-card">
+                    <Statistic 
+                      title="已转换" 
+                      value={stats.converted} 
+                      valueStyle={{ color: '#722ed1', fontSize: 16 }}
+                      prefix={<BulbOutlined />}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            </div>
+
+            {/* 文献表格 */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+              <Table
+                size="small"
+                columns={columns}
+                dataSource={displayedLiterature}
+                rowKey="id"
+                loading={isLoading || isFolderLiteratureLoading}
+                pagination={{
+                  total: displayedLiterature.length,
+                  showSizeChanger: true,
+                  showQuickJumper: true,
+                  showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
+                }}
+                rowSelection={{
+                  selectedRowKeys,
+                  onChange: setSelectedRowKeys,
+                }}
+                scroll={{ y: 'calc(100vh - 400px)' }}
+                onRow={(record) => ({
+                  onClick: () => handleRowSelect(record),
+                  style: {
+                    cursor: 'pointer',
+                    backgroundColor: selectedLiterature?.id === record.id ? '#e6f7ff' : undefined,
+                  },
+                })}
+              />
+            </div>
+          </div>
+        </Content>
+
+        {/* 右侧详情面板 */}
+        <Sider
+          collapsible
+          collapsed={rightCollapsed}
+          onCollapse={setRightCollapsed}
+          width={400}
+          collapsedWidth={0}
+          trigger={null}
+          reverseArrow
+          style={{ 
+            background: 'white',
+            borderLeft: '1px solid #f0f0f0'
+          }}
+        >
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid #f0f0f0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text strong>
+                <FileTextOutlined style={{ marginRight: 8 }} />
+                文献详情
+              </Text>
+              <Button
+                type="text"
+                size="small"
+                icon={rightCollapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => setRightCollapsed(!rightCollapsed)}
+              />
+            </div>
+          </div>
+          
+          <div style={{ height: 'calc(100% - 60px)', overflow: 'hidden' }}>
+            <LiteratureDetail
+              literature={selectedLiterature}
+              onEdit={handleEditLiterature}
+              onDelete={handleDeleteLiterature}
+              onConvertToIdea={handleConvertToIdea}
+            />
+          </div>
+        </Sider>
+      </Layout>
 
       {/* 创建/编辑文献模态框 */}
       <Modal
@@ -867,7 +1012,6 @@ const LiteratureDiscovery: React.FC = () => {
       >
         {convertingLiterature && (
           <div>
-            {/* 显示原文献信息 */}
             <Card size="small" style={{ marginBottom: 16 }}>
               <Title level={5}>原文献信息</Title>
               <Paragraph>
@@ -878,11 +1022,6 @@ const LiteratureDiscovery: React.FC = () => {
                   <Text strong>作者：</Text> {convertingLiterature.authors}
                 </Paragraph>
               )}
-              {convertingLiterature.journal && (
-                <Paragraph>
-                  <Text strong>期刊：</Text> {convertingLiterature.journal}
-                </Paragraph>
-              )}
               {convertingLiterature.abstract && (
                 <Paragraph ellipsis={{ rows: 3, expandable: true }}>
                   <Text strong>摘要：</Text> {convertingLiterature.abstract}
@@ -890,7 +1029,6 @@ const LiteratureDiscovery: React.FC = () => {
               )}
             </Card>
 
-            {/* Idea编辑表单 */}
             <Form
               form={convertForm}
               layout="vertical"
@@ -954,32 +1092,6 @@ const LiteratureDiscovery: React.FC = () => {
                   </Form.Item>
                 </Col>
               </Row>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="estimated_duration"
-                    label="预计耗时"
-                  >
-                    <Input placeholder="例如：3个月、半年等" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="required_skills"
-                    label="所需技能"
-                  >
-                    <Input placeholder="描述完成这个idea需要的技能" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Form.Item
-                name="tags"
-                label="标签"
-              >
-                <Input placeholder="输入标签，用逗号分隔" />
-              </Form.Item>
             </Form>
           </div>
         )}
@@ -1018,9 +1130,6 @@ const LiteratureDiscovery: React.FC = () => {
                 status="active"
                 strokeColor="#1890ff"
               />
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {matchingProgress.current} / {matchingProgress.total}
-              </Text>
             </div>
           )}
         </div>
@@ -1035,7 +1144,6 @@ const LiteratureDiscovery: React.FC = () => {
             name="ai_provider"
             label="选择AI提供商"
             rules={[{ required: true, message: '请选择AI提供商' }]}
-            tooltip="选择用于文献匹配分析的AI提供商"
           >
             <Select placeholder="选择AI提供商" size="large">
               {providersData.map((provider: any) => (
@@ -1051,12 +1159,11 @@ const LiteratureDiscovery: React.FC = () => {
 
           <Form.Item
             name="prompt_template"
-            label="选择匹配策略"
+            label="匹配策略"
             rules={[{ required: true, message: '请选择或输入匹配提示词' }]}
-            tooltip="选择预定义的匹配策略，或自定义提示词"
           >
             <Select
-              placeholder="选择匹配策略或自定义"
+              placeholder="选择匹配策略"
               size="large"
               style={{ marginBottom: 8 }}
               onChange={(value) => {
@@ -1082,9 +1189,6 @@ const LiteratureDiscovery: React.FC = () => {
                   </div>
                 </Option>
               ))}
-              <Option value="custom">
-                <Text strong>自定义提示词</Text>
-              </Option>
             </Select>
             
             <TextArea 
@@ -1093,21 +1197,6 @@ const LiteratureDiscovery: React.FC = () => {
               style={{ fontSize: '12px' }}
             />
           </Form.Item>
-
-          <Alert
-            message="匹配说明"
-            description={
-              <div>
-                <p>• AI将根据您提供的提示词分析每篇文献的相关性</p>
-                <p>• 分析结果将显示在"AI分析结果"列中</p>
-                <p>• 相关的文献状态会更新为"已验证"，不相关的会标记为"已拒绝"</p>
-                <p>• 请耐心等待，批量匹配可能需要一些时间</p>
-              </div>
-            }
-            type="info"
-            showIcon
-            style={{ marginTop: 16 }}
-          />
         </Form>
       </Modal>
     </div>

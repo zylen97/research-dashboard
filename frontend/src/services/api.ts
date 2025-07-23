@@ -9,6 +9,7 @@ import {
   IdeasSummary, PaginationParams,
   BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
   BatchDeleteRequest, BatchDeleteResponse,
+  LiteratureFolder, LiteratureFolderCreate, LiteratureFolderUpdate, FolderTreeNode,
   User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
@@ -234,6 +235,41 @@ export const researchApi = {
     api.put(`/api/research/${id}`, { is_todo }),
 };
 
+// 文件夹API
+export const folderApi = {
+  // 获取文件夹列表
+  getFolders: (): Promise<LiteratureFolder[]> =>
+    api.get('/api/folders/'),
+
+  // 获取文件夹树结构
+  getFolderTree: (): Promise<FolderTreeNode[]> =>
+    api.get('/api/folders/tree'),
+
+  // 获取单个文件夹
+  getFolder: (id: number): Promise<LiteratureFolder> =>
+    api.get(`/api/folders/${id}`),
+
+  // 创建文件夹
+  createFolder: (data: LiteratureFolderCreate): Promise<LiteratureFolder> =>
+    api.post('/api/folders/', data),
+
+  // 更新文件夹
+  updateFolder: (id: number, data: LiteratureFolderUpdate): Promise<LiteratureFolder> =>
+    api.put(`/api/folders/${id}`, data),
+
+  // 删除文件夹
+  deleteFolder: (id: number, moveToParent: boolean = true): Promise<{ message: string }> =>
+    api.delete(`/api/folders/${id}?move_to_parent=${moveToParent}`),
+
+  // 移动文件夹
+  moveFolder: (id: number, newParentId: number | null): Promise<LiteratureFolder> =>
+    api.put(`/api/folders/${id}/move`, { parent_id: newParentId }),
+
+  // 获取文件夹下的文献列表
+  getFolderLiterature: (id: number, params?: any): Promise<Literature[]> =>
+    api.get(`/api/folders/${id}/literature`, { params }),
+};
+
 // 文献API
 export const literatureApi = {
   // 获取文献列表
@@ -289,6 +325,20 @@ export const literatureApi = {
   // 获取预定义的匹配提示词
   getPredefinedPrompts: (): Promise<PredefinedPrompt[]> =>
     api.get('/api/literature/prompts'),
+
+  // 移动文献到文件夹
+  moveLiteratureToFolder: (literatureId: number, folderId: number | null): Promise<Literature> =>
+    api.put(`/api/literature/${literatureId}/move`, { folder_id: folderId }),
+
+  // 批量移动文献到文件夹
+  batchMoveLiteratureToFolder: (literatureIds: number[], folderId: number | null): Promise<{
+    success: boolean;
+    message: string;
+    updated_count: number;
+    failed_ids: number[];
+    errors: string[];
+  }> =>
+    api.post('/api/literature/batch-move', { literature_ids: literatureIds, folder_id: folderId }),
 };
 
 // Idea API

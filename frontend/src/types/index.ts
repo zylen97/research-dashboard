@@ -109,6 +109,7 @@ export interface Literature {
   abstract?: string;
   keywords?: string;
   citation_count: number;
+  folder_id?: number | null;  // 文件夹ID
   validation_status: string;
   validation_score?: number;
   validation_reason?: string;
@@ -117,6 +118,7 @@ export interface Literature {
   group_name?: string;  // 分组字段(zl/yq/zz/dj)
   created_at: string;
   updated_at: string;
+  folder?: LiteratureFolder;  // 文件夹关联
 }
 
 export interface LiteratureCreate {
@@ -128,6 +130,7 @@ export interface LiteratureCreate {
   abstract?: string;
   keywords?: string;
   citation_count?: number;
+  folder_id?: number | null;
 }
 
 export interface LiteratureUpdate {
@@ -139,6 +142,7 @@ export interface LiteratureUpdate {
   abstract?: string;
   keywords?: string;
   citation_count?: number;
+  folder_id?: number | null;  // 文件夹ID
   validation_status?: string;
   validation_score?: number;
   validation_reason?: string;
@@ -273,6 +277,48 @@ export interface BatchMatchingResponse {
   total_processed: number;
   successful_count: number;
   error_count: number;
+}
+
+// 文献文件夹类型
+export interface LiteratureFolder {
+  id: number;
+  name: string;
+  description?: string;
+  parent_id?: number;
+  user_id: number;
+  group_name?: string;  // 分组字段(zl/yq/zz/dj)
+  is_root: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LiteratureFolderCreate {
+  name: string;
+  description?: string;
+  parent_id?: number;
+  sort_order?: number;
+}
+
+export interface LiteratureFolderUpdate {
+  name?: string;
+  description?: string;
+  parent_id?: number;
+  sort_order?: number;
+}
+
+// 文件夹树节点类型
+export interface FolderTreeNode {
+  id: number;
+  name: string;
+  description?: string;
+  parent_id?: number;
+  is_root: boolean;
+  sort_order: number;
+  literature_count: number;  // 该文件夹中的文献数量
+  children: FolderTreeNode[];  // 子文件夹
+  created_at: string;
+  updated_at: string;
 }
 
 // 批量删除相关类型

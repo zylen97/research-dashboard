@@ -60,6 +60,35 @@ class ResearchProject(Base):
     collaborators = relationship("Collaborator", secondary=project_collaborators, back_populates="projects")
     communication_logs = relationship("CommunicationLog", back_populates="project", cascade="all, delete-orphan")
 
+class LiteratureFolder(Base):
+    """文献文件夹模型 - 支持文献的层级组织"""
+    __tablename__ = "literature_folders"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, index=True)  # 文件夹名称
+    parent_id = Column(Integer, ForeignKey('literature_folders.id'), nullable=True, index=True)  # 父文件夹ID，支持层级结构
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)  # 用户ID
+    group_name = Column(String(50), index=True)  # 分组字段(zl/yq/zz/dj)
+    description = Column(Text)  # 文件夹描述
+    is_root = Column(Boolean, default=False, index=True)  # 是否为根文件夹
+    sort_order = Column(Integer, default=0)  # 排序顺序
+    
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # 关系定义
+    parent = relationship("LiteratureFolder", remote_side=[id], back_populates="children")
+    children = relationship("LiteratureFolder", back_populates="parent", cascade="all, delete-orphan")
+    user = relationship("User", back_populates="literature_folders")
+    literature = relationship("Literature", back_populates="folder")
+    
+    # 复合索引优化查询
+    __table_args__ = (
+        Index('idx_folder_user_group', 'user_id', 'group_name'),
+        Index('idx_folder_parent_order', 'parent_id', 'sort_order'),
+        Index('idx_folder_group_root', 'group_name', 'is_root'),
+    )
+
 class Literature(Base):
     """文献模型 - 存储用户的文献信息和AI分析结果"""
     __tablename__ = "literature"
@@ -77,6 +106,9 @@ class Literature(Base):
     # User association
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     
+    # Folder association - 新增文件夹关联
+    folder_id = Column(Integer, ForeignKey('literature_folders.id'), nullable=True, index=True)
+    
     # AI validation results
     validation_status = Column(String(50), default="pending", index=True)  # 验证状态索引
     validation_score = Column(Float)  # AI返回的匹配分数
@@ -90,7 +122,8 @@ class Literature(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = relationship("User", backref="literature")
+    user = relationship("User", back_populates="literature")
+    folder = relationship("LiteratureFolder", back_populates="literature")
     
     # 复合索引优化常用查询
     __table_args__ = (
@@ -98,6 +131,7 @@ class Literature(Base):
         Index('idx_literature_user_status', 'user_id', 'status'),
         Index('idx_literature_year_citation', 'year', 'citation_count'),
         Index('idx_literature_created_user', 'created_at', 'user_id'),
+        Index('idx_literature_folder_user', 'folder_id', 'user_id'),  # 新增文件夹索引
     )
 
 class Idea(Base):
@@ -200,6 +234,10 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime)
+    
+    # 关系定义
+    literature = relationship("Literature", back_populates="user")
+    literature_folders = relationship("LiteratureFolder", back_populates="user")
 
 class SystemConfig(Base):
     """系统配置模型 - 存储系统设置和AI配置信息"""

@@ -19,8 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 迁移版本号 - 为ideas表添加group字段
-MIGRATION_VERSION = "v1.10_add_group_to_ideas"
+# 迁移版本号 - 添加文献文件夹功能
+MIGRATION_VERSION = "v1.11_add_literature_folders"
 
 def backup_database(db_path):
     """创建数据库备份"""
@@ -103,98 +103,138 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.10迁移任务：创建ideas表并添加group字段
+        # 🔧 v1.11迁移任务：添加文献文件夹功能
         # ===========================================
         
-        logger.info("开始检查ideas表...")
+        logger.info("开始添加文献文件夹功能...")
         
-        # 检查ideas表是否存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ideas'")
+        # 步骤1：检查并创建literature_folders表
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='literature_folders'")
         if not cursor.fetchone():
-            logger.info("ideas表不存在，开始创建...")
+            logger.info("literature_folders表不存在，开始创建...")
             
-            # 创建ideas表
+            # 创建literature_folders表
             cursor.execute("""
-                CREATE TABLE ideas (
+                CREATE TABLE literature_folders (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title VARCHAR(200) NOT NULL,
-                    description TEXT NOT NULL,
-                    source VARCHAR(100),
-                    source_literature_id INTEGER,
+                    name VARCHAR(100) NOT NULL,
+                    parent_id INTEGER,
                     user_id INTEGER NOT NULL,
                     group_name VARCHAR(50),
-                    difficulty_level VARCHAR(20),
-                    estimated_duration VARCHAR(50),
-                    required_skills VARCHAR(500),
-                    potential_impact VARCHAR(20),
-                    status VARCHAR(50) DEFAULT 'pool',
-                    priority VARCHAR(20) DEFAULT 'medium',
-                    tags VARCHAR(500),
+                    description TEXT,
+                    is_root BOOLEAN DEFAULT FALSE,
+                    sort_order INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (source_literature_id) REFERENCES literature(id),
+                    FOREIGN KEY (parent_id) REFERENCES literature_folders(id),
                     FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
-            logger.info("✅ ideas表创建成功")
+            logger.info("✅ literature_folders表创建成功")
             
-            # 创建索引
-            cursor.execute("CREATE INDEX idx_ideas_title ON ideas(title)")
-            cursor.execute("CREATE INDEX idx_ideas_source ON ideas(source)")
-            cursor.execute("CREATE INDEX idx_ideas_source_literature ON ideas(source_literature_id)")
-            cursor.execute("CREATE INDEX idx_ideas_user_id ON ideas(user_id)")
-            cursor.execute("CREATE INDEX idx_ideas_group_name ON ideas(group_name)")
-            cursor.execute("CREATE INDEX idx_ideas_difficulty_level ON ideas(difficulty_level)")
-            cursor.execute("CREATE INDEX idx_ideas_potential_impact ON ideas(potential_impact)")
-            cursor.execute("CREATE INDEX idx_ideas_status ON ideas(status)")
-            cursor.execute("CREATE INDEX idx_ideas_priority ON ideas(priority)")
-            cursor.execute("CREATE INDEX idx_ideas_created_at ON ideas(created_at)")
+            # 创建literature_folders表的索引
+            cursor.execute("CREATE INDEX idx_folder_name ON literature_folders(name)")
+            cursor.execute("CREATE INDEX idx_folder_parent_id ON literature_folders(parent_id)")
+            cursor.execute("CREATE INDEX idx_folder_user_id ON literature_folders(user_id)")
+            cursor.execute("CREATE INDEX idx_folder_group_name ON literature_folders(group_name)")
+            cursor.execute("CREATE INDEX idx_folder_is_root ON literature_folders(is_root)")
+            cursor.execute("CREATE INDEX idx_folder_created_at ON literature_folders(created_at)")
             
             # 复合索引
-            cursor.execute("CREATE INDEX idx_ideas_user_status ON ideas(user_id, status)")
-            cursor.execute("CREATE INDEX idx_ideas_user_priority ON ideas(user_id, priority)")
-            cursor.execute("CREATE INDEX idx_ideas_difficulty_impact ON ideas(difficulty_level, potential_impact)")
-            cursor.execute("CREATE INDEX idx_ideas_created_user ON ideas(created_at, user_id)")
-            cursor.execute("CREATE INDEX idx_ideas_group_status ON ideas(group_name, status)")
-            cursor.execute("CREATE INDEX idx_ideas_group_priority ON ideas(group_name, priority)")
+            cursor.execute("CREATE INDEX idx_folder_user_group ON literature_folders(user_id, group_name)")
+            cursor.execute("CREATE INDEX idx_folder_parent_order ON literature_folders(parent_id, sort_order)")
+            cursor.execute("CREATE INDEX idx_folder_group_root ON literature_folders(group_name, is_root)")
             
-            logger.info("✅ ideas表的所有索引创建成功")
+            logger.info("✅ literature_folders表的所有索引创建成功")
         else:
-            logger.info("ideas表已存在，检查group_name字段...")
+            logger.info("literature_folders表已存在，跳过创建")
+        
+        # 步骤2：为literature表添加folder_id字段
+        logger.info("检查literature表的folder_id字段...")
+        
+        # 检查literature表是否存在folder_id字段
+        cursor.execute("PRAGMA table_info(literature)")
+        columns = cursor.fetchall()
+        column_names = [col[1] for col in columns]
+        
+        if 'folder_id' not in column_names:
+            logger.info("literature表缺少folder_id字段，开始添加...")
             
-            # 检查group字段是否已存在
-            cursor.execute("PRAGMA table_info(ideas)")
-            columns = cursor.fetchall()
-            column_names = [col[1] for col in columns]
+            # 添加folder_id字段
+            cursor.execute("""
+                ALTER TABLE literature ADD COLUMN folder_id INTEGER DEFAULT NULL
+            """)
+            logger.info("✅ literature表的folder_id字段添加成功")
             
-            if 'group_name' in column_names:
-                logger.info("ideas表的group_name字段已存在，跳过添加")
-            else:
-                # 添加group_name字段
+            # 为folder_id字段创建索引
+            cursor.execute("CREATE INDEX idx_literature_folder_id ON literature(folder_id)")
+            cursor.execute("CREATE INDEX idx_literature_folder_user ON literature(folder_id, user_id)")
+            
+            logger.info("✅ literature表的folder_id索引创建成功")
+        else:
+            logger.info("literature表的folder_id字段已存在，跳过添加")
+        
+        # 步骤3：为每个用户创建默认根文件夹
+        logger.info("开始为用户创建默认根文件夹...")
+        
+        # 获取所有用户
+        cursor.execute("SELECT id, username FROM users")
+        users = cursor.fetchall()
+        
+        for user_id, username in users:
+            # 检查用户是否已有根文件夹
+            cursor.execute("""
+                SELECT id FROM literature_folders 
+                WHERE user_id = ? AND is_root = 1
+            """, (user_id,))
+            
+            if not cursor.fetchone():
+                # 创建默认根文件夹
                 cursor.execute("""
-                    ALTER TABLE ideas ADD COLUMN group_name VARCHAR(50) DEFAULT NULL
-                """)
-                logger.info("✅ ideas表的group_name字段添加成功")
+                    INSERT INTO literature_folders (name, user_id, group_name, is_root, description, sort_order)
+                    VALUES (?, ?, ?, 1, '默认根文件夹', 0)
+                """, (f"{username}的文献", user_id, username))
                 
-                # 创建group_name的索引以提高查询性能
-                cursor.execute("CREATE INDEX idx_ideas_group_name ON ideas(group_name)")
-                cursor.execute("CREATE INDEX idx_ideas_group_status ON ideas(group_name, status)")
-                cursor.execute("CREATE INDEX idx_ideas_group_priority ON ideas(group_name, priority)")
-                logger.info("✅ ideas表的group_name索引创建成功")
+                logger.info(f"✅ 已为用户 {username} 创建根文件夹")
+        
+        # 步骤4：创建一些基础分类文件夹
+        logger.info("开始创建基础分类文件夹...")
+        
+        # 为每个用户创建常用的分类文件夹
+        basic_categories = [
+            ("待阅读", "新导入的文献，等待阅读"),
+            ("已阅读", "已经阅读完成的文献"),
+            ("重要文献", "标记为重要的文献"),
+            ("参考文献", "用作参考的文献")
+        ]
+        
+        for user_id, username in users:
+            # 获取根文件夹ID
+            cursor.execute("""
+                SELECT id FROM literature_folders 
+                WHERE user_id = ? AND is_root = 1 
+                LIMIT 1
+            """, (user_id,))
+            
+            root_folder = cursor.fetchone()
+            if root_folder:
+                root_folder_id = root_folder[0]
                 
-                # 为现有数据设置默认分组(根据user_id)
-                cursor.execute("""
-                    UPDATE ideas 
-                    SET group_name = CASE 
-                        WHEN user_id = 1 THEN 'zl'
-                        WHEN user_id = 2 THEN 'zz'
-                        WHEN user_id = 3 THEN 'yq'
-                        WHEN user_id = 4 THEN 'dj'
-                        ELSE NULL
-                    END
-                    WHERE group_name IS NULL
-                """)
-                logger.info("✅ 已为现有ideas数据设置默认分组")
+                for i, (category_name, category_desc) in enumerate(basic_categories):
+                    # 检查分类文件夹是否已存在
+                    cursor.execute("""
+                        SELECT id FROM literature_folders 
+                        WHERE parent_id = ? AND name = ?
+                    """, (root_folder_id, category_name))
+                    
+                    if not cursor.fetchone():
+                        cursor.execute("""
+                            INSERT INTO literature_folders 
+                            (name, parent_id, user_id, group_name, description, sort_order)
+                            VALUES (?, ?, ?, ?, ?, ?)
+                        """, (category_name, root_folder_id, user_id, username, category_desc, i + 1))
+                
+                logger.info(f"✅ 已为用户 {username} 创建基础分类文件夹")
         
         # 提交更改
         conn.commit()
@@ -205,7 +245,7 @@ def run_migration():
         
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
-        # 输出修复结果
+        # 输出迁移结果统计
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
@@ -213,8 +253,9 @@ def run_migration():
         project_count = 0
         collaborator_count = 0
         user_count = 0
-        idea_count = 0
-        group_counts = []
+        literature_count = 0
+        folder_count = 0
+        folder_stats = []
         
         try:
             cursor.execute("SELECT COUNT(*) FROM research_projects")
@@ -235,33 +276,49 @@ def run_migration():
             pass
         
         try:
-            # 检查ideas表
-            cursor.execute("SELECT COUNT(*) FROM ideas")
-            idea_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM literature")
+            literature_count = cursor.fetchone()[0]
+        except:
+            pass
+        
+        try:
+            # 检查文件夹统计
+            cursor.execute("SELECT COUNT(*) FROM literature_folders")
+            folder_count = cursor.fetchone()[0]
             
-            # 检查各组的ideas数量
-            cursor.execute("SELECT group_name, COUNT(*) FROM ideas WHERE group_name IS NOT NULL GROUP BY group_name")
-            group_counts = cursor.fetchall()
+            # 各用户的文件夹统计
+            cursor.execute("""
+                SELECT u.username, COUNT(lf.id) as folder_count,
+                       SUM(CASE WHEN lf.is_root = 1 THEN 1 ELSE 0 END) as root_folders
+                FROM users u
+                LEFT JOIN literature_folders lf ON u.id = lf.user_id
+                GROUP BY u.id, u.username
+                ORDER BY u.username
+            """)
+            folder_stats = cursor.fetchall()
         except:
             pass
         
         conn.close()
         
-        logger.info("=" * 50)
-        logger.info("🎉 数据库迁移完成！")
-        logger.info(f"📊 数据统计:")
+        logger.info("=" * 60)
+        logger.info("🎉 文献文件夹功能迁移完成！")
+        logger.info(f"📊 系统数据统计:")
         logger.info(f"   - 用户: {user_count}")
         logger.info(f"   - 项目: {project_count}")
         logger.info(f"   - 合作者: {collaborator_count}")
-        logger.info(f"   - Ideas: {idea_count}")
+        logger.info(f"   - 文献: {literature_count}")
+        logger.info(f"   - 文件夹: {folder_count}")
         
-        if group_counts:
-            logger.info("📊 Ideas分组统计:")
-            for group_name, count in group_counts:
-                logger.info(f"   - {group_name}: {count}")
+        if folder_stats:
+            logger.info("📁 文件夹分布统计:")
+            for username, folder_count, root_folders in folder_stats:
+                logger.info(f"   - {username}: {folder_count}个文件夹 (包含{root_folders}个根文件夹)")
         
-        logger.info("✅ ideas表的group_name字段已添加，4个子面板功能已就绪")
-        logger.info("=" * 50)
+        logger.info("✅ 文献文件夹功能已就绪，支持层级组织和分组管理")
+        logger.info("✅ 每个用户已自动创建根文件夹和基础分类文件夹")
+        logger.info("✅ literature表已支持文件夹关联")
+        logger.info("=" * 60)
         
         return True
         

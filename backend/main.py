@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, literature, ideas, validation, audit, auth, backup, config
+from app.routes import research, collaborators, literature, ideas, validation, audit, auth, backup, config, folders
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 from app.core.config import settings
@@ -64,6 +64,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
 app.include_router(research.router, prefix="/api/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
 app.include_router(literature.router, prefix="/api/literature", tags=["literature"])
+app.include_router(folders.router, tags=["folders"])  # folders.router已包含/api/folders前缀
 app.include_router(ideas.router, prefix="/api/ideas", tags=["ideas"])
 app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
 app.include_router(audit.router, prefix="/api/audit", tags=["audit"])

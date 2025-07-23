@@ -100,10 +100,12 @@ class LiteratureUpdate(BaseModel):
     validation_reason: Optional[str] = None
     status: Optional[str] = Field(None, max_length=50)
     notes: Optional[str] = None
+    folder_id: Optional[int] = None  # 文件夹ID
 
 class Literature(LiteratureBase):
     id: int
     user_id: int
+    folder_id: Optional[int] = None  # 文件夹ID
     validation_status: str
     validation_score: Optional[float]
     validation_reason: Optional[str]
@@ -112,6 +114,7 @@ class Literature(LiteratureBase):
     created_at: datetime
     updated_at: datetime
     user: Optional['User'] = None
+    folder: Optional['LiteratureFolder'] = None  # 文件夹关联
     
     class Config:
         from_attributes = True
@@ -338,6 +341,57 @@ class AITestResponse(BaseModel):
     message: str
     response: Optional[str] = None
 
+# Literature Folder schemas
+class LiteratureFolderBase(BaseModel):
+    name: str = Field(..., max_length=100, description="文件夹名称")
+    description: Optional[str] = Field(None, description="文件夹描述")
+    parent_id: Optional[int] = Field(None, description="父文件夹ID")
+    sort_order: int = Field(default=0, description="排序顺序")
+
+class LiteratureFolderCreate(LiteratureFolderBase):
+    pass
+
+class LiteratureFolderUpdate(BaseModel):
+    name: Optional[str] = Field(None, max_length=100, description="文件夹名称")
+    description: Optional[str] = Field(None, description="文件夹描述")
+    parent_id: Optional[int] = Field(None, description="父文件夹ID")
+    sort_order: Optional[int] = Field(None, description="排序顺序")
+
+class LiteratureFolder(LiteratureFolderBase):
+    id: int
+    user_id: int
+    group_name: Optional[str] = Field(None, description="分组字段(zl/yq/zz/dj)")
+    is_root: bool = Field(default=False, description="是否为根文件夹")
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+# 文件夹树形结构响应模型
+class FolderTreeNode(BaseModel):
+    id: int
+    name: str
+    description: Optional[str] = None
+    parent_id: Optional[int] = None
+    is_root: bool = False
+    sort_order: int = 0
+    literature_count: int = 0  # 该文件夹中的文献数量
+    children: List['FolderTreeNode'] = []  # 子文件夹
+    created_at: datetime
+    updated_at: datetime
+
+# 批量删除schemas
+class BatchDeleteRequest(BaseModel):
+    literature_ids: List[int] = Field(..., description="要删除的文献ID列表")
+
+class BatchDeleteResponse(BaseModel):
+    success: bool
+    message: str
+    deleted_count: int
+    failed_ids: List[int] = []
+    errors: List[str] = []
+
 # Batch AI Matching schemas
 class BatchMatchingRequest(BaseModel):
     literature_ids: List[int] = Field(..., description="文献ID列表")
@@ -363,3 +417,4 @@ class BatchMatchingResponse(BaseModel):
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
 Literature.model_rebuild()
 Idea.model_rebuild()
+FolderTreeNode.model_rebuild()  # Fix FolderTreeNode self-reference
