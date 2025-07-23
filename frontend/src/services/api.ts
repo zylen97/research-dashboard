@@ -167,6 +167,21 @@ export const collaboratorApi = {
       group_name: groupName,
       member_names: memberNames,
     }),
+  
+  // 获取合作者依赖关系
+  getCollaboratorDependencies: (id: number): Promise<{
+    valid: boolean;
+    error?: string;
+    dependencies?: {
+      total_projects: number;
+      active_projects: number;
+      completed_projects: number;
+    };
+    warnings?: string[];
+    can_soft_delete?: boolean;
+    can_hard_delete?: boolean;
+  }> =>
+    api.get(`/api/validation/collaborator/${id}/dependencies`),
 };
 
 // 研究项目API

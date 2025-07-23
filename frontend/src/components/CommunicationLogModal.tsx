@@ -216,24 +216,10 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     <>
       <Modal
         title={
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>
-              <FileTextOutlined style={{ marginRight: 8 }} />
-              {project?.title} - 交流日志
-            </span>
-            <Button
-              type="primary"
-              size="small"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditingLog(null);
-                form.resetFields();
-                setIsAddModalVisible(true);
-              }}
-            >
-              添加记录
-            </Button>
-          </div>
+          <span>
+            <FileTextOutlined style={{ marginRight: 8 }} />
+            {project?.title} - 交流日志
+          </span>
         }
         open={visible}
         onCancel={onClose}
@@ -245,9 +231,27 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         ]}
         bodyStyle={{ maxHeight: '70vh', overflow: 'auto' }}
       >
-        <Spin spinning={loading}>
-          {renderTableView()}
-        </Spin>
+        <div>
+          {/* 操作按钮区域 */}
+          <div style={{ marginBottom: 16, textAlign: 'right' }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingLog(null);
+                form.resetFields();
+                setIsAddModalVisible(true);
+              }}
+            >
+              添加记录
+            </Button>
+          </div>
+          
+          {/* 表格区域 */}
+          <Spin spinning={loading}>
+            {renderTableView()}
+          </Spin>
+        </div>
       </Modal>
 
       {/* 添加/编辑交流日志模态框 */}

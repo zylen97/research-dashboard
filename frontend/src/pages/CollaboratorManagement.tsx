@@ -227,16 +227,19 @@ const CollaboratorManagement: React.FC = () => {
   // 处理删除
   const handleDelete = async (collaborator: Collaborator) => {
     try {
-      // 先检查依赖关系
-      const response = await fetch(`${window.location.origin}/api/validation/collaborator/${collaborator.id}/dependencies`);
-      const data = await response.json();
+      // 先检查是否有关联的项目
+      const projects = await collaboratorApi.getCollaboratorProjects(collaborator.id);
+      const activeProjects = projects.filter(p => p.status === 'active');
       
-      if (!data.valid) {
-        message.error(data.error || '无法获取合作者依赖信息');
-        return;
-      }
+      const dependencies = {
+        total_projects: projects.length,
+        active_projects: activeProjects.length,
+        completed_projects: projects.filter(p => p.status === 'completed').length,
+      };
       
-      const { dependencies, warnings, can_soft_delete, can_hard_delete } = data;
+      const warnings: string[] = [];
+      const can_soft_delete = true;
+      const can_hard_delete = activeProjects.length === 0;
       const hasActiveProjects = dependencies.active_projects > 0;
       
       // 重置删除类型为默认值
@@ -249,7 +252,7 @@ const CollaboratorManagement: React.FC = () => {
           <div>
             <p>您即将删除合作者：<strong>"{collaborator.name}"</strong></p>
             
-            {(dependencies.total_projects > 0 || dependencies.communication_logs > 0) && (
+            {dependencies.total_projects > 0 && (
               <>
                 <p style={{ marginTop: 16, marginBottom: 8 }}>
                   <strong>当前合作者的相关数据：</strong>
@@ -263,11 +266,6 @@ const CollaboratorManagement: React.FC = () => {
                   {dependencies.completed_projects > 0 && (
                     <li>
                       参与 {dependencies.completed_projects} 个已完成的项目
-                    </li>
-                  )}
-                  {dependencies.communication_logs > 0 && (
-                    <li>
-                      相关交流日志 {dependencies.communication_logs} 条
                     </li>
                   )}
                 </ul>

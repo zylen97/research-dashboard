@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, Select, Radio } from 'antd';
+import { Modal, Form, Input, Radio, Checkbox } from 'antd';
 import { Collaborator } from '../../types';
 
 const { TextArea } = Input;
@@ -42,7 +42,7 @@ const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={editingCollaborator || { gender: '男', is_senior: false }}
+        initialValues={editingCollaborator || { gender: '男', is_senior: false, is_group: false }}
       >
         <Form.Item
           label="姓名"
@@ -64,31 +64,10 @@ const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="学校"
-          name="school"
-        >
-          <Input placeholder="请输入学校名称" />
-        </Form.Item>
-
-        <Form.Item
-          label="专业"
-          name="major"
-        >
-          <Input placeholder="请输入专业" />
-        </Form.Item>
-
-        <Form.Item
           label="班级"
           name="class_name"
         >
           <Input placeholder="请输入班级" />
-        </Form.Item>
-
-        <Form.Item
-          label="联系方式"
-          name="contact"
-        >
-          <Input placeholder="请输入手机号或邮箱" />
         </Form.Item>
 
         <Form.Item
@@ -106,14 +85,18 @@ const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
         </Form.Item>
 
         <Form.Item
-          label="高级合作者"
           name="is_senior"
           valuePropName="checked"
+          style={{ marginBottom: 16 }}
         >
-          <Select>
-            <Select.Option value={false}>否</Select.Option>
-            <Select.Option value={true}>是</Select.Option>
-          </Select>
+          <Checkbox>高级合作者</Checkbox>
+        </Form.Item>
+
+        <Form.Item
+          name="is_group"
+          valuePropName="checked"
+        >
+          <Checkbox>小组成员</Checkbox>
         </Form.Item>
       </Form>
     </Modal>
