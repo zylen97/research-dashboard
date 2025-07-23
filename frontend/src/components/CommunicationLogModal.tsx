@@ -78,11 +78,24 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
   const handleSubmit = async (values: CommunicationFormValues) => {
     if (!project) return;
 
+    // 确保content不为空
+    const content = values.content?.trim();
+    if (!content) {
+      message.error('交流内容不能为空');
+      return;
+    }
+
+    // 确保title长度符合要求
+    if (values.title.length > 200) {
+      message.error('标题长度不能超过200个字符');
+      return;
+    }
+
     const logData: CommunicationLogCreate = {
       communication_type: 'meeting', // 默认值，后端需要
-      title: values.title,
-      content: values.content || '',
-      ...(values.action_items && { action_items: values.action_items }),
+      title: values.title.trim(),
+      content: content,
+      ...(values.action_items?.trim() && { action_items: values.action_items.trim() }),
       ...(values.communication_date && { communication_date: values.communication_date.format('YYYY-MM-DD') }),
     };
 

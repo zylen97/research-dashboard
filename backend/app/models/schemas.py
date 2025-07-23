@@ -172,12 +172,22 @@ class CommunicationLogBase(BaseModel):
 class CommunicationLogCreate(BaseModel):
     collaborator_id: Optional[int] = None
     communication_type: str = Field(..., max_length=50)
-    title: str = Field(..., max_length=200)
-    content: str
+    title: str = Field(..., max_length=200, min_length=1)
+    content: str = Field(..., min_length=1)
     outcomes: Optional[str] = None
     action_items: Optional[str] = None
     communication_date: Union[str, datetime] = Field(default_factory=datetime.utcnow)
     
+    @field_validator('title', 'content', mode='before')
+    def strip_and_validate_text(cls, v):
+        if v is None:
+            return v
+        if isinstance(v, str):
+            v = v.strip()
+            if not v:  # 去除空白后如果为空，返回None让min_length验证失败
+                return None
+        return v
+
     @field_validator('communication_date', mode='before')
     def parse_communication_date(cls, v):
         if v is None:
