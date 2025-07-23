@@ -121,8 +121,8 @@ export const collaboratorApi = {
     api.put(`/api/collaborators/${id}`, data),
 
   // 删除合作者
-  deleteCollaborator: (id: number, force: boolean = false): Promise<{ message: string }> =>
-    api.delete(`/api/collaborators/${id}${force ? '?force=true' : ''}`),
+  deleteCollaborator: (id: number, permanent: boolean = false): Promise<{ message: string }> =>
+    api.delete(`/api/collaborators/${id}${permanent ? '?permanent=true' : ''}`),
 
   // 获取合作者参与的项目
   getCollaboratorProjects: (id: number): Promise<ResearchProject[]> =>
@@ -179,6 +179,24 @@ export const collaboratorApi = {
     can_hard_delete?: boolean;
   }> =>
     api.get(`/api/validation/collaborator/${id}/dependencies`),
+    
+  // 恢复已删除的合作者
+  restoreCollaborator: (id: number): Promise<{ message: string }> =>
+    api.post(`/api/collaborators/${id}/restore`),
+    
+  // 获取已删除的合作者列表
+  getDeletedCollaborators: (): Promise<Collaborator[]> =>
+    api.get('/api/collaborators/deleted/list'),
+    
+  // 检查合作者的依赖关系（在合作者路由中）
+  checkCollaboratorDependencies: (id: number): Promise<{
+    exists: boolean;
+    active_projects: number;
+    total_projects: number;
+    can_soft_delete: boolean;
+    can_hard_delete: boolean;
+  }> =>
+    api.get(`/api/collaborators/${id}/check-dependencies`),
 };
 
 // 研究项目API
@@ -245,6 +263,15 @@ export const researchApi = {
     notes: string | null;
   }> =>
     api.get(`/api/research/${projectId}/todo-status`),
+    
+  // 检查项目的依赖关系
+  checkProjectDependencies: (id: number): Promise<{
+    exists: boolean;
+    communication_logs: number;
+    collaborators: number;
+    can_delete: boolean;
+  }> =>
+    api.get(`/api/research/${id}/check-dependencies`),
 };
 
 
@@ -399,6 +426,83 @@ export const ideasApi = {
   // 获取高级合作者列表
   getSeniorCollaborators: (): Promise<import('../types').Collaborator[]> =>
     api.get('/api/ideas-management/collaborators/senior'),
+};
+
+// 验证 API
+export const validationApi = {
+  // 获取项目的依赖关系
+  getProjectDependencies: (id: number): Promise<{
+    valid: boolean;
+    dependencies?: {
+      communication_logs: number;
+      collaborators: number;
+    };
+    warnings?: string[];
+    can_delete?: boolean;
+  }> =>
+    api.get(`/api/validation/project/${id}/dependencies`),
+
+  // 验证项目数据
+  validateProject: (data: any): Promise<{
+    valid: boolean;
+    errors?: string[];
+    warnings?: string[];
+  }> =>
+    api.post('/api/validation/project/validate', data),
+
+  // 验证合作者数据
+  validateCollaborator: (data: any): Promise<{
+    valid: boolean;
+    errors?: string[];
+    warnings?: string[];
+  }> =>
+    api.post('/api/validation/collaborator/validate', data),
+
+  // 检查数据一致性
+  checkConsistency: (): Promise<{
+    valid: boolean;
+    issues?: Array<{
+      type: string;
+      description: string;
+      severity: 'error' | 'warning';
+    }>;
+  }> =>
+    api.get('/api/validation/consistency'),
+};
+
+// 审计日志 API
+export const auditApi = {
+  // 获取审计日志列表
+  getAuditLogs: (params?: {
+    table_name?: string;
+    action?: string;
+    user_id?: number;
+    skip?: number;
+    limit?: number;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<any[]> =>
+    api.get('/api/audit/', { params }),
+
+  // 获取单条审计日志
+  getAuditLog: (id: number): Promise<any> =>
+    api.get(`/api/audit/${id}`),
+
+  // 获取审计统计
+  getAuditStats: (): Promise<{
+    total_actions: number;
+    actions_by_type: Record<string, number>;
+    actions_by_table: Record<string, number>;
+    recent_actions: any[];
+  }> =>
+    api.get('/api/audit/stats'),
+
+  // 获取用户操作历史
+  getUserActions: (userId: number, params?: {
+    skip?: number;
+    limit?: number;
+  }): Promise<any[]> =>
+    api.get(`/api/audit/user/${userId}`, { params }),
 };
 
 export default api;
