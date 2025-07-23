@@ -12,7 +12,6 @@ from ..models import (
 )
 from ..utils.encryption import encryption_util
 import httpx
-import asyncio
 
 router = APIRouter()
 

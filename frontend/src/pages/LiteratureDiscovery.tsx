@@ -31,7 +31,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   BookOutlined,
-  BulbOutlined,
   FileTextOutlined,
   RobotOutlined,
   PlusOutlined,
@@ -46,7 +45,7 @@ import type { ColumnsType } from 'antd/es/table';
 import FolderTree from '../components/common/FolderTree';
 import LiteratureDetail from '../components/common/LiteratureDetail';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -59,9 +58,7 @@ const LiteratureDiscovery: React.FC = () => {
   const [selectedLiterature, setSelectedLiterature] = useState<Literature | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
-  const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
   const [editingLiterature, setEditingLiterature] = useState<Literature | null>(null);
-  const [convertingLiterature, setConvertingLiterature] = useState<Literature | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const [isBatchMatchingModalVisible, setIsBatchMatchingModalVisible] = useState(false);
   const [matchingProgress, setMatchingProgress] = useState({ current: 0, total: 0 });
@@ -70,7 +67,6 @@ const LiteratureDiscovery: React.FC = () => {
   const [form] = Form.useForm();
   const [validationForm] = Form.useForm();
   const [batchMatchingForm] = Form.useForm();
-  const [convertForm] = Form.useForm();
   const queryClient = useQueryClient();
 
   // 获取文献数据
@@ -153,7 +149,7 @@ const LiteratureDiscovery: React.FC = () => {
     const total = displayedLiterature.length;
     const validated = displayedLiterature.filter(item => item.validation_status === 'validated').length;
     const pending = displayedLiterature.filter(item => item.validation_status === 'pending').length;
-    const converted = displayedLiterature.filter(item => item.status === 'converted_to_idea').length;
+    const converted = 0; // 移除converted_to_idea统计
     
     return { total, validated, pending, converted };
   }, [displayedLiterature]);
@@ -304,24 +300,6 @@ const LiteratureDiscovery: React.FC = () => {
     },
   });
 
-  // 转换为idea mutation
-  const convertToIdeaMutation = useMutation({
-    mutationFn: ({ id, ideaData }: { id: number; ideaData?: any }) => 
-      literatureApi.convertToIdea(id, ideaData),
-    onSuccess: (response) => {
-      message.success(`文献已转换为idea！ID: ${response.idea_id}`);
-      setIsConvertModalVisible(false);
-      setConvertingLiterature(null);
-      convertForm.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['literature'] });
-      if (selectedFolderId) {
-        queryClient.invalidateQueries({ queryKey: ['folder-literature', selectedFolderId] });
-      }
-    },
-    onError: (error) => {
-      message.error('转换失败：' + error.message);
-    },
-  });
 
   // 批量AI匹配mutation
   const batchMatchingMutation = useMutation({
@@ -414,18 +392,6 @@ const LiteratureDiscovery: React.FC = () => {
     validateMutation.mutate(data);
   };
 
-  // 处理转换提交
-  const handleConvertSubmit = (values: any) => {
-    if (!convertingLiterature) return;
-    
-    convertToIdeaMutation.mutate({
-      id: convertingLiterature.id,
-      ideaData: {
-        ...values,
-        group_name: selectedGroup, // 继承当前分组
-      },
-    });
-  };
 
   // 处理批量匹配
   const handleBatchMatching = (values: any) => {
@@ -474,17 +440,6 @@ const LiteratureDiscovery: React.FC = () => {
     });
   };
 
-  // 处理转换为idea
-  const handleConvertToIdea = (literature: Literature) => {
-    setConvertingLiterature(literature);
-    convertForm.setFieldsValue({
-      title: `基于"${literature.title}"的研究idea`,
-      description: literature.abstract ? 
-        `基于文献"${literature.title}"提出的研究想法。\n\n原文摘要：${literature.abstract}` :
-        `基于文献"${literature.title}"提出的研究想法。`,
-    });
-    setIsConvertModalVisible(true);
-  };
 
   // 表格列定义
   const columns: ColumnsType<Literature> = [
@@ -598,18 +553,6 @@ const LiteratureDiscovery: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 handleEditLiterature(record);
-              }}
-            />
-          </Tooltip>
-          <Tooltip title="转为Idea">
-            <Button
-              type="text"
-              icon={<BulbOutlined />}
-              size="small"
-              disabled={record.status === 'converted_to_idea'}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleConvertToIdea(record);
               }}
             />
           </Tooltip>
@@ -827,7 +770,7 @@ const LiteratureDiscovery: React.FC = () => {
 
               {/* 统计卡片 */}
               <Row gutter={12}>
-                <Col span={6}>
+                <Col span={8}>
                   <Card size="small" className="statistics-card">
                     <Statistic 
                       title="总数" 
@@ -837,7 +780,7 @@ const LiteratureDiscovery: React.FC = () => {
                     />
                   </Card>
                 </Col>
-                <Col span={6}>
+                <Col span={8}>
                   <Card size="small" className="statistics-card">
                     <Statistic 
                       title="已验证" 
@@ -847,23 +790,13 @@ const LiteratureDiscovery: React.FC = () => {
                     />
                   </Card>
                 </Col>
-                <Col span={6}>
+                <Col span={8}>
                   <Card size="small" className="statistics-card">
                     <Statistic 
                       title="待验证" 
                       value={stats.pending} 
                       valueStyle={{ color: '#1890ff', fontSize: 16 }}
                       prefix={<SyncOutlined />}
-                    />
-                  </Card>
-                </Col>
-                <Col span={6}>
-                  <Card size="small" className="statistics-card">
-                    <Statistic 
-                      title="已转换" 
-                      value={stats.converted} 
-                      valueStyle={{ color: '#722ed1', fontSize: 16 }}
-                      prefix={<BulbOutlined />}
                     />
                   </Card>
                 </Col>
@@ -935,7 +868,6 @@ const LiteratureDiscovery: React.FC = () => {
               literature={selectedLiterature}
               onEdit={handleEditLiterature}
               onDelete={handleDeleteLiterature}
-              onConvertToIdea={handleConvertToIdea}
             />
           </div>
         </Sider>
@@ -1063,77 +995,6 @@ const LiteratureDiscovery: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 转换为Idea模态框 */}
-      <Modal
-        title="转换文献为Idea"
-        open={isConvertModalVisible}
-        onCancel={() => {
-          setIsConvertModalVisible(false);
-          setConvertingLiterature(null);
-          convertForm.resetFields();
-        }}
-        onOk={() => convertForm.submit()}
-        confirmLoading={convertToIdeaMutation.isPending}
-        width={800}
-      >
-        {convertingLiterature && (
-          <div>
-            <Card size="small" style={{ marginBottom: 16 }}>
-              <Title level={5}>原文献信息</Title>
-              <Paragraph>
-                <Text strong>标题：</Text> {convertingLiterature.title}
-              </Paragraph>
-              {convertingLiterature.authors && (
-                <Paragraph>
-                  <Text strong>作者：</Text> {convertingLiterature.authors}
-                </Paragraph>
-              )}
-              {convertingLiterature.abstract && (
-                <Paragraph ellipsis={{ rows: 3, expandable: true }}>
-                  <Text strong>摘要：</Text> {convertingLiterature.abstract}
-                </Paragraph>
-              )}
-            </Card>
-
-            <Form
-              form={convertForm}
-              layout="vertical"
-              onFinish={handleConvertSubmit}
-            >
-              <Form.Item
-                name="title"
-                label="Idea标题"
-                rules={[{ required: true, message: '请输入idea标题' }]}
-              >
-                <Input placeholder="请输入idea标题" />
-              </Form.Item>
-
-              <Form.Item
-                name="description"
-                label="详细描述"
-                rules={[{ required: true, message: '请输入详细描述' }]}
-              >
-                <TextArea 
-                  rows={4} 
-                  placeholder="请详细描述这个idea的核心内容、目标和价值"
-                />
-              </Form.Item>
-
-              <Form.Item
-                name="priority"
-                label="优先级"
-                initialValue="medium"
-              >
-                <Select>
-                  <Select.Option value="high">高</Select.Option>
-                  <Select.Option value="medium">中</Select.Option>
-                  <Select.Option value="low">低</Select.Option>
-                </Select>
-              </Form.Item>
-            </Form>
-          </div>
-        )}
-      </Modal>
 
       {/* 批量AI匹配模态框 */}
       <Modal

@@ -43,3 +43,13 @@ export interface BackupCreateResponse {
   created: string;
   createdFormatted: string;
 }
+
+export interface BackupStats {
+  total_backups: number;
+  total_size: number;
+  oldest_backup: BackupItem | null;
+  newest_backup: BackupItem | null;
+  average_size: number;
+  max_backups: number;
+  current_environment: string;
+}

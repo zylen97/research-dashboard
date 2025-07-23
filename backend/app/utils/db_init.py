@@ -3,7 +3,7 @@
 """
 import logging
 from ..models.database import create_tables, engine, SessionLocal, User
-from ..models import Collaborator, ResearchProject, Literature, Idea, CommunicationLog
+from ..models import Collaborator, ResearchProject, Literature, CommunicationLog
 from ..utils.auth import get_password_hash
 
 # 配置日志

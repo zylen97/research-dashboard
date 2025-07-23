@@ -63,13 +63,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {
         key: '/literature',
         icon: <BookOutlined />,
-        label: 'Idea发掘',
+        label: '文献管理',
         onClick: () => navigate('/literature'),
       },
       {
         key: '/ideas',
         icon: <BulbOutlined />,
-        label: 'Idea管理',
+        label: 'Idea发掘',
         onClick: () => navigate('/ideas'),
       },
       {

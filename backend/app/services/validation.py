@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from ..models import (
     ResearchProject, Collaborator, CommunicationLog,
-    Literature, Idea
+    Literature
 )
 
 class ValidationService:

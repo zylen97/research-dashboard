@@ -3,10 +3,9 @@ import {
   Collaborator, CollaboratorCreate, CollaboratorUpdate,
   ResearchProject, ResearchProjectCreate, ResearchProjectUpdate,
   Literature, LiteratureCreate, LiteratureUpdate,
-  Idea, IdeaCreate, IdeaUpdate,
   CommunicationLog, CommunicationLogCreate, CommunicationLogUpdate,
   FileUploadResponse, ValidationRequest, ValidationResult,
-  IdeasSummary, PaginationParams,
+  PaginationParams,
   BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
   BatchDeleteRequest, BatchDeleteResponse,
   LiteratureFolder, LiteratureFolderCreate, LiteratureFolderUpdate, FolderTreeNode,
@@ -341,59 +340,6 @@ export const literatureApi = {
     api.post('/api/literature/batch-move', { literature_ids: literatureIds, folder_id: folderId }),
 };
 
-// Idea API
-export const ideaApi = {
-  // 获取idea列表
-  getIdeas: (params?: PaginationParams & {
-    status_filter?: string;
-    priority_filter?: string;
-    source_filter?: string;
-    group_filter?: string;
-  }): Promise<Idea[]> =>
-    api.get('/api/ideas/', { params }),
-
-  // 获取单个idea
-  getIdea: (id: number): Promise<Idea> =>
-    api.get(`/api/ideas/${id}`),
-
-  // 创建idea
-  createIdea: (data: IdeaCreate): Promise<Idea> =>
-    api.post('/api/ideas/', data),
-
-  // 更新idea
-  updateIdea: (id: number, data: IdeaUpdate): Promise<Idea> =>
-    api.put(`/api/ideas/${id}`, data),
-
-  // 删除idea
-  deleteIdea: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/ideas/${id}`),
-
-  // 更新优先级
-  updatePriority: (id: number, priority: string): Promise<{ message: string; priority: string }> =>
-    api.put(`/api/ideas/${id}/priority`, null, { params: { priority } }),
-
-  // 更新状态
-  updateStatus: (id: number, status: string): Promise<{ message: string; status: string }> =>
-    api.put(`/api/ideas/${id}/status`, null, { params: { status_value: status } }),
-
-  // 转换为研究项目
-  convertToProject: (id: number, collaboratorIds: number[] = []): Promise<{
-    message: string;
-    project_id: number;
-    project: ResearchProject;
-  }> =>
-    api.post(`/api/ideas/${id}/convert-to-project`, null, { 
-      params: { collaborator_ids: collaboratorIds }
-    }),
-
-  // 获取统计信息
-  getSummary: (): Promise<IdeasSummary> =>
-    api.get('/api/ideas/stats/summary'),
-
-  // 搜索ideas
-  searchIdeas: (query: string): Promise<Idea[]> =>
-    api.get('/api/ideas/search', { params: { q: query } }),
-};
 
 // 认证API
 export const authApi = {
@@ -494,6 +440,66 @@ export const backupApi = {
       responseType: 'blob'
     });
   },
+};
+
+// Idea发掘 API
+export const ideaDiscoveryApi = {
+  // 上传Excel文件
+  uploadFile: (file: File): Promise<{
+    success: boolean;
+    message: string;
+    file_id: string;
+    file_name: string;
+    file_size: number;
+    columns: string[];
+    row_count: number;
+  }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    return api.post('/api/ideas/upload', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  // 开始处理文件
+  startProcessing: (data: {
+    file_id: string;
+    ai_provider?: string;
+    prompt_template?: string;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      processing_id: string;
+      status: string;
+    };
+  }> =>
+    api.post('/api/ideas/process', data),
+
+  // 获取处理状态
+  getProcessingStatus: (processingId: string): Promise<{
+    current_step: number;
+    total_steps: number;
+    status: string;
+    message: string;
+    progress: number;
+  }> =>
+    api.get(`/api/ideas/status/${processingId}`),
+
+  // 下载结果文件
+  downloadResult: (resultFileId: string): Promise<Blob> =>
+    api.get(`/api/ideas/download/${resultFileId}`, {
+      responseType: 'blob'
+    }),
+
+  // 清理临时文件
+  cleanupFile: (fileId: string): Promise<{
+    success: boolean;
+    message: string;
+  }> =>
+    api.delete(`/api/ideas/cleanup/${fileId}`),
 };
 
 export default api;

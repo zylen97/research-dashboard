@@ -2,7 +2,7 @@
 数据验证和关联检查工具
 """
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from ..models import ResearchProject, Collaborator, CommunicationLog
 
 class DataValidator:

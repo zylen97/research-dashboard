@@ -134,49 +134,6 @@ class Literature(Base):
         Index('idx_literature_folder_user', 'folder_id', 'user_id'),  # 新增文件夹索引
     )
 
-class Idea(Base):
-    """Idea池模型 - 存储用户的研究想法和创意"""
-    __tablename__ = "ideas"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String(200), nullable=False, index=True)  # 标题索引，支持搜索
-    description = Column(Text, nullable=False)
-    source = Column(String(100), index=True)  # literature, manual, other - 来源索引
-    source_literature_id = Column(Integer, ForeignKey('literature.id'), nullable=True, index=True)
-    
-    # User ownership
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
-    
-    # Group field for 4 sub-panels (zl/yq/zz/dj)
-    group_name = Column(String(50), index=True)  # 分组字段，用于4个子面板
-    
-    # Idea details
-    difficulty_level = Column(String(20), index=True)  # easy, medium, hard - 难度索引
-    estimated_duration = Column(String(50))  # 预计耗时
-    required_skills = Column(String(500))  # 所需技能
-    potential_impact = Column(String(20), index=True)  # low, medium, high - 影响力索引
-    
-    # Status management
-    status = Column(String(50), default="pool", index=True)  # 状态索引
-    priority = Column(String(20), default="medium", index=True)  # 优先级索引
-    tags = Column(String(500))  # 标签，逗号分隔
-    
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)  # 创建时间索引
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    source_literature = relationship("Literature")
-    user = relationship("User", backref="ideas")
-    
-    # 复合索引优化常用查询
-    __table_args__ = (
-        Index('idx_idea_user_status', 'user_id', 'status'),
-        Index('idx_idea_user_priority', 'user_id', 'priority'),
-        Index('idx_idea_difficulty_impact', 'difficulty_level', 'potential_impact'),
-        Index('idx_idea_created_user', 'created_at', 'user_id'),
-        Index('idx_idea_group_status', 'group_name', 'status'),
-        Index('idx_idea_group_priority', 'group_name', 'priority'),
-    )
 
 class AuditLog(Base):
     """审计日志模型"""

@@ -7,7 +7,6 @@ from .database import (
     Collaborator,
     ResearchProject,
     Literature,
-    Idea,
     CommunicationLog,
     AuditLog,
     User,
@@ -34,11 +33,6 @@ from .schemas import (
     LiteratureUpdate,
     Literature as LiteratureSchema,
 
-    # Idea schemas
-    IdeaBase,
-    IdeaCreate,
-    IdeaUpdate,
-    Idea as IdeaSchema,
 
     # Communication Log schemas
     CommunicationLogBase,
@@ -80,12 +74,11 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "Literature", "Idea", "CommunicationLog", "AuditLog", "User", "SystemConfig",
+    "Collaborator", "ResearchProject", "Literature", "CommunicationLog", "AuditLog", "User", "SystemConfig",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
     "LiteratureBase", "LiteratureCreate", "LiteratureUpdate", "LiteratureSchema",
-    "IdeaBase", "IdeaCreate", "IdeaUpdate", "IdeaSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",
     "UserBase", "UserCreate", "UserUpdate", "UserLogin", "UserSchema",
     "Token",

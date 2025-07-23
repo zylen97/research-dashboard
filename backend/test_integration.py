@@ -18,7 +18,8 @@ sys.path.append(os.path.dirname(__file__))
 from app.models.database import Base, engine, get_db
 from sqlalchemy import text
 from app.models.schemas import *
-from app.routes import auth, research, collaborators, literature, ideas, config, backup
+from app.routes import auth, research, collaborators, literature, config, backup
+from app.routes import idea_discovery
 
 # 配置日志
 logging.basicConfig(
@@ -48,7 +49,7 @@ class IntegrationValidator:
             'research': research.router,
             'collaborators': collaborators.router,
             'literature': literature.router,
-            'ideas': ideas.router,
+            'idea_discovery': idea_discovery.router,
             'config': config.router,
             'backup': backup.router,
         }
@@ -67,9 +68,9 @@ class IntegrationValidator:
                 'GET /', 'POST /', 'PUT /{literature_id}', 'DELETE /{literature_id}',
                 'POST /upload', 'POST /batch-match', 'GET /prompts'
             ],
-            'ideas': [
-                'GET /', 'POST /', 'PUT /{idea_id}', 'DELETE /{idea_id}',
-                'GET /stats/summary', 'POST /{idea_id}/convert-to-project'
+            'idea_discovery': [
+                'POST /upload', 'POST /process', 'GET /status/{processing_id}',
+                'GET /download/{result_file_id}', 'DELETE /cleanup/{file_id}'
             ],
             'config': [
                 'GET /', 'POST /', 'PUT /{config_id}', 'DELETE /{config_id}',
@@ -102,7 +103,7 @@ class IntegrationValidator:
             # 验证关键表存在
             required_tables = [
                 'users', 'collaborators', 'research_projects', 
-                'literature', 'ideas', 'communication_logs', 
+                'literature', 'communication_logs', 
                 'system_configs', 'audit_logs'
             ]
             
@@ -176,7 +177,6 @@ class IntegrationValidator:
             ('Collaborator', Collaborator),
             ('ResearchProject', ResearchProject),
             ('Literature', Literature),
-            ('Idea', Idea),
             ('SystemConfig', SystemConfig),
             ('BatchMatchingRequest', BatchMatchingRequest),
             ('BatchMatchingResponse', BatchMatchingResponse),

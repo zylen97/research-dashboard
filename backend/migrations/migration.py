@@ -12,23 +12,13 @@ import os
 import logging
 from datetime import datetime
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# 导入迁移工具
+from migration_utils import setup_migration_logging, find_database_path, backup_database, get_table_columns, table_exists
+
+logger = setup_migration_logging()
 
 # 迁移版本号 - 添加文献文件夹功能  
 MIGRATION_VERSION = "v1.11_add_literature_folders"
-
-def backup_database(db_path):
-    """创建数据库备份"""
-    backup_path = f"{db_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    import shutil
-    shutil.copy2(db_path, backup_path)
-    logger.info(f"数据库已备份到: {backup_path}")
-    return backup_path
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -69,28 +59,8 @@ def mark_migration_completed(db_path):
 
 def run_migration():
     """执行当前迁移任务"""
-    # 检查所有可能的数据库路径（按优先级排序）
-    # 如果设置了ENVIRONMENT环境变量，优先使用对应的数据库
-    environment = os.environ.get('ENVIRONMENT', 'production')
-    if environment == 'development':
-        db_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
-        ]
-    else:
-        db_paths = [
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
-        ]
-    
-    db_path = None
-    for path in db_paths:
-        if os.path.exists(path):
-            db_path = path
-            break
-    
+    # 使用工具函数查找数据库路径
+    db_path = find_database_path()
     if not db_path:
         logger.error("找不到数据库文件")
         return False
@@ -118,8 +88,7 @@ def run_migration():
         logger.info("开始添加文献文件夹功能...")
         
         # 步骤1：检查并创建literature_folders表
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='literature_folders'")
-        if not cursor.fetchone():
+        if not table_exists(cursor, 'literature_folders'):
             logger.info("literature_folders表不存在，开始创建...")
             
             # 创建literature_folders表
@@ -162,9 +131,7 @@ def run_migration():
         logger.info("检查literature表的folder_id字段...")
         
         # 检查literature表是否存在folder_id字段
-        cursor.execute("PRAGMA table_info(literature)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
+        column_names = get_table_columns(cursor, 'literature')
         
         if 'folder_id' not in column_names:
             logger.info("literature表缺少folder_id字段，开始添加...")

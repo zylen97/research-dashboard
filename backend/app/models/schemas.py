@@ -119,47 +119,6 @@ class Literature(LiteratureBase):
     class Config:
         from_attributes = True
 
-# Idea schemas
-class IdeaBase(BaseModel):
-    title: str = Field(..., max_length=200)
-    description: str
-    source: str = Field(..., max_length=100)
-    source_literature_id: Optional[int] = None
-    group_name: Optional[str] = Field(None, max_length=50)  # 分组字段
-    difficulty_level: Optional[str] = Field(None, max_length=20)
-    estimated_duration: Optional[str] = Field(None, max_length=50)
-    required_skills: Optional[str] = Field(None, max_length=500)
-    potential_impact: Optional[str] = Field(None, max_length=20)
-    priority: str = Field(default="medium", max_length=20)
-    tags: Optional[str] = Field(None, max_length=500)
-
-class IdeaCreate(IdeaBase):
-    pass
-
-class IdeaUpdate(BaseModel):
-    title: Optional[str] = Field(None, max_length=200)
-    description: Optional[str] = None
-    group_name: Optional[str] = Field(None, max_length=50)  # 分组字段
-    difficulty_level: Optional[str] = Field(None, max_length=20)
-    estimated_duration: Optional[str] = Field(None, max_length=50)
-    required_skills: Optional[str] = Field(None, max_length=500)
-    potential_impact: Optional[str] = Field(None, max_length=20)
-    status: Optional[str] = Field(None, max_length=50)
-    priority: Optional[str] = Field(None, max_length=20)
-    tags: Optional[str] = Field(None, max_length=500)
-
-class Idea(IdeaBase):
-    id: int
-    status: str
-    user_id: int
-    group_name: Optional[str] = None  # 确保输出包含分组字段
-    created_at: datetime
-    updated_at: datetime
-    source_literature: Optional[Literature] = None
-    user: Optional['User'] = None
-    
-    class Config:
-        from_attributes = True
 
 # Communication Log schemas
 class CommunicationLogBase(BaseModel):
@@ -416,5 +375,4 @@ class BatchMatchingResponse(BaseModel):
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
 Literature.model_rebuild()
-Idea.model_rebuild()
 FolderTreeNode.model_rebuild()  # Fix FolderTreeNode self-reference

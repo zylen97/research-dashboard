@@ -1,9 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 from datetime import timedelta
-from pydantic import BaseModel, Field
-from typing import Optional
 from app.models.database import get_db, User
 from app.models.schemas import (
     UserLogin, 

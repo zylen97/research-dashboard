@@ -1,3 +1,6 @@
+// 导出api.ts中的所有类型
+export * from './api';
+
 // API响应类型 - 统一后端响应格式
 export interface ApiResponse<T> {
   success: boolean;
@@ -150,54 +153,6 @@ export interface LiteratureUpdate {
   notes?: string;
 }
 
-// Idea类型
-export interface Idea {
-  id: number;
-  title: string;
-  description: string;
-  source: string;
-  source_literature_id?: number;
-  user_id: number;
-  group_name?: string;  // 分组字段(zl/yq/zz/dj)
-  difficulty_level?: string;
-  estimated_duration?: string;
-  required_skills?: string;
-  potential_impact?: string;
-  status: string;
-  priority: string;
-  tags?: string;
-  created_at: string;
-  updated_at: string;
-  user?: User;
-  source_literature?: Literature;
-}
-
-export interface IdeaCreate {
-  title: string;
-  description: string;
-  source: string;
-  source_literature_id?: number;
-  group_name?: string;  // 分组字段(zl/yq/zz/dj)
-  difficulty_level?: string;
-  estimated_duration?: string;
-  required_skills?: string;
-  potential_impact?: string;
-  priority?: string;
-  tags?: string;
-}
-
-export interface IdeaUpdate {
-  title?: string;
-  description?: string;
-  group_name?: string;  // 分组字段(zl/yq/zz/dj)
-  difficulty_level?: string;
-  estimated_duration?: string;
-  required_skills?: string;
-  potential_impact?: string;
-  status?: string;
-  priority?: string;
-  tags?: string;
-}
 
 // 交流日志类型
 export interface CommunicationLog {
@@ -341,26 +296,14 @@ export interface PredefinedPrompt {
   template: string;
 }
 
-// 统计类型
-export interface IdeasSummary {
-  total_ideas: number;
-  status_breakdown: Record<string, number>;
-  priority_breakdown: Record<string, number>;
-  source_breakdown: Record<string, number>;
-}
 
 // 常量
 export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as const;
 export const PROJECT_STATUSES = ['active', 'completed', 'paused'] as const;
-export const LITERATURE_STATUSES = ['imported', 'reviewed', 'converted_to_idea'] as const;
+export const LITERATURE_STATUSES = ['imported', 'reviewed'] as const;
 export const VALIDATION_STATUSES = ['pending', 'validated', 'rejected'] as const;
-export const IDEA_STATUSES = ['pool', 'in_development', 'converted_to_project'] as const;
-export const PRIORITIES = ['low', 'medium', 'high'] as const;
-export const DIFFICULTY_LEVELS = ['easy', 'medium', 'hard'] as const;
-export const IMPACT_LEVELS = ['low', 'medium', 'high'] as const;
 
 // 导出API相关类型
-export * from './api';
 
 // 用户类型
 export interface User {
@@ -463,40 +406,3 @@ export interface AITestResponse {
   response_content?: string;
 }
 
-// 备份管理相关类型
-export interface BackupStats {
-  total_backups: number;
-  total_size: number;
-  oldest_backup: BackupItem | null;
-  newest_backup: BackupItem | null;
-  average_size: number;
-  max_backups: number;
-  current_environment: string;
-}
-
-export interface BackupItem {
-  id: string;
-  name: string;
-  size: number;
-  sizeFormatted: string;
-  created: string;
-  createdFormatted: string;
-  details?: string;
-  collaborators_count?: number;
-  projects_count?: number;
-  logs_count?: number;
-}
-
-export interface BackupListResponse {
-  data: BackupItem[];
-  total: number;
-}
-
-export interface BackupCreateResponse {
-  id: string;
-  name: string;
-  size: number;
-  sizeFormatted: string;
-  created: string;
-  createdFormatted: string;
-}
