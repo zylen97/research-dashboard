@@ -70,11 +70,20 @@ def mark_migration_completed(db_path):
 def run_migration():
     """执行当前迁移任务"""
     # 检查所有可能的数据库路径（按优先级排序）
-    db_paths = [
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
-    ]
+    # 如果设置了ENVIRONMENT环境变量，优先使用对应的数据库
+    environment = os.environ.get('ENVIRONMENT', 'production')
+    if environment == 'development':
+        db_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
+        ]
+    else:
+        db_paths = [
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_prod.db'),  # 生产环境
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'research_dashboard_dev.db'),   # 开发环境
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), 'research_dashboard.db')              # 默认
+        ]
     
     db_path = None
     for path in db_paths:
