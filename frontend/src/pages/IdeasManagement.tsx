@@ -7,7 +7,7 @@ const { Title, Paragraph } = Typography;
 
 const IdeasManagementPage: React.FC = () => {
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '24px' }}>
       {/* 页面标题 */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>

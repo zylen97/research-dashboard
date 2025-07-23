@@ -18,7 +18,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  BulbOutlined,
 } from '@ant-design/icons';
 import { ideasApi } from '../services/api';
 import type { Idea, IdeaCreate, IdeaUpdate, Collaborator } from '../types';
@@ -26,7 +25,7 @@ import type { ColumnsType } from 'antd/es/table';
 
 const { TextArea } = Input;
 const { Option } = Select;
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const IdeasManagement: React.FC = () => {
   const [ideas, setIdeas] = useState<Idea[]>([]);
@@ -171,10 +170,10 @@ const IdeasManagement: React.FC = () => {
       title: '研究问题',
       dataIndex: 'research_question',
       key: 'research_question',
-      width: '25%',
+      width: '30%',
       render: (text: string) => (
-        <Text style={{ wordBreak: 'break-all' }}>
-          {text.length > 50 ? `${text.substring(0, 50)}...` : text}
+        <Text style={{ wordBreak: 'break-word' }}>
+          {text}
         </Text>
       ),
     },
@@ -183,6 +182,7 @@ const IdeasManagement: React.FC = () => {
       dataIndex: 'research_method',
       key: 'research_method',
       width: '20%',
+      ellipsis: true,
       render: (text: string) => text || <Text type="secondary">未填写</Text>,
     },
     {
@@ -190,12 +190,14 @@ const IdeasManagement: React.FC = () => {
       dataIndex: 'source_literature',
       key: 'source_literature',
       width: '20%',
+      ellipsis: true,
       render: (text: string) => text || <Text type="secondary">未填写</Text>,
     },
     {
       title: '负责人',
       dataIndex: 'collaborator',
       key: 'collaborator',
+      width: '10%',
       render: (collaborator: Collaborator) => 
         collaborator ? collaborator.name : <Text type="secondary">未分配</Text>,
     },
@@ -203,6 +205,7 @@ const IdeasManagement: React.FC = () => {
       title: '重要性',
       dataIndex: 'importance',
       key: 'importance',
+      width: '10%',
       render: renderImportance,
       sorter: (a, b) => a.importance - b.importance,
     },
@@ -210,13 +213,14 @@ const IdeasManagement: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
+      width: '10%',
       render: (date: string) => new Date(date).toLocaleDateString(),
       sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 120,
+      fixed: 'right',
       render: (_, record) => (
         <Space>
           <Button 
@@ -249,19 +253,19 @@ const IdeasManagement: React.FC = () => {
 
   return (
     <div>
-      <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <Title level={4} style={{ margin: 0 }}>
-              <BulbOutlined style={{ marginRight: 8, color: '#1890ff' }} />
-              Ideas管理
-            </Title>
-            <Text type="secondary">管理研究想法，设置重要性和负责人</Text>
-          </div>
+      <Card 
+        bordered={false}
+        style={{ 
+          boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02)',
+          borderRadius: '8px'
+        }}
+      >
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
           <Button 
             type="primary" 
             icon={<PlusOutlined />} 
             onClick={() => openModal()}
+            size="large"
           >
             新建Idea
           </Button>
@@ -278,7 +282,7 @@ const IdeasManagement: React.FC = () => {
             showQuickJumper: true,
             showTotal: (total) => `共 ${total} 条记录`,
           }}
-          scroll={{ x: 800 }}
+          style={{ width: '100%' }}
         />
       </Card>
 
