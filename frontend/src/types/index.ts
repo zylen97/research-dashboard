@@ -29,6 +29,7 @@ export interface Collaborator {
   background?: string;
   contact_info?: string;
   is_senior: boolean;
+  is_group?: boolean;   // 是否为小组成员
   is_deleted: boolean;  // 软删除标记
   deleted_at?: string;  // 删除时间
   created_at: string;
@@ -44,6 +45,7 @@ export interface CollaboratorCreate {
   background?: string;
   contact_info?: string;
   is_senior?: boolean;
+  is_group?: boolean;
 }
 
 export interface CollaboratorUpdate {
@@ -54,6 +56,7 @@ export interface CollaboratorUpdate {
   background?: string;
   contact_info?: string;
   is_senior?: boolean;
+  is_group?: boolean;
 }
 
 // 研究项目类型
@@ -111,6 +114,7 @@ export interface Literature {
   validation_reason?: string;
   status: string;
   notes?: string;
+  group_name?: string;  // 分组字段(zl/yq/zz/dj)
   created_at: string;
   updated_at: string;
 }

@@ -64,14 +64,17 @@ const CollaboratorManagement: React.FC = () => {
     queryFn: () => collaboratorApi.getCollaborators(),
   });
 
-  // 临时识别小组的函数（后端支持is_group字段前使用）
+  // 识别小组成员的函数
   const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
-    // 1. 优先使用本地标记状态
+    // 1. 优先使用后端的is_group字段（如果存在）
+    if (collaborator.is_group !== undefined) {
+      return collaborator.is_group;
+    }
+    
+    // 2. 使用本地标记状态
     if (localGroupMarks[collaborator.id] !== undefined) {
       return localGroupMarks[collaborator.id];
     }
-    
-    // 2. 后端暂不支持is_group字段，使用临时逻辑
     
     // 3. 临时逻辑：根据名称和班级信息判断是否为小组
     const groupIndicators = [
@@ -196,18 +199,38 @@ const CollaboratorManagement: React.FC = () => {
   const [pendingGroupStatus, setPendingGroupStatus] = useState<boolean>(false);
 
   // 处理表单提交
-  const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean }) => {
-    // 暂不支持is_group字段，使用本地管理
-    const apiValues = values;
+  const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean; is_group?: boolean }) => {
+    const apiValues: CollaboratorCreate = {
+      name: values.name,
+      is_senior: values.is_senior || false,
+      is_group: values.is_group || false,
+    };
+    
+    // 只有在字段有值时才添加到apiValues中
+    if (values.gender !== undefined) {
+      apiValues.gender = values.gender;
+    }
+    if (values.class_name !== undefined) {
+      apiValues.class_name = values.class_name;
+    }
+    if (values.future_plan !== undefined) {
+      apiValues.future_plan = values.future_plan;
+    }
+    if (values.background !== undefined) {
+      apiValues.background = values.background;
+    }
     
     if (editingCollaborator) {
-      // 更新本地小组标记状态（暂不支持is_group字段）
-      // setLocalGroupMarks 逻辑暂时移除
+      // 更新合作者时，同时更新本地标记状态
+      setLocalGroupMarks(prev => ({
+        ...prev,
+        [editingCollaborator.id]: values.is_group || false
+      }));
       
       updateCollaboratorMutation.mutate({ id: editingCollaborator.id, data: apiValues });
     } else {
-      // 新建时暂不支持is_group字段
-      // setPendingGroupStatus 逻辑暂时移除
+      // 新建时保存is_group状态
+      setPendingGroupStatus(values.is_group || false);
       createCollaboratorMutation.mutate(apiValues);
     }
   };

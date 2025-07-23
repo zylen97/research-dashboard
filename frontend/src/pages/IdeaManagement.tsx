@@ -262,7 +262,7 @@ const IdeaManagement: React.FC = () => {
                 icon={<UserOutlined />} 
                 style={{ marginRight: 4 }}
               />
-              {user.display_name} 的专属面板
+{user.display_name}
             </Tag>
           )}
         </div>

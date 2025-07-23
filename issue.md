@@ -1,24 +1,3 @@
-1.添加交流日志的面板里面的“添加记录”按钮应该再往左一点，现在和关闭的×重合了
-2.删除合作者的时候报错：CollaboratorManagement.tsx:231 
- GET http://45.149.156.216:3001/api/validation/collaborator/27/dependencies 401 (Unauthorized)
-(anonymous)	@	CollaboratorManagement.tsx:231
-onClick	@	CollaboratorManagement.tsx:553
-CollaboratorManagement.tsx:231 
- GET http://45.149.156.216:3001/api/validation/collaborator/27/dependencies 401 (Unauthorized)
-(anonymous)	@	CollaboratorManagement.tsx:231
-onClick	@	CollaboratorManagement.tsx:553
-(anonymous)	@	button.js:186
-ze	@	react-dom.production.min.js:54
-Ae	@	react-dom.production.min.js:54
-(anonymous)	@	react-dom.production.min.js:55
-_r	@	react-dom.production.min.js:105
-Br	@	react-dom.production.min.js:106
-(anonymous)	@	react-dom.production.min.js:117
-cc	@	react-dom.production.min.js:273
-Pe	@	react-dom.production.min.js:52
-qr	@	react-dom.production.min.js:109
-Ut	@	react-dom.production.min.js:74
-Kt	@	react-dom.production.min.js:73
-3.新建和编辑合作者里面的学校、专业、联系方式这三个去掉，高级合作者改成打勾的方式，还有小组的打勾选项没有了？加上
-4.idea发掘面板应该加入四个子面板，四个独立的子列表，但所有用户都能访问和修改，你逻辑错了
-5.idea管理界面不需要子面板，所有人都一个list
+1.idea发掘系统，你理解错了，idea发掘系统就是通过文献来发掘的，所以我说的分组是基于文献管理进行分组，而你现在是在idea发掘系统下面新建立了一个idea管理功能，而这个功能和idea管理面板里面的功能重复了，所以删除idea发掘面板里面的idea管理，把文献管理进行分组
+2.idea管理面板里面，我说了所有人共用一个list，现在还是出现了“zl的专属面板”这种字样，删除
+3.合作者管理里面，我取消了勾选“小组成员”之后，合作者还是小组成员的紫色图标，而且勾选“小组成员”之后，性别应该自动屏蔽不用选
