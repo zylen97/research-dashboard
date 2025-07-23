@@ -1,67 +1,55 @@
+# Research Dashboard 项目规范
 
-
-## ⚠️ 关键注意事项
-
-### 部署相关（最重要）
-- **必须**使用`./deploy-scripts/deploy.sh`部署
-- **禁止**直接git push
-- **必须**保留deploy-scripts目录
-- **验证**：使用`backend/test_integration.py`检查系统
-
-### 数据库相关
-- **必须**使用单一migration.py管理迁移
-- **必须**更新版本号避免重复执行
-
-### 开发相关
-- **避免**硬编码配置
-- **建议**本地测试后部署
-
-## 🔧 开发工具使用
-
-### 前端Hooks
-```typescript
-// 模态框表单管理
-const { isModalVisible, showModal, handleSubmit } = useModalForm();
-
-// 表格CRUD操作
-const { data, loading, handleDelete, refresh } = useTableCRUD();
-```
-
-### 后端工具
-```python
-# CRUD基类
-from app.utils.crud_base import CRUDBase
-
-# 统一响应
-from app.utils.response import create_response
-```
-
-### 系统验证
+## 🚀 部署
 ```bash
-# 运行集成验证
-cd backend && python test_integration.py
+./deploy-scripts/deploy.sh          # 自动部署所有
+./deploy-scripts/deploy.sh --backend # 仅后端
+./deploy-scripts/deploy.sh --frontend # 仅前端
 ```
 
-## 🎯 常用开发任务
+## 📦 数据库迁移
+```python
+# backend/migrations/migration.py
+MIGRATION_VERSION = "v1.12_feature_name"  # 更新版本号
+# 添加迁移代码...
+```
 
-### 添加新功能
-1. 开发功能（前端组件+后端API）
-2. 本地测试
-3. 部署：`./deploy-scripts/deploy.sh`
+## 🏗️ 项目结构
+```
+frontend/
+├── src/
+│   ├── components/   # 通用组件
+│   ├── pages/       # 页面组件
+│   ├── services/    # API调用
+│   └── hooks/       # 自定义hooks
+backend/
+├── app/
+│   ├── routes/      # API路由
+│   ├── models/      # 数据模型
+│   └── utils/       # 工具函数
+└── migrations/      # 数据库迁移
+```
 
-### 修复Bug
-1. 定位问题
-2. 修复代码
-3. 验证修复
-4. 部署：`./deploy-scripts/deploy.sh`
+## 💡 常用代码模板
 
-### 数据库修改
-1. 编辑`backend/migrations/migration.py`
-2. 更新`MIGRATION_VERSION`
-3. 部署：`./deploy-scripts/deploy.sh --backend`
+### 前端API调用
+```typescript
+import { api } from '@/services/api';
+const data = await api.get('/api/endpoint');
+```
+
+### 后端路由
+```python
+from app.utils.response import success_response
+@router.get("/")
+async def get_items(request: Request, db: Session = Depends(get_db)):
+    return success_response(data)
+```
+
+## ⚡ 核心规则
+1. **永远使用** deploy.sh 部署
+2. **永远更新** MIGRATION_VERSION
+3. **永远测试** 本地后再部署
 
 ---
-
-⚡ **核心原则**：所有代码修改都必须通过`./deploy-scripts/deploy.sh`部署到VPS！
-
-🚀 **Ultra Think**：代码写好 → 智能部署脚本 → 生产环境！
+**生产环境**: http://45.149.156.216:3001
