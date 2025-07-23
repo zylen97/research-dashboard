@@ -318,15 +318,9 @@ const CollaboratorManagement: React.FC = () => {
         onOk: () => {
           if (deleteTypeRef.current === 'hard') {
             // 硬删除：添加force参数
-            fetch(`${window.location.origin}/api/collaborators/${collaborator.id}?force=true`, {
-              method: 'DELETE',
-            }).then(response => {
-              if (response.ok) {
-                message.success('合作者已永久删除！');
-                queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-              } else {
-                message.error('删除失败，请稍后重试');
-              }
+            collaboratorApi.deleteCollaborator(collaborator.id, true).then(() => {
+              message.success('合作者已永久删除！');
+              queryClient.invalidateQueries({ queryKey: ['collaborators'] });
             }).catch(error => {
               message.error('删除失败：' + error.message);
             });

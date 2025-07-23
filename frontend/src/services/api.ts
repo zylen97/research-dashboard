@@ -124,8 +124,8 @@ export const collaboratorApi = {
     api.put(`/api/collaborators/${id}`, data),
 
   // 删除合作者
-  deleteCollaborator: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/collaborators/${id}`),
+  deleteCollaborator: (id: number, force: boolean = false): Promise<{ message: string }> =>
+    api.delete(`/api/collaborators/${id}${force ? '?force=true' : ''}`),
 
   // 获取合作者参与的项目
   getCollaboratorProjects: (id: number): Promise<ResearchProject[]> =>
