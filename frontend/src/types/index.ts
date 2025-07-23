@@ -275,6 +275,19 @@ export interface BatchMatchingResponse {
   error_count: number;
 }
 
+// 批量删除相关类型
+export interface BatchDeleteRequest {
+  literature_ids: number[];
+}
+
+export interface BatchDeleteResponse {
+  success: boolean;
+  message: string;
+  deleted_count: number;
+  failed_ids: number[];
+  errors: string[];
+}
+
 // AI提示词模板类型
 export interface PredefinedPrompt {
   id: string;

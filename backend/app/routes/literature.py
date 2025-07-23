@@ -34,6 +34,18 @@ from ..models import (
     BatchMatchingRequest, MatchingResult, BatchMatchingResponse,
     SystemConfig
 )
+
+# 批量删除请求模型
+class BatchDeleteRequest(BaseModel):
+    literature_ids: List[int]
+
+# 批量删除响应模型  
+class BatchDeleteResponse(BaseModel):
+    success: bool
+    message: str
+    deleted_count: int
+    failed_ids: List[int] = []
+    errors: List[str] = []
 from ..utils.encryption import encryption_util
 from ..core.ai_config import AIBatchConfig, performance_monitor, get_optimized_prompt_template, estimate_processing_time
 
@@ -158,6 +170,80 @@ async def delete_literature(
     db.delete(db_literature)
     db.commit()
     return {"message": "Literature deleted successfully"}
+
+@router.post("/batch-delete", response_model=BatchDeleteResponse)
+async def batch_delete_literature(
+    request: Request,
+    batch_request: BatchDeleteRequest,
+    db: Session = Depends(get_db)
+):
+    """批量删除文献"""
+    current_user = request.state.current_user
+    literature_ids = batch_request.literature_ids
+    
+    if not literature_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No literature IDs provided"
+        )
+    
+    # 验证所有文献是否存在并获取详细信息
+    existing_literature = db.query(Literature).filter(
+        Literature.id.in_(literature_ids)
+    ).all()
+    
+    existing_ids = {lit.id for lit in existing_literature}
+    missing_ids = [lit_id for lit_id in literature_ids if lit_id not in existing_ids]
+    
+    deleted_count = 0
+    failed_ids = []
+    errors = []
+    
+    # 使用事务确保批量操作的原子性
+    try:
+        for literature in existing_literature:
+            try:
+                db.delete(literature)
+                deleted_count += 1
+            except Exception as e:
+                failed_ids.append(literature.id)
+                errors.append(f"删除文献ID {literature.id} 失败: {str(e)}")
+                db.rollback()  # 回滚当前文献的删除
+                continue
+        
+        # 提交所有成功的删除操作
+        db.commit()
+        
+        # 处理不存在的文献ID
+        if missing_ids:
+            failed_ids.extend(missing_ids)
+            errors.extend([f"文献ID {lit_id} 不存在" for lit_id in missing_ids])
+        
+        success = deleted_count > 0
+        total_requested = len(literature_ids)
+        
+        if success:
+            if deleted_count == total_requested:
+                message = f"成功删除 {deleted_count} 篇文献"
+            else:
+                message = f"成功删除 {deleted_count} 篇文献，{len(failed_ids)} 篇失败"
+        else:
+            message = "所有文献删除失败"
+        
+        return BatchDeleteResponse(
+            success=success,
+            message=message,
+            deleted_count=deleted_count,
+            failed_ids=failed_ids,
+            errors=errors
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"批量删除操作失败: {str(e)}"
+        )
 
 @router.post("/upload", response_model=FileUploadResponse)
 async def upload_literature_file(

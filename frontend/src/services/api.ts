@@ -8,6 +8,7 @@ import {
   FileUploadResponse, ValidationRequest, ValidationResult,
   IdeasSummary, PaginationParams,
   BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
+  BatchDeleteRequest, BatchDeleteResponse,
   User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
@@ -257,6 +258,10 @@ export const literatureApi = {
   // 删除文献
   deleteLiterature: (id: number): Promise<{ message: string }> =>
     api.delete(`/api/literature/${id}`),
+
+  // 批量删除文献
+  batchDeleteLiterature: (data: BatchDeleteRequest): Promise<BatchDeleteResponse> =>
+    api.post('/api/literature/batch-delete', data),
 
   // 上传文献文件
   uploadLiteratureFile: (file: File): Promise<FileUploadResponse> => {

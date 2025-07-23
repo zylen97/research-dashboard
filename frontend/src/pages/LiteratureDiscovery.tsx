@@ -153,6 +153,40 @@ const LiteratureDiscovery: React.FC = () => {
     },
   });
 
+  // 批量删除文献mutation
+  const batchDeleteMutation = useMutation({
+    mutationFn: literatureApi.batchDeleteLiterature,
+    onSuccess: (response) => {
+      if (response.success) {
+        message.success(response.message);
+        if (response.errors.length > 0) {
+          // 如果有部分失败，显示详细信息
+          Modal.warning({
+            title: '部分删除失败',
+            content: (
+              <div>
+                <p>成功删除 {response.deleted_count} 篇文献</p>
+                <p>失败原因：</p>
+                <ul style={{ maxHeight: '200px', overflow: 'auto' }}>
+                  {response.errors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+          });
+        }
+      } else {
+        message.error(response.message);
+      }
+      setSelectedRowKeys([]);
+      queryClient.invalidateQueries({ queryKey: ['literature'] });
+    },
+    onError: (error) => {
+      message.error('批量删除失败：' + error.message);
+    },
+  });
+
   // 上传文件mutation
   const uploadMutation = useMutation({
     mutationFn: literatureApi.uploadLiteratureFile,
@@ -298,6 +332,34 @@ const LiteratureDiscovery: React.FC = () => {
   // 处理删除
   const handleDelete = (record: Literature) => {
     deleteLiteratureMutation.mutate(record.id);
+  };
+
+  // 处理批量删除
+  const handleBatchDelete = () => {
+    if (selectedRowKeys.length === 0) {
+      message.warning('请选择要删除的文献');
+      return;
+    }
+
+    Modal.confirm({
+      title: '批量删除确认',
+      content: (
+        <div>
+          <p>您确定要删除选中的 <strong>{selectedRowKeys.length}</strong> 篇文献吗？</p>
+          <p style={{ color: '#ff4d4f', fontSize: '14px' }}>
+            <strong>注意：此操作不可撤销！</strong>
+          </p>
+        </div>
+      ),
+      okText: '确认删除',
+      okType: 'danger',
+      cancelText: '取消',
+      onOk: () => {
+        batchDeleteMutation.mutate({
+          literature_ids: selectedRowKeys as number[]
+        });
+      },
+    });
   };
 
   // 处理转换为idea
@@ -546,6 +608,15 @@ const LiteratureDiscovery: React.FC = () => {
             >
               AI批量匹配 ({selectedRowKeys.length})
             </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              disabled={selectedRowKeys.length === 0}
+              onClick={handleBatchDelete}
+              loading={batchDeleteMutation.isPending}
+            >
+              批量删除 ({selectedRowKeys.length})
+            </Button>
           </Space>
           <Space>
             <Tag color="blue">共 {groupLiterature.length} 篇文献</Tag>
@@ -608,9 +679,6 @@ const LiteratureDiscovery: React.FC = () => {
             rowSelection={{
               selectedRowKeys,
               onChange: setSelectedRowKeys,
-              getCheckboxProps: (record) => ({
-                disabled: record.validation_status !== 'pending',
-              }),
             }}
             scroll={{ x: 1200 }}
           />
