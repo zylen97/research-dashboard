@@ -31,7 +31,6 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ideaApi, collaboratorApi } from '../services/api';
 import { Idea, IdeaCreate } from '../types';
-import { useAuth } from '../contexts/AuthContext';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -39,7 +38,6 @@ const { TextArea } = Input;
 const { Search } = Input;
 
 const IdeaManagement: React.FC = () => {
-  const { user } = useAuth();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isConvertModalVisible, setIsConvertModalVisible] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
@@ -250,21 +248,11 @@ const IdeaManagement: React.FC = () => {
     <div>
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div>
           <Title level={3} style={{ margin: 0 }}>
             <BulbOutlined style={{ marginRight: 8 }} />
             Idea管理
           </Title>
-          {user && (
-            <Tag color="blue" style={{ marginBottom: 0 }}>
-              <Avatar 
-                size="small" 
-                icon={<UserOutlined />} 
-                style={{ marginRight: 4 }}
-              />
-{user.display_name}
-            </Tag>
-          )}
         </div>
         <Button 
           type="primary" 
