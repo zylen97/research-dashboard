@@ -7,11 +7,33 @@
 ./deploy-scripts/deploy.sh --frontend # 仅前端
 ```
 
-## 📦 数据库迁移
+## 📦 数据库迁移（全自动）
+
+### 修改数据库结构
 ```python
-# backend/migrations/migration.py
-MIGRATION_VERSION = "v1.12_feature_name"  # 更新版本号
-# 添加迁移代码...
+# 1. 编辑 backend/migrations/migration.py
+MIGRATION_VERSION = "v1.12_your_feature"  # 改版本号
+
+# 2. 在 run_migration() 中添加
+if MIGRATION_VERSION == "v1.12_your_feature":
+    cursor.execute("CREATE TABLE ...")
+    cursor.execute("ALTER TABLE ... ADD COLUMN ...")
+
+# 3. 部署即自动执行
+./deploy-scripts/deploy.sh
+```
+
+### 常见数据库问题
+- **缺少表/字段**: 更新migration.py → 部署
+- **数据不一致**: 在migration中添加UPDATE语句
+- **需要回滚**: 使用自动生成的.backup文件
+
+### 快速诊断
+```bash
+# 查看错误日志
+journalctl -u research-backend -n 50 | grep -i error
+# 手动测试迁移
+cd backend && python migrations/migration.py
 ```
 
 ## 🏗️ 项目结构
@@ -48,8 +70,9 @@ async def get_items(request: Request, db: Session = Depends(get_db)):
 
 ## ⚡ 核心规则
 1. **永远使用** deploy.sh 部署
-2. **永远更新** MIGRATION_VERSION
+2. **永远更新** MIGRATION_VERSION（每次改数据库）
 3. **永远测试** 本地后再部署
+4. **一个文件** backend/migrations/migration.py 管理所有迁移
 
 ---
 **生产环境**: http://45.149.156.216:3001
