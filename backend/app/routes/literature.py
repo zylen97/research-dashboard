@@ -523,9 +523,9 @@ async def batch_match_literature(
             detail=f"Failed to load AI configuration: {str(e)}"
         )
     
-    # 批量获取文献数据，减少数据库查询次数
+    # 批量获取文献数据（用户隔离）
     literature_dict = await get_literature_batch(
-        db, matching_request.literature_ids, 1  # user_id参数已无用，传入任意值
+        db, matching_request.literature_ids, current_user.id
     )
     
     # 并发处理文献匹配
@@ -566,9 +566,12 @@ async def get_literature_batch(db: Session, literature_ids: List[int], user_id: 
     Returns:
         文献ID到Literature对象的映射字典
     """
-    # 所有数据共享，不过滤user_id，只按ID获取文献
+    # 用户隔离：只获取指定用户的文献
     literature_list = db.query(Literature).filter(
-        Literature.id.in_(literature_ids)
+        and_(
+            Literature.id.in_(literature_ids),
+            Literature.user_id == user_id
+        )
     ).all()
     
     return {lit.id: lit for lit in literature_list}
@@ -1100,9 +1103,12 @@ async def move_literature_to_folder(
     folder_id = move_data.get('folder_id')
     
     try:
-        # 验证文献存在
+        # 验证文献存在且属于当前用户
         literature = db.query(Literature).filter(
-            Literature.id == literature_id
+            and_(
+                Literature.id == literature_id,
+                Literature.user_id == current_user.id
+            )
         ).first()
         
         if not literature:
@@ -1190,9 +1196,12 @@ async def batch_move_literature_to_folder(
         
         for literature_id in move_request.literature_ids:
             try:
-                # 查找文献
+                # 查找文献（用户隔离）
                 literature = db.query(Literature).filter(
-                    Literature.id == literature_id
+                    and_(
+                        Literature.id == literature_id,
+                        Literature.user_id == current_user.id
+                    )
                 ).first()
                 
                 if not literature:

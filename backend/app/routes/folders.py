@@ -58,61 +58,36 @@ async def get_folder_tree(
             LiteratureFolder.created_at
         ).all()
         
-        # 构建文件夹字典
-        folder_dict = {}
-        folder_literature_count = {}
+        # 扁平化文件夹结构：直接将所有文件夹作为根级别显示
+        tree = []
         
-        # 计算每个文件夹的文献数量（包括子文件夹）
         for folder in folders:
-            # 直接在该文件夹中的文献数量
-            direct_count = db.query(Literature).filter(
+            # 计算该文件夹中的文献数量
+            literature_count = db.query(Literature).filter(
                 and_(
                     Literature.folder_id == folder.id,
                     Literature.user_id == current_user.id
                 )
             ).count()
             
-            folder_literature_count[folder.id] = direct_count
-            folder_dict[folder.id] = {
-                'folder': folder,
-                'children': [],
-                'literature_count': direct_count
-            }
+            # 创建扁平化的文件夹节点
+            tree_node = FolderTreeNode(
+                id=folder.id,
+                name=folder.name,
+                description=folder.description,
+                parent_id=None,  # 扁平化：所有文件夹都显示为根级别
+                is_root=folder.is_root,
+                sort_order=folder.sort_order,
+                literature_count=literature_count,
+                children=[],  # 扁平化：没有子文件夹
+                created_at=folder.created_at,
+                updated_at=folder.updated_at
+            )
+            tree.append(tree_node)
         
-        # 构建树形结构
-        def build_tree(parent_id: Optional[int] = None) -> List[FolderTreeNode]:
-            tree = []
-            for folder_id, folder_info in folder_dict.items():
-                folder = folder_info['folder']
-                if folder.parent_id == parent_id:
-                    # 递归构建子文件夹
-                    children = build_tree(folder.id)
-                    
-                    # 计算包含子文件夹的文献总数
-                    total_literature_count = folder_info['literature_count']
-                    for child in children:
-                        total_literature_count += child.literature_count
-                    
-                    tree_node = FolderTreeNode(
-                        id=folder.id,
-                        name=folder.name,
-                        description=folder.description,
-                        parent_id=folder.parent_id,
-                        is_root=folder.is_root,
-                        sort_order=folder.sort_order,
-                        literature_count=total_literature_count,
-                        children=children,
-                        created_at=folder.created_at,
-                        updated_at=folder.updated_at
-                    )
-                    tree.append(tree_node)
-            
-            # 按sort_order排序
-            tree.sort(key=lambda x: (x.sort_order, x.created_at))
-            return tree
-        
-        tree = build_tree()
-        logger.info(f"用户 {current_user.username} 获取文件夹树成功，根节点数: {len(tree)}")
+        # 按sort_order和创建时间排序
+        tree.sort(key=lambda x: (x.sort_order, x.created_at))
+        logger.info(f"用户 {current_user.username} 获取扁平化文件夹树成功，文件夹数: {len(tree)}")
         return tree
     except Exception as e:
         logger.error(f"获取文件夹树失败: {str(e)}")
@@ -152,39 +127,31 @@ async def create_folder(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """创建新文件夹"""
+    """创建新文件夹（扁平化结构：所有新文件夹都是根级别）"""
     try:
-        # 验证父文件夹是否存在且属于当前用户
-        if folder_data.parent_id:
-            parent_folder = db.query(LiteratureFolder).filter(
-                and_(
-                    LiteratureFolder.id == folder_data.parent_id,
-                    LiteratureFolder.user_id == current_user.id
-                )
-            ).first()
-            if not parent_folder:
-                raise HTTPException(status_code=404, detail="父文件夹不存在")
+        # 扁平化结构：忽略前端传入的parent_id，强制创建根级别文件夹
+        logger.info(f"用户 {current_user.username} 请求创建文件夹: {folder_data.name}")
         
-        # 检查同一层级下是否有重名文件夹
+        # 检查当前用户是否已有同名根文件夹
         existing_folder = db.query(LiteratureFolder).filter(
             and_(
                 LiteratureFolder.name == folder_data.name,
-                LiteratureFolder.parent_id == folder_data.parent_id,
+                LiteratureFolder.parent_id.is_(None),  # 只检查根级别文件夹
                 LiteratureFolder.user_id == current_user.id
             )
         ).first()
         
         if existing_folder:
-            raise HTTPException(status_code=400, detail="同一层级下已存在同名文件夹")
+            raise HTTPException(status_code=400, detail="已存在同名文件夹")
         
-        # 创建文件夹
+        # 创建扁平化的根级别文件夹
         folder = LiteratureFolder(
             name=folder_data.name,
             description=folder_data.description,
-            parent_id=folder_data.parent_id,
+            parent_id=None,  # 强制设为None（根级别）
             user_id=current_user.id,
-            group_name=current_user.username,  # 使用用户名作为分组
-            is_root=folder_data.parent_id is None,  # 无父文件夹时为根文件夹
+            group_name=current_user.username,  # 用户隔离标识
+            is_root=False,  # 用户创建的文件夹不是系统根文件夹
             sort_order=folder_data.sort_order or 0
         )
         
@@ -192,7 +159,7 @@ async def create_folder(
         db.commit()
         db.refresh(folder)
         
-        logger.info(f"用户 {current_user.username} 创建文件夹 {folder.name} 成功")
+        logger.info(f"用户 {current_user.username} 创建根级别文件夹 {folder.name} 成功 (ID: {folder.id})")
         return folder
     except HTTPException:
         raise
@@ -209,7 +176,7 @@ async def update_folder(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """更新文件夹"""
+    """更新文件夹（扁平化结构：禁止修改根文件夹）"""
     try:
         # 查找文件夹
         folder = db.query(LiteratureFolder).filter(
@@ -222,56 +189,33 @@ async def update_folder(
         if not folder:
             raise HTTPException(status_code=404, detail="文件夹不存在")
         
-        # 如果更新父文件夹，需要验证
-        if folder_data.parent_id is not None and folder_data.parent_id != folder.parent_id:
-            # 验证父文件夹存在且属于当前用户
-            if folder_data.parent_id != 0:  # 0表示移到根级别
-                parent_folder = db.query(LiteratureFolder).filter(
-                    and_(
-                        LiteratureFolder.id == folder_data.parent_id,
-                        LiteratureFolder.user_id == current_user.id
-                    )
-                ).first()
-                if not parent_folder:
-                    raise HTTPException(status_code=404, detail="父文件夹不存在")
-            
-            # 检查不能将文件夹移动到自己的子文件夹中
-            def is_descendant(parent_id, target_id):
-                if parent_id == target_id:
-                    return True
-                children = db.query(LiteratureFolder).filter(
-                    LiteratureFolder.parent_id == target_id
-                ).all()
-                for child in children:
-                    if is_descendant(parent_id, child.id):
-                        return True
-                return False
-            
-            if is_descendant(folder.id, folder_data.parent_id):
-                raise HTTPException(status_code=400, detail="不能将文件夹移动到自己的子文件夹中")
+        # 禁止修改系统根文件夹
+        if folder.is_root:
+            raise HTTPException(status_code=403, detail="系统根文件夹不能修改")
         
-        # 检查重名（如果更新了名称或父文件夹）
-        if folder_data.name and (folder_data.name != folder.name or folder_data.parent_id != folder.parent_id):
+        # 扁平化结构：忽略parent_id更新，保持所有文件夹为根级别
+        logger.info(f"用户 {current_user.username} 更新文件夹 {folder.name}")
+        
+        # 检查重名（扁平化结构：只需检查根级别重名）
+        if folder_data.name and folder_data.name != folder.name:
             existing_folder = db.query(LiteratureFolder).filter(
                 and_(
                     LiteratureFolder.name == folder_data.name,
-                    LiteratureFolder.parent_id == (folder_data.parent_id if folder_data.parent_id is not None else folder.parent_id),
+                    LiteratureFolder.parent_id.is_(None),  # 只检查根级别
                     LiteratureFolder.user_id == current_user.id,
                     LiteratureFolder.id != folder_id
                 )
             ).first()
             
             if existing_folder:
-                raise HTTPException(status_code=400, detail="同一层级下已存在同名文件夹")
+                raise HTTPException(status_code=400, detail="已存在同名文件夹")
         
-        # 更新字段
+        # 更新字段（扁平化结构：不允许修改parent_id）
         if folder_data.name is not None:
             folder.name = folder_data.name
         if folder_data.description is not None:
             folder.description = folder_data.description
-        if folder_data.parent_id is not None:
-            folder.parent_id = folder_data.parent_id if folder_data.parent_id != 0 else None
-            folder.is_root = folder.parent_id is None
+        # 扁平化结构：不更新parent_id，保持为None
         if folder_data.sort_order is not None:
             folder.sort_order = folder_data.sort_order
         

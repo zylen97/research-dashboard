@@ -17,7 +17,6 @@ import {
   EditOutlined,
   DeleteOutlined,
   MoreOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { folderApi } from '../../services/api';
@@ -104,20 +103,22 @@ const FolderTree: React.FC<FolderTreeProps> = ({
     },
   });
 
-  // 将FolderTreeNode转换为TreeDataNode
-  const convertToTreeData = React.useCallback((folders: FolderTreeNode[], searchValue: string = ''): TreeDataNode[] => {
-    return folders.map((folder) => {
+  // 将FolderTreeNode转换为TreeDataNode（扁平化结构，不显示层级）
+  const convertToTreeData = React.useCallback((folders: FolderTreeNode[]): TreeDataNode[] => {
+    // 扁平化处理：只显示根级文件夹，忽略children
+    const flatFolders = folders.map((folder) => ({
+      ...folder,
+      children: [] // 强制移除子文件夹显示
+    }));
+    
+    return flatFolders.map((folder) => {
       const node: TreeDataNode & { data?: FolderTreeNode } = {
         key: folder.id,
         title: folder.name,
-        icon: folder.children.length > 0 ? <FolderOutlined /> : <FileTextOutlined />,
-        isLeaf: folder.children.length === 0,
+        icon: <FolderOutlined />,
+        isLeaf: true, // 扁平结构中所有文件夹都是叶子节点
         data: folder, // 存储原始数据
       };
-      
-      if (folder.children.length > 0) {
-        node.children = convertToTreeData(folder.children, searchValue);
-      }
       
       return node;
     });
@@ -148,7 +149,7 @@ const FolderTree: React.FC<FolderTreeProps> = ({
     };
 
     const filtered = filterTree(folderTree);
-    return convertToTreeData(filtered, searchValue);
+    return convertToTreeData(filtered);
   }, [folderTree, searchValue, convertToTreeData]);
 
   // 自动展开搜索结果
@@ -192,22 +193,19 @@ const FolderTree: React.FC<FolderTreeProps> = ({
     return undefined;
   };
 
-  // 处理创建根文件夹
-  const handleCreateRootFolder = () => {
+  // 处理创建文件夹（只允许创建根级文件夹）
+  const handleCreateFolder = () => {
     setParentFolder(null);
     setEditingFolder(null);
     setIsModalVisible(true);
   };
 
-  // 处理创建子文件夹
-  const handleCreateSubfolder = (parent: FolderTreeNode) => {
-    setParentFolder(parent);
-    setEditingFolder(null);
-    setIsModalVisible(true);
-  };
-
-  // 处理编辑文件夹
+  // 处理编辑文件夹（禁止编辑根文件夹）
   const handleEditFolder = (folder: FolderTreeNode) => {
+    if (folder.is_root) {
+      message.warning('根文件夹不能编辑');
+      return;
+    }
     setEditingFolder(folder);
     setParentFolder(null);
     form.setFieldsValue({
@@ -288,7 +286,7 @@ const FolderTree: React.FC<FolderTreeProps> = ({
           <Button
             type="dashed"
             icon={<PlusOutlined />}
-            onClick={handleCreateRootFolder}
+            onClick={handleCreateFolder}
             style={{ width: '100%' }}
             size="small"
           >
@@ -345,15 +343,10 @@ const FolderTree: React.FC<FolderTreeProps> = ({
                     menu={{
                       items: [
                         {
-                          key: 'add-subfolder',
-                          icon: <PlusOutlined />,
-                          label: '新建子文件夹',
-                          onClick: () => handleCreateSubfolder(folder),
-                        },
-                        {
                           key: 'edit',
                           icon: <EditOutlined />,
                           label: '编辑',
+                          disabled: folder.is_root,
                           onClick: () => handleEditFolder(folder),
                         },
                         {
