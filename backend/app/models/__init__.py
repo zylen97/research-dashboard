@@ -6,7 +6,6 @@ from .database import (
     create_tables,
     Collaborator,
     ResearchProject,
-    Literature,
     CommunicationLog,
     AuditLog,
     User,
@@ -27,12 +26,6 @@ from .schemas import (
     ResearchProjectUpdate,
     ResearchProject as ResearchProjectSchema,
 
-    # Literature schemas
-    LiteratureBase,
-    LiteratureCreate,
-    LiteratureUpdate,
-    Literature as LiteratureSchema,
-
 
     # Communication Log schemas
     CommunicationLogBase,
@@ -52,8 +45,6 @@ from .schemas import (
 
     # Utility schemas
     FileUploadResponse,
-    ValidationRequest,
-    ValidationResult,
 
     # System Config schemas
     SystemConfigBase,
@@ -66,24 +57,18 @@ from .schemas import (
     AITestRequest,
     AITestResponse,
 
-    # Batch AI Matching schemas
-    BatchMatchingRequest,
-    MatchingResult,
-    BatchMatchingResponse
 )
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "Literature", "CommunicationLog", "AuditLog", "User", "SystemConfig",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
-    "LiteratureBase", "LiteratureCreate", "LiteratureUpdate", "LiteratureSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",
     "UserBase", "UserCreate", "UserUpdate", "UserLogin", "UserSchema",
     "Token",
-    "FileUploadResponse", "ValidationRequest", "ValidationResult",
+    "FileUploadResponse",
     "SystemConfigBase", "SystemConfigCreate", "SystemConfigUpdate", "SystemConfigSchema",
     "AIProviderConfig", "AITestRequest", "AITestResponse",
-    "BatchMatchingRequest", "MatchingResult", "BatchMatchingResponse"
 ]

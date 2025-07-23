@@ -17,8 +17,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 添加文献文件夹功能  
-MIGRATION_VERSION = "v1.11_add_literature_folders"
+# 迁移版本号 - 删除文献管理功能  
+MIGRATION_VERSION = "v1.12_remove_literature_system"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -82,99 +82,56 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.11迁移任务：添加文献文件夹功能
+        # 🔧 v1.12迁移任务：删除文献管理功能
         # ===========================================
         
-        logger.info("开始添加文献文件夹功能...")
+        logger.info("开始删除文献管理功能...")
         
-        # 步骤1：检查并创建literature_folders表
-        if not table_exists(cursor, 'literature_folders'):
-            logger.info("literature_folders表不存在，开始创建...")
+        # 步骤1：删除literature表
+        if table_exists(cursor, 'literature'):
+            logger.info("发现literature表，准备删除...")
             
-            # 创建literature_folders表
-            cursor.execute("""
-                CREATE TABLE literature_folders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name VARCHAR(100) NOT NULL,
-                    parent_id INTEGER,
-                    user_id INTEGER NOT NULL,
-                    group_name VARCHAR(50),
-                    description TEXT,
-                    is_root BOOLEAN DEFAULT FALSE,
-                    sort_order INTEGER DEFAULT 0,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (parent_id) REFERENCES literature_folders(id),
-                    FOREIGN KEY (user_id) REFERENCES users(id)
-                )
-            """)
-            logger.info("✅ literature_folders表创建成功")
+            # 先获取文献数据统计
+            cursor.execute("SELECT COUNT(*) FROM literature")
+            literature_count = cursor.fetchone()[0]
             
-            # 创建literature_folders表的索引
-            cursor.execute("CREATE INDEX idx_folder_name ON literature_folders(name)")
-            cursor.execute("CREATE INDEX idx_folder_parent_id ON literature_folders(parent_id)")
-            cursor.execute("CREATE INDEX idx_folder_user_id ON literature_folders(user_id)")
-            cursor.execute("CREATE INDEX idx_folder_group_name ON literature_folders(group_name)")
-            cursor.execute("CREATE INDEX idx_folder_is_root ON literature_folders(is_root)")
-            cursor.execute("CREATE INDEX idx_folder_created_at ON literature_folders(created_at)")
-            
-            # 复合索引
-            cursor.execute("CREATE INDEX idx_folder_user_group ON literature_folders(user_id, group_name)")
-            cursor.execute("CREATE INDEX idx_folder_parent_order ON literature_folders(parent_id, sort_order)")
-            cursor.execute("CREATE INDEX idx_folder_group_root ON literature_folders(group_name, is_root)")
-            
-            logger.info("✅ literature_folders表的所有索引创建成功")
+            # 删除literature表
+            cursor.execute("DROP TABLE IF EXISTS literature")
+            logger.info(f"✅ literature表删除成功 (包含{literature_count}条记录)")
         else:
-            logger.info("literature_folders表已存在，跳过创建")
+            logger.info("literature表不存在，跳过删除")
         
-        # 步骤2：为literature表添加folder_id字段
-        logger.info("检查literature表的folder_id字段...")
-        
-        # 检查literature表是否存在folder_id字段
-        column_names = get_table_columns(cursor, 'literature')
-        
-        if 'folder_id' not in column_names:
-            logger.info("literature表缺少folder_id字段，开始添加...")
+        # 步骤2：删除literature_folders表
+        if table_exists(cursor, 'literature_folders'):
+            logger.info("发现literature_folders表，准备删除...")
             
-            # 添加folder_id字段
-            cursor.execute("""
-                ALTER TABLE literature ADD COLUMN folder_id INTEGER DEFAULT NULL
-            """)
-            logger.info("✅ literature表的folder_id字段添加成功")
+            # 先获取文件夹数据统计
+            cursor.execute("SELECT COUNT(*) FROM literature_folders")
+            folder_count = cursor.fetchone()[0]
             
-            # 为folder_id字段创建索引
-            cursor.execute("CREATE INDEX idx_literature_folder_id ON literature(folder_id)")
-            cursor.execute("CREATE INDEX idx_literature_folder_user ON literature(folder_id, user_id)")
-            
-            logger.info("✅ literature表的folder_id索引创建成功")
+            # 删除literature_folders表
+            cursor.execute("DROP TABLE IF EXISTS literature_folders")
+            logger.info(f"✅ literature_folders表删除成功 (包含{folder_count}条记录)")
         else:
-            logger.info("literature表的folder_id字段已存在，跳过添加")
+            logger.info("literature_folders表不存在，跳过删除")
         
-        # 步骤3：为每个用户创建默认根文件夹
-        logger.info("开始为用户创建默认根文件夹...")
+        # 步骤3：清理其他文献相关数据（如果有的话）
+        logger.info("清理其他可能的文献相关数据...")
         
-        # 获取所有用户
-        cursor.execute("SELECT id, username FROM users")
-        users = cursor.fetchall()
+        # 删除可能存在的文献相关索引（SQLite会自动删除表时删除索引，这里只是确保）
+        logger.info("✅ 所有文献相关的索引已随表删除")
         
-        for user_id, username in users:
-            # 检查用户是否已有根文件夹
-            cursor.execute("""
-                SELECT id FROM literature_folders 
-                WHERE user_id = ? AND is_root = 1
-            """, (user_id,))
-            
-            if not cursor.fetchone():
-                # 创建默认根文件夹
-                cursor.execute("""
-                    INSERT INTO literature_folders (name, user_id, group_name, is_root, description, sort_order)
-                    VALUES (?, ?, ?, 1, '默认根文件夹', 0)
-                """, (f"{username}的文献", user_id, username))
-                
-                logger.info(f"✅ 已为用户 {username} 创建根文件夹")
+        # 步骤4：验证清理结果
+        remaining_literature_tables = []
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE '%literature%'")
+        results = cursor.fetchall()
+        for (table_name,) in results:
+            remaining_literature_tables.append(table_name)
         
-        # 步骤4：跳过创建预设文件夹，让用户自己创建需要的结构
-        logger.info("✅ 根文件夹创建完成，用户可自行创建所需的文件夹结构")
+        if remaining_literature_tables:
+            logger.warning(f"⚠️ 发现残留的文献相关表: {remaining_literature_tables}")
+        else:
+            logger.info("✅ 所有文献相关表已成功删除")
         
         # 提交更改
         conn.commit()
@@ -193,9 +150,6 @@ def run_migration():
         project_count = 0
         collaborator_count = 0
         user_count = 0
-        literature_count = 0
-        folder_count = 0
-        folder_stats = []
         
         try:
             cursor.execute("SELECT COUNT(*) FROM research_projects")
@@ -215,49 +169,31 @@ def run_migration():
         except:
             pass
         
+        # 验证文献相关表确实被删除
+        remaining_tables = []
         try:
-            cursor.execute("SELECT COUNT(*) FROM literature")
-            literature_count = cursor.fetchone()[0]
-        except:
-            pass
-        
-        try:
-            # 检查文件夹统计
-            cursor.execute("SELECT COUNT(*) FROM literature_folders")
-            folder_count = cursor.fetchone()[0]
-            
-            # 各用户的文件夹统计
-            cursor.execute("""
-                SELECT u.username, COUNT(lf.id) as folder_count,
-                       SUM(CASE WHEN lf.is_root = 1 THEN 1 ELSE 0 END) as root_folders
-                FROM users u
-                LEFT JOIN literature_folders lf ON u.id = lf.user_id
-                GROUP BY u.id, u.username
-                ORDER BY u.username
-            """)
-            folder_stats = cursor.fetchall()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND (name = 'literature' OR name = 'literature_folders')")
+            remaining_tables = [row[0] for row in cursor.fetchall()]
         except:
             pass
         
         conn.close()
         
         logger.info("=" * 60)
-        logger.info("🎉 文献文件夹功能迁移完成！")
+        logger.info("🎉 文献管理功能删除完成！")
         logger.info(f"📊 系统数据统计:")
         logger.info(f"   - 用户: {user_count}")
         logger.info(f"   - 项目: {project_count}")
         logger.info(f"   - 合作者: {collaborator_count}")
-        logger.info(f"   - 文献: {literature_count}")
-        logger.info(f"   - 文件夹: {folder_count}")
         
-        if folder_stats:
-            logger.info("📁 文件夹分布统计:")
-            for username, folder_count, root_folders in folder_stats:
-                logger.info(f"   - {username}: {folder_count}个文件夹 (包含{root_folders}个根文件夹)")
+        if remaining_tables:
+            logger.warning(f"⚠️ 发现未删除的文献相关表: {remaining_tables}")
+        else:
+            logger.info("✅ 所有文献相关表已成功删除")
         
-        logger.info("✅ 文献文件夹功能已就绪，支持层级组织和分组管理")
-        logger.info("✅ 每个用户已创建根文件夹，可自行创建所需的文件夹结构")
-        logger.info("✅ literature表已支持文件夹关联")
+        logger.info("✅ 文献管理功能已完全移除")
+        logger.info("✅ 系统现专注于Idea管理和发掘功能")
+        logger.info("✅ 数据库结构已优化，减少了存储开销")
         logger.info("=" * 60)
         
         return True

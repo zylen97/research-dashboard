@@ -2,13 +2,9 @@ import axios from 'axios';
 import {
   Collaborator, CollaboratorCreate, CollaboratorUpdate,
   ResearchProject, ResearchProjectCreate, ResearchProjectUpdate,
-  Literature, LiteratureCreate, LiteratureUpdate,
   CommunicationLog, CommunicationLogCreate, CommunicationLogUpdate,
-  FileUploadResponse, ValidationRequest, ValidationResult,
+  FileUploadResponse,
   PaginationParams,
-  BatchMatchingRequest, BatchMatchingResponse, PredefinedPrompt,
-  BatchDeleteRequest, BatchDeleteResponse,
-  LiteratureFolder, LiteratureFolderCreate, LiteratureFolderUpdate, FolderTreeNode,
   User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
@@ -234,111 +230,6 @@ export const researchApi = {
     api.put(`/api/research/${id}`, { is_todo }),
 };
 
-// 文件夹API
-export const folderApi = {
-  // 获取文件夹列表
-  getFolders: (): Promise<LiteratureFolder[]> =>
-    api.get('/api/folders/'),
-
-  // 获取文件夹树结构
-  getFolderTree: (): Promise<FolderTreeNode[]> =>
-    api.get('/api/folders/tree'),
-
-  // 获取单个文件夹
-  getFolder: (id: number): Promise<LiteratureFolder> =>
-    api.get(`/api/folders/${id}`),
-
-  // 创建文件夹
-  createFolder: (data: LiteratureFolderCreate): Promise<LiteratureFolder> =>
-    api.post('/api/folders/', data),
-
-  // 更新文件夹
-  updateFolder: (id: number, data: LiteratureFolderUpdate): Promise<LiteratureFolder> =>
-    api.put(`/api/folders/${id}`, data),
-
-  // 删除文件夹
-  deleteFolder: (id: number, moveToParent: boolean = true): Promise<{ message: string }> =>
-    api.delete(`/api/folders/${id}?move_to_parent=${moveToParent}`),
-
-  // 移动文件夹
-  moveFolder: (id: number, newParentId: number | null): Promise<LiteratureFolder> =>
-    api.put(`/api/folders/${id}/move`, { parent_id: newParentId }),
-
-  // 获取文件夹下的文献列表
-  getFolderLiterature: (id: number, params?: any): Promise<Literature[]> =>
-    api.get(`/api/folders/${id}/literature`, { params }),
-};
-
-// 文献API
-export const literatureApi = {
-  // 获取文献列表
-  getLiterature: (params?: PaginationParams & { 
-    status_filter?: string; 
-    validation_status?: string;
-  }): Promise<Literature[]> =>
-    api.get('/api/literature/', { params }),
-
-  // 获取单个文献
-  getLiteratureItem: (id: number): Promise<Literature> =>
-    api.get(`/api/literature/${id}`),
-
-  // 创建文献
-  createLiterature: (data: LiteratureCreate): Promise<Literature> =>
-    api.post('/api/literature/', data),
-
-  // 更新文献
-  updateLiterature: (id: number, data: LiteratureUpdate): Promise<Literature> =>
-    api.put(`/api/literature/${id}`, data),
-
-  // 删除文献
-  deleteLiterature: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/literature/${id}`),
-
-  // 批量删除文献
-  batchDeleteLiterature: (data: BatchDeleteRequest): Promise<BatchDeleteResponse> =>
-    api.post('/api/literature/batch-delete', data),
-
-  // 上传文献文件
-  uploadLiteratureFile: (file: File): Promise<FileUploadResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/api/literature/upload', formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
-  },
-
-  // 验证文献
-  validateLiterature: (data: ValidationRequest): Promise<ValidationResult[]> =>
-    api.post('/api/literature/validate', data),
-
-  // 转换文献为idea
-  convertToIdea: (id: number, ideaData?: any): Promise<{ message: string; idea_id: number }> =>
-    api.put(`/api/literature/${id}/convert-to-idea`, ideaData),
-
-  // 批量AI匹配文献 - 使用类型安全的接口
-  batchMatchLiterature: (data: BatchMatchingRequest): Promise<BatchMatchingResponse> =>
-    api.post('/api/literature/batch-match', data),
-
-  // 获取预定义的匹配提示词
-  getPredefinedPrompts: (): Promise<PredefinedPrompt[]> =>
-    api.get('/api/literature/prompts'),
-
-  // 移动文献到文件夹
-  moveLiteratureToFolder: (literatureId: number, folderId: number | null): Promise<Literature> =>
-    api.put(`/api/literature/${literatureId}/move`, { folder_id: folderId }),
-
-  // 批量移动文献到文件夹
-  batchMoveLiteratureToFolder: (literatureIds: number[], folderId: number | null): Promise<{
-    success: boolean;
-    message: string;
-    updated_count: number;
-    failed_ids: number[];
-    errors: string[];
-  }> =>
-    api.post('/api/literature/batch-move', { literature_ids: literatureIds, folder_id: folderId }),
-};
 
 
 // 认证API

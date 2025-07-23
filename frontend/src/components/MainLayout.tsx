@@ -3,7 +3,6 @@ import { Layout, Menu, Typography, Avatar, Dropdown, Button, theme, Space, Drawe
 import {
   DashboardOutlined,
   TeamOutlined,
-  BookOutlined,
   BulbOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
@@ -59,12 +58,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         icon: <TeamOutlined />,
         label: '合作者管理',
         onClick: () => navigate('/collaborators'),
-      },
-      {
-        key: '/literature',
-        icon: <BookOutlined />,
-        label: '文献管理',
-        onClick: () => navigate('/literature'),
       },
       {
         key: '/ideas',

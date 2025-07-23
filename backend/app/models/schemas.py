@@ -72,53 +72,6 @@ class ResearchProject(ResearchProjectBase):
     class Config:
         from_attributes = True
 
-# Literature schemas
-class LiteratureBase(BaseModel):
-    title: str = Field(..., max_length=500)
-    authors: Optional[str] = Field(None, max_length=500)
-    journal: Optional[str] = Field(None, max_length=200)
-    year: Optional[int] = Field(None, ge=1900, le=2030)
-    doi: Optional[str] = Field(None, max_length=100)
-    abstract: Optional[str] = None
-    keywords: Optional[str] = Field(None, max_length=500)
-    citation_count: int = Field(default=0, ge=0)
-
-class LiteratureCreate(LiteratureBase):
-    pass
-
-class LiteratureUpdate(BaseModel):
-    title: Optional[str] = Field(None, max_length=500)
-    authors: Optional[str] = Field(None, max_length=500)
-    journal: Optional[str] = Field(None, max_length=200)
-    year: Optional[int] = Field(None, ge=1900, le=2030)
-    doi: Optional[str] = Field(None, max_length=100)
-    abstract: Optional[str] = None
-    keywords: Optional[str] = Field(None, max_length=500)
-    citation_count: Optional[int] = Field(None, ge=0)
-    validation_status: Optional[str] = Field(None, max_length=50)
-    validation_score: Optional[float] = None
-    validation_reason: Optional[str] = None
-    status: Optional[str] = Field(None, max_length=50)
-    notes: Optional[str] = None
-    folder_id: Optional[int] = None  # 文件夹ID
-
-class Literature(LiteratureBase):
-    id: int
-    user_id: int
-    folder_id: Optional[int] = None  # 文件夹ID
-    validation_status: str
-    validation_score: Optional[float]
-    validation_reason: Optional[str]
-    status: str
-    notes: Optional[str]
-    created_at: datetime
-    updated_at: datetime
-    user: Optional['User'] = None
-    folder: Optional['LiteratureFolder'] = None  # 文件夹关联
-    
-    class Config:
-        from_attributes = True
-
 
 # Communication Log schemas
 class CommunicationLogBase(BaseModel):
@@ -205,16 +158,6 @@ class FileUploadResponse(BaseModel):
     imported_count: int
     errors: List[str] = []
 
-# API validation schemas
-class ValidationRequest(BaseModel):
-    literature_ids: List[int]
-    prompt: str
-
-class ValidationResult(BaseModel):
-    literature_id: int
-    status: str
-    score: Optional[float]
-    reason: str
 
 # User schemas
 class UserBase(BaseModel):
@@ -300,79 +243,6 @@ class AITestResponse(BaseModel):
     message: str
     response: Optional[str] = None
 
-# Literature Folder schemas
-class LiteratureFolderBase(BaseModel):
-    name: str = Field(..., max_length=100, description="文件夹名称")
-    description: Optional[str] = Field(None, description="文件夹描述")
-    parent_id: Optional[int] = Field(None, description="父文件夹ID")
-    sort_order: int = Field(default=0, description="排序顺序")
-
-class LiteratureFolderCreate(LiteratureFolderBase):
-    pass
-
-class LiteratureFolderUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100, description="文件夹名称")
-    description: Optional[str] = Field(None, description="文件夹描述")
-    parent_id: Optional[int] = Field(None, description="父文件夹ID")
-    sort_order: Optional[int] = Field(None, description="排序顺序")
-
-class LiteratureFolder(LiteratureFolderBase):
-    id: int
-    user_id: int
-    group_name: Optional[str] = Field(None, description="分组字段(zl/yq/zz/dj)")
-    is_root: bool = Field(default=False, description="是否为根文件夹")
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-# 文件夹树形结构响应模型
-class FolderTreeNode(BaseModel):
-    id: int
-    name: str
-    description: Optional[str] = None
-    parent_id: Optional[int] = None
-    is_root: bool = False
-    sort_order: int = 0
-    literature_count: int = 0  # 该文件夹中的文献数量
-    children: List['FolderTreeNode'] = []  # 子文件夹
-    created_at: datetime
-    updated_at: datetime
-
-# 批量删除schemas
-class BatchDeleteRequest(BaseModel):
-    literature_ids: List[int] = Field(..., description="要删除的文献ID列表")
-
-class BatchDeleteResponse(BaseModel):
-    success: bool
-    message: str
-    deleted_count: int
-    failed_ids: List[int] = []
-    errors: List[str] = []
-
-# Batch AI Matching schemas
-class BatchMatchingRequest(BaseModel):
-    literature_ids: List[int] = Field(..., description="文献ID列表")
-    prompt_template: str = Field(..., description="AI提示词模板")
-    ai_provider: str = Field(..., description="AI提供商名称")
-
-class MatchingResult(BaseModel):
-    literature_id: int
-    status: str  # "matched", "not_matched", "error"
-    score: Optional[float] = None
-    reason: str
-    ai_response: Optional[str] = None
-
-class BatchMatchingResponse(BaseModel):
-    success: bool
-    message: str
-    results: List[MatchingResult]
-    total_processed: int
-    successful_count: int
-    error_count: int
 
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
-Literature.model_rebuild()
-FolderTreeNode.model_rebuild()  # Fix FolderTreeNode self-reference

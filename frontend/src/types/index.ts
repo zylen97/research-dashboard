@@ -102,56 +102,6 @@ export interface ResearchProjectUpdate {
 }
 
 // 文献类型
-export interface Literature {
-  id: number;
-  title: string;
-  authors?: string;
-  journal?: string;
-  year?: number;
-  doi?: string;
-  abstract?: string;
-  keywords?: string;
-  citation_count: number;
-  folder_id?: number | null;  // 文件夹ID
-  validation_status: string;
-  validation_score?: number;
-  validation_reason?: string;
-  status: string;
-  notes?: string;
-  group_name?: string;  // 分组字段(zl/yq/zz/dj)
-  created_at: string;
-  updated_at: string;
-  folder?: LiteratureFolder;  // 文件夹关联
-}
-
-export interface LiteratureCreate {
-  title: string;
-  authors?: string;
-  journal?: string;
-  year?: number;
-  doi?: string;
-  abstract?: string;
-  keywords?: string;
-  citation_count?: number;
-  folder_id?: number | null;
-}
-
-export interface LiteratureUpdate {
-  title?: string;
-  authors?: string;
-  journal?: string;
-  year?: number;
-  doi?: string;
-  abstract?: string;
-  keywords?: string;
-  citation_count?: number;
-  folder_id?: number | null;  // 文件夹ID
-  validation_status?: string;
-  validation_score?: number;
-  validation_reason?: string;
-  status?: string;
-  notes?: string;
-}
 
 
 // 交流日志类型
@@ -196,112 +146,10 @@ export interface FileUploadResponse {
   errors: string[];
 }
 
-// 验证请求和响应
-export interface ValidationRequest {
-  literature_ids: number[];
-  prompt: string;
-}
-
-export interface ValidationResult {
-  literature_id: number;
-  status: string;
-  score?: number;
-  reason: string;
-  ai_response?: string;
-}
-
-// 批量AI匹配相关类型
-export interface BatchMatchingRequest {
-  literature_ids: number[];
-  prompt_template: string;
-  ai_provider: string;
-}
-
-export interface MatchingResult {
-  literature_id: number;
-  status: string;
-  score?: number;
-  reason: string;
-  ai_response?: string;
-}
-
-export interface BatchMatchingResponse {
-  success: boolean;
-  message: string;
-  results: MatchingResult[];
-  total_processed: number;
-  successful_count: number;
-  error_count: number;
-}
-
-// 文献文件夹类型
-export interface LiteratureFolder {
-  id: number;
-  name: string;
-  description?: string;
-  parent_id?: number;
-  user_id: number;
-  group_name?: string;  // 分组字段(zl/yq/zz/dj)
-  is_root: boolean;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface LiteratureFolderCreate {
-  name: string;
-  description?: string;
-  parent_id?: number;
-  sort_order?: number;
-}
-
-export interface LiteratureFolderUpdate {
-  name?: string;
-  description?: string;
-  parent_id?: number;
-  sort_order?: number;
-}
-
-// 文件夹树节点类型
-export interface FolderTreeNode {
-  id: number;
-  name: string;
-  description?: string;
-  parent_id?: number;
-  is_root: boolean;
-  sort_order: number;
-  literature_count: number;  // 该文件夹中的文献数量
-  children: FolderTreeNode[];  // 子文件夹
-  created_at: string;
-  updated_at: string;
-}
-
-// 批量删除相关类型
-export interface BatchDeleteRequest {
-  literature_ids: number[];
-}
-
-export interface BatchDeleteResponse {
-  success: boolean;
-  message: string;
-  deleted_count: number;
-  failed_ids: number[];
-  errors: string[];
-}
-
-// AI提示词模板类型
-export interface PredefinedPrompt {
-  id: string;
-  name: string;
-  template: string;
-}
-
 
 // 常量
 export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as const;
 export const PROJECT_STATUSES = ['active', 'completed', 'paused'] as const;
-export const LITERATURE_STATUSES = ['imported', 'reviewed'] as const;
-export const VALIDATION_STATUSES = ['pending', 'validated', 'rejected'] as const;
 
 // 导出API相关类型
 

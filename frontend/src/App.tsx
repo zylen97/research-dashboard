@@ -3,7 +3,6 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './components/MainLayout';
 import ResearchDashboard from './pages/ResearchDashboard';
 import CollaboratorManagement from './pages/CollaboratorManagement';
-import LiteratureDiscovery from './pages/LiteratureDiscovery';
 import IdeaDiscovery from './pages/IdeaDiscovery';
 import AuthPage from './pages/AuthPage';
 import DatabaseBackup from './pages/DatabaseBackup';
@@ -38,7 +37,6 @@ const ProtectedRoutes: React.FC = () => {
         <Route path="/dashboard" element={<ResearchDashboard />} />
         <Route path="/research" element={<Navigate to="/dashboard" replace />} />
         <Route path="/collaborators" element={<CollaboratorManagement />} />
-        <Route path="/literature" element={<LiteratureDiscovery />} />
         <Route path="/ideas" element={<IdeaDiscovery />} />
         <Route path="/backup" element={<DatabaseBackup />} />
         <Route path="/settings" element={<SystemSettings />} />

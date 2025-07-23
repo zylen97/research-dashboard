@@ -18,7 +18,7 @@ sys.path.append(os.path.dirname(__file__))
 from app.models.database import Base, engine, get_db
 from sqlalchemy import text
 from app.models.schemas import *
-from app.routes import auth, research, collaborators, literature, config, backup
+from app.routes import auth, research, collaborators, config, backup
 from app.routes import idea_discovery
 
 # 配置日志
@@ -48,7 +48,6 @@ class IntegrationValidator:
             'auth': auth.router,
             'research': research.router,
             'collaborators': collaborators.router,
-            'literature': literature.router,
             'idea_discovery': idea_discovery.router,
             'config': config.router,
             'backup': backup.router,
@@ -63,10 +62,6 @@ class IntegrationValidator:
             'collaborators': [
                 'GET /', 'POST /', 'PUT /{collaborator_id}', 'DELETE /{collaborator_id}',
                 'POST /upload', 'POST /create-batch'
-            ],
-            'literature': [
-                'GET /', 'POST /', 'PUT /{literature_id}', 'DELETE /{literature_id}',
-                'POST /upload', 'POST /batch-match', 'GET /prompts'
             ],
             'idea_discovery': [
                 'POST /upload', 'POST /process', 'GET /status/{processing_id}',
@@ -103,8 +98,7 @@ class IntegrationValidator:
             # 验证关键表存在
             required_tables = [
                 'users', 'collaborators', 'research_projects', 
-                'literature', 'communication_logs', 
-                'system_configs', 'audit_logs'
+                'communication_logs', 'system_configs', 'audit_logs'
             ]
             
             # SQLite查询所有表
@@ -121,7 +115,6 @@ class IntegrationValidator:
             
             # 验证关键字段
             self.validate_research_projects_fields(db)
-            self.validate_literature_fields(db)
             
             db.close()
             return self.results['database_schema']['failed'] == 0
@@ -149,23 +142,6 @@ class IntegrationValidator:
         except Exception as e:
             self.results['database_schema']['issues'].append(f"验证research_projects表失败: {str(e)}")
     
-    def validate_literature_fields(self, db):
-        """验证文献表的字段"""
-        try:
-            result = db.execute(text("PRAGMA table_info(literature)")).fetchall()
-            columns = [row[1] for row in result]
-            
-            required_fields = ['id', 'title', 'user_id', 'validation_status', 'validation_score']
-            
-            for field in required_fields:
-                if field in columns:
-                    logger.info(f"✓ literature.{field} 字段存在")
-                else:
-                    self.results['database_schema']['failed'] += 1
-                    self.results['database_schema']['issues'].append(f"literature表缺少字段: {field}")
-                    
-        except Exception as e:
-            self.results['database_schema']['issues'].append(f"验证literature表失败: {str(e)}")
     
     def validate_data_models(self) -> bool:
         """验证数据模型一致性"""
@@ -176,10 +152,7 @@ class IntegrationValidator:
             ('User', User),
             ('Collaborator', Collaborator),
             ('ResearchProject', ResearchProject),
-            ('Literature', Literature),
             ('SystemConfig', SystemConfig),
-            ('BatchMatchingRequest', BatchMatchingRequest),
-            ('BatchMatchingResponse', BatchMatchingResponse),
         ]
         
         for model_name, model_class in models_to_check:
@@ -205,7 +178,6 @@ class IntegrationValidator:
         # 检查关键类型定义
         type_checks = [
             ('ResearchProject中的is_todo字段', self.check_research_project_todo_field),
-            ('BatchMatching相关类型', self.check_batch_matching_types),
             ('SystemConfig类型', self.check_system_config_types),
         ]
         
@@ -235,16 +207,6 @@ class IntegrationValidator:
         except:
             return False
     
-    def check_batch_matching_types(self) -> bool:
-        """检查批量匹配类型"""
-        try:
-            required_types = [BatchMatchingRequest, MatchingResult, BatchMatchingResponse]
-            for type_class in required_types:
-                if not hasattr(type_class, '__fields__'):
-                    return False
-            return True
-        except:
-            return False
     
     def check_system_config_types(self) -> bool:
         """检查系统配置类型"""
