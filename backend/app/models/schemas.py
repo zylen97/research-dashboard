@@ -122,6 +122,7 @@ class IdeaBase(BaseModel):
     description: str
     source: str = Field(..., max_length=100)
     source_literature_id: Optional[int] = None
+    group_name: Optional[str] = Field(None, max_length=50)  # 分组字段
     difficulty_level: Optional[str] = Field(None, max_length=20)
     estimated_duration: Optional[str] = Field(None, max_length=50)
     required_skills: Optional[str] = Field(None, max_length=500)
@@ -135,6 +136,7 @@ class IdeaCreate(IdeaBase):
 class IdeaUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
     description: Optional[str] = None
+    group_name: Optional[str] = Field(None, max_length=50)  # 分组字段
     difficulty_level: Optional[str] = Field(None, max_length=20)
     estimated_duration: Optional[str] = Field(None, max_length=50)
     required_skills: Optional[str] = Field(None, max_length=500)
@@ -147,6 +149,7 @@ class Idea(IdeaBase):
     id: int
     status: str
     user_id: int
+    group_name: Optional[str] = None  # 确保输出包含分组字段
     created_at: datetime
     updated_at: datetime
     source_literature: Optional[Literature] = None

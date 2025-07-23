@@ -19,8 +19,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 迁移版本号 - 创建communication_logs表
-MIGRATION_VERSION = "v1.9_create_communication_logs_table"
+# 迁移版本号 - 为ideas表添加group字段
+MIGRATION_VERSION = "v1.10_add_group_to_ideas"
 
 def backup_database(db_path):
     """创建数据库备份"""
@@ -103,41 +103,98 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.9迁移任务：创建communication_logs表
+        # 🔧 v1.10迁移任务：创建ideas表并添加group字段
         # ===========================================
         
-        logger.info("开始创建communication_logs表...")
+        logger.info("开始检查ideas表...")
         
-        # 检查表是否已存在
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='communication_logs'")
-        if cursor.fetchone():
-            logger.info("communication_logs表已存在，跳过创建")
-        else:
-            # 创建communication_logs表
+        # 检查ideas表是否存在
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='ideas'")
+        if not cursor.fetchone():
+            logger.info("ideas表不存在，开始创建...")
+            
+            # 创建ideas表
             cursor.execute("""
-                CREATE TABLE communication_logs (
+                CREATE TABLE ideas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    project_id INTEGER NOT NULL,
-                    collaborator_id INTEGER,
-                    communication_type VARCHAR(50),
                     title VARCHAR(200) NOT NULL,
-                    content TEXT NOT NULL,
-                    outcomes TEXT,
-                    action_items TEXT,
-                    communication_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    description TEXT NOT NULL,
+                    source VARCHAR(100),
+                    source_literature_id INTEGER,
+                    user_id INTEGER NOT NULL,
+                    group_name VARCHAR(50),
+                    difficulty_level VARCHAR(20),
+                    estimated_duration VARCHAR(50),
+                    required_skills VARCHAR(500),
+                    potential_impact VARCHAR(20),
+                    status VARCHAR(50) DEFAULT 'pool',
+                    priority VARCHAR(20) DEFAULT 'medium',
+                    tags VARCHAR(500),
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (project_id) REFERENCES research_projects(id) ON DELETE CASCADE,
-                    FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
+                    FOREIGN KEY (source_literature_id) REFERENCES literature(id),
+                    FOREIGN KEY (user_id) REFERENCES users(id)
                 )
             """)
-            logger.info("✅ communication_logs表创建成功")
+            logger.info("✅ ideas表创建成功")
             
-            # 创建索引以提高查询性能
-            cursor.execute("CREATE INDEX idx_communication_logs_project_id ON communication_logs(project_id)")
-            cursor.execute("CREATE INDEX idx_communication_logs_collaborator_id ON communication_logs(collaborator_id)")
-            cursor.execute("CREATE INDEX idx_communication_logs_communication_date ON communication_logs(communication_date)")
-            logger.info("✅ communication_logs表索引创建成功")
+            # 创建索引
+            cursor.execute("CREATE INDEX idx_ideas_title ON ideas(title)")
+            cursor.execute("CREATE INDEX idx_ideas_source ON ideas(source)")
+            cursor.execute("CREATE INDEX idx_ideas_source_literature ON ideas(source_literature_id)")
+            cursor.execute("CREATE INDEX idx_ideas_user_id ON ideas(user_id)")
+            cursor.execute("CREATE INDEX idx_ideas_group_name ON ideas(group_name)")
+            cursor.execute("CREATE INDEX idx_ideas_difficulty_level ON ideas(difficulty_level)")
+            cursor.execute("CREATE INDEX idx_ideas_potential_impact ON ideas(potential_impact)")
+            cursor.execute("CREATE INDEX idx_ideas_status ON ideas(status)")
+            cursor.execute("CREATE INDEX idx_ideas_priority ON ideas(priority)")
+            cursor.execute("CREATE INDEX idx_ideas_created_at ON ideas(created_at)")
+            
+            # 复合索引
+            cursor.execute("CREATE INDEX idx_ideas_user_status ON ideas(user_id, status)")
+            cursor.execute("CREATE INDEX idx_ideas_user_priority ON ideas(user_id, priority)")
+            cursor.execute("CREATE INDEX idx_ideas_difficulty_impact ON ideas(difficulty_level, potential_impact)")
+            cursor.execute("CREATE INDEX idx_ideas_created_user ON ideas(created_at, user_id)")
+            cursor.execute("CREATE INDEX idx_ideas_group_status ON ideas(group_name, status)")
+            cursor.execute("CREATE INDEX idx_ideas_group_priority ON ideas(group_name, priority)")
+            
+            logger.info("✅ ideas表的所有索引创建成功")
+        else:
+            logger.info("ideas表已存在，检查group_name字段...")
+            
+            # 检查group字段是否已存在
+            cursor.execute("PRAGMA table_info(ideas)")
+            columns = cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            
+            if 'group_name' in column_names:
+                logger.info("ideas表的group_name字段已存在，跳过添加")
+            else:
+                # 添加group_name字段
+                cursor.execute("""
+                    ALTER TABLE ideas ADD COLUMN group_name VARCHAR(50) DEFAULT NULL
+                """)
+                logger.info("✅ ideas表的group_name字段添加成功")
+                
+                # 创建group_name的索引以提高查询性能
+                cursor.execute("CREATE INDEX idx_ideas_group_name ON ideas(group_name)")
+                cursor.execute("CREATE INDEX idx_ideas_group_status ON ideas(group_name, status)")
+                cursor.execute("CREATE INDEX idx_ideas_group_priority ON ideas(group_name, priority)")
+                logger.info("✅ ideas表的group_name索引创建成功")
+                
+                # 为现有数据设置默认分组(根据user_id)
+                cursor.execute("""
+                    UPDATE ideas 
+                    SET group_name = CASE 
+                        WHEN user_id = 1 THEN 'zl'
+                        WHEN user_id = 2 THEN 'zz'
+                        WHEN user_id = 3 THEN 'yq'
+                        WHEN user_id = 4 THEN 'dj'
+                        ELSE NULL
+                    END
+                    WHERE group_name IS NULL
+                """)
+                logger.info("✅ 已为现有ideas数据设置默认分组")
         
         # 提交更改
         conn.commit()
@@ -152,20 +209,41 @@ def run_migration():
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
         
-        cursor.execute("SELECT COUNT(*) FROM research_projects")
-        project_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM collaborators")
-        collaborator_count = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM users")
-        user_count = cursor.fetchone()[0]
+        # 安全地获取表数据
+        project_count = 0
+        collaborator_count = 0
+        user_count = 0
+        idea_count = 0
+        group_counts = []
         
-        # 检查communication_logs表
-        cursor.execute("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='communication_logs'")
-        comm_logs_exists = cursor.fetchone()[0] > 0
-        comm_count = 0
-        if comm_logs_exists:
-            cursor.execute("SELECT COUNT(*) FROM communication_logs")
-            comm_count = cursor.fetchone()[0]
+        try:
+            cursor.execute("SELECT COUNT(*) FROM research_projects")
+            project_count = cursor.fetchone()[0]
+        except:
+            pass
+            
+        try:
+            cursor.execute("SELECT COUNT(*) FROM collaborators")
+            collaborator_count = cursor.fetchone()[0]
+        except:
+            pass
+            
+        try:
+            cursor.execute("SELECT COUNT(*) FROM users")
+            user_count = cursor.fetchone()[0]
+        except:
+            pass
+        
+        try:
+            # 检查ideas表
+            cursor.execute("SELECT COUNT(*) FROM ideas")
+            idea_count = cursor.fetchone()[0]
+            
+            # 检查各组的ideas数量
+            cursor.execute("SELECT group_name, COUNT(*) FROM ideas WHERE group_name IS NOT NULL GROUP BY group_name")
+            group_counts = cursor.fetchall()
+        except:
+            pass
         
         conn.close()
         
@@ -175,11 +253,14 @@ def run_migration():
         logger.info(f"   - 用户: {user_count}")
         logger.info(f"   - 项目: {project_count}")
         logger.info(f"   - 合作者: {collaborator_count}")
+        logger.info(f"   - Ideas: {idea_count}")
         
-        if comm_logs_exists:
-            logger.info(f"   - 交流记录: {comm_count}")
-            logger.info("✅ communication_logs表已创建，交流进度功能已就绪")
+        if group_counts:
+            logger.info("📊 Ideas分组统计:")
+            for group_name, count in group_counts:
+                logger.info(f"   - {group_name}: {count}")
         
+        logger.info("✅ ideas表的group_name字段已添加，4个子面板功能已就绪")
         logger.info("=" * 50)
         
         return True

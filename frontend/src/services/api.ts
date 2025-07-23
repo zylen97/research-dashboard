@@ -278,6 +278,7 @@ export const ideaApi = {
     status_filter?: string;
     priority_filter?: string;
     source_filter?: string;
+    group_filter?: string;
   }): Promise<Idea[]> =>
     api.get('/api/ideas/', { params }),
 

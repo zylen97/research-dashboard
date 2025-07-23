@@ -150,6 +150,7 @@ export interface Idea {
   source: string;
   source_literature_id?: number;
   user_id: number;
+  group_name?: string;  // 分组字段(zl/yq/zz/dj)
   difficulty_level?: string;
   estimated_duration?: string;
   required_skills?: string;
@@ -168,6 +169,7 @@ export interface IdeaCreate {
   description: string;
   source: string;
   source_literature_id?: number;
+  group_name?: string;  // 分组字段(zl/yq/zz/dj)
   difficulty_level?: string;
   estimated_duration?: string;
   required_skills?: string;
@@ -179,6 +181,7 @@ export interface IdeaCreate {
 export interface IdeaUpdate {
   title?: string;
   description?: string;
+  group_name?: string;  // 分组字段(zl/yq/zz/dj)
   difficulty_level?: string;
   estimated_duration?: string;
   required_skills?: string;

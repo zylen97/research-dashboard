@@ -16,6 +16,7 @@ async def get_ideas(
     status_filter: Optional[str] = None,
     priority_filter: Optional[str] = None,
     source_filter: Optional[str] = None,
+    group_filter: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """获取idea列表（数据共享，user_id仅用于前端分类展示）"""
@@ -32,6 +33,8 @@ async def get_ideas(
         query = query.filter(Idea.priority == priority_filter)
     if source_filter:
         query = query.filter(Idea.source == source_filter)
+    if group_filter:
+        query = query.filter(Idea.group_name == group_filter)
     
     ideas = query.order_by(Idea.created_at.desc()).offset(skip).limit(limit).all()
     return ideas
@@ -67,7 +70,19 @@ async def create_idea(
     """创建新idea"""
     current_user = request.state.current_user
     
-    db_idea = Idea(**idea.dict(), user_id=current_user.id)
+    # 创建idea时，如果没有指定group_name，则使用默认规则
+    idea_data = idea.dict()
+    if not idea_data.get('group_name'):
+        # 根据user_id设置默认分组
+        user_group_map = {
+            1: 'zl',
+            2: 'zz', 
+            3: 'yq',
+            4: 'dj'
+        }
+        idea_data['group_name'] = user_group_map.get(current_user.id, None)
+    
+    db_idea = Idea(**idea_data, user_id=current_user.id)
     db.add(db_idea)
     db.commit()
     db.refresh(db_idea)

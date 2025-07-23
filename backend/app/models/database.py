@@ -113,6 +113,9 @@ class Idea(Base):
     # User ownership
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     
+    # Group field for 4 sub-panels (zl/yq/zz/dj)
+    group_name = Column(String(50), index=True)  # 分组字段，用于4个子面板
+    
     # Idea details
     difficulty_level = Column(String(20), index=True)  # easy, medium, hard - 难度索引
     estimated_duration = Column(String(50))  # 预计耗时
@@ -137,6 +140,8 @@ class Idea(Base):
         Index('idx_idea_user_priority', 'user_id', 'priority'),
         Index('idx_idea_difficulty_impact', 'difficulty_level', 'potential_impact'),
         Index('idx_idea_created_user', 'created_at', 'user_id'),
+        Index('idx_idea_group_status', 'group_name', 'status'),
+        Index('idx_idea_group_priority', 'group_name', 'priority'),
     )
 
 class AuditLog(Base):
