@@ -101,8 +101,6 @@ export interface ResearchProjectUpdate {
   is_todo?: boolean; // 是否标记为待办事项
 }
 
-// 文献类型
-
 
 // 交流日志类型
 export interface CommunicationLog {

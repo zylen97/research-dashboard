@@ -1,9 +1,34 @@
 结合前端和后端和数据库进行如下开发：
 
-我现在认为idea发掘这个功能有点鸡肋了。我现在是这样想的，完全删除将文献数据导入数据库，然后好的文献转换到idea管理这个想法。而是：
+idea发掘面板：
 
-将idea发掘不经过web应用的数据库，web应用只提供读取文献摘要和基本信息，利用大预言模型api，用prompt来生成idea迁移意见，然后再写入csv。具体工作流如下：
-
-即兴.xlsx是一个存着很多文献信息的xlsx，你的工作流是，用户将xlsx上传到你的idea发掘面板，然后你转换为csv，每条文献都会有英文或中文的“摘要”列和“标题”列，你逐条文献将“摘要”列和“标题”列用设置的prmopt调用大预言模型api，然后生成迁移意见，再将迁移意见写入csv的一列中，叫做“迁移意见by[这里填入大模型的名字]”，最后将这个写入新列的csv转换为xlsx，这个xlsx供用户下载即可。
-
-仔细思考，帮我实现这个功能，原来的idea发掘的功能和元素都删除，用新的替换。我相信这可以大大简化工程的复杂度。请注意，这里的数据如何和数据库交互，最大程度的减少写入vps的数据库中。
+1.无法上传xlsx，报错：POST http://localhost:8001/api/folders/create 500 (Internal Server Error)
+dispatchXhrRequest @ axios.js?v=e6383e6c:1651
+xhr @ axios.js?v=e6383e6c:1531
+dispatchRequest @ axios.js?v=e6383e6c:2006
+Promise.then
+_request @ axios.js?v=e6383e6c:2209
+request @ axios.js?v=e6383e6c:2118
+httpMethod @ axios.js?v=e6383e6c:2256
+wrap @ axios.js?v=e6383e6c:8
+createFolder @ folderApi.ts:16
+handleSaveFolder @ LiteratureManagement.tsx:199
+await in handleSaveFolder
+handleOk @ antd.js?v=e6383e6c:19355
+(anonymous) @ antd.js?v=e6383e6c:13632
+callCallback2 @ chunk-PJEEZAML.js?v=e6383e6c:3674
+invokeGuardedCallbackDev @ chunk-PJEEZAML.js?v=e6383e6c:3699
+invokeGuardedCallback @ chunk-PJEEZAML.js?v=e6383e6c:3733
+invokeGuardedCallbackAndCatchFirstError @ chunk-PJEEZAML.js?v=e6383e6c:3736
+executeDispatch @ chunk-PJEEZAML.js?v=e6383e6c:7014
+processDispatchQueueItemsInOrder @ chunk-PJEEZAML.js?v=e6383e6c:7034
+processDispatchQueue @ chunk-PJEEZAML.js?v=e6383e6c:7043
+dispatchEventsForPlugins @ chunk-PJEEZAML.js?v=e6383e6c:7051
+(anonymous) @ chunk-PJEEZAML.js?v=e6383e6c:7174
+batchedUpdates$1 @ chunk-PJEEZAML.js?v=e6383e6c:18913
+batchedUpdates @ chunk-PJEEZAML.js?v=e6383e6c:3579
+dispatchEventForPluginEventSystem @ chunk-PJEEZAML.js?v=e6383e6c:7173
+dispatchEventWithEnableCapturePhaseSelectiveHydrationWithoutDiscreteEventReplay @ chunk-PJEEZAML.js?v=e6383e6c:5478
+dispatchEvent @ chunk-PJEEZAML.js?v=e6383e6c:5472
+dispatchDiscreteEvent @ chunk-PJEEZAML.js?v=e6383e6c:5449Understand this error
+2.功能说明部分，删除，不需要

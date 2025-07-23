@@ -367,8 +367,9 @@ fi
 
 # 7. 显示部署结果
 echo ""
-echo -e "${GREEN}🎉 === Ultra Think 更新完成 === ${NC}"
-echo -e "${CYAN}=== 系统状态 ===${NC}"
+echo -e "${GREEN}🎉 === Research Dashboard 部署完成 === ${NC}"
+echo ""
+echo -e "${CYAN}=== 📊 部署摘要 ===${NC}"
 
 # 系统信息
 echo -e "  🌍 环境: $ENVIRONMENT"
@@ -404,5 +405,12 @@ if [ -f "$PROJECT_ROOT/backend/data/research_dashboard_prod.db" ]; then
 fi
 
 echo ""
-echo -e "${GREEN}✅ Ultra Think 部署成功！系统已优化至生产标准${NC}"
-log_message "INFO" "Ultra Think 部署完成"
+echo -e "${GREEN}✅ 部署成功！系统运行正常${NC}"
+echo ""
+echo -e "${YELLOW}🔧 常用管理命令：${NC}"
+echo "  systemctl status research-backend  # 查看后端状态"
+echo "  journalctl -u research-backend -f  # 查看实时日志"
+echo "  ./deploy-scripts/verify-deployment.sh  # 运行系统检查"
+echo "  ./deploy-scripts/rollback.sh       # 快速回滚"
+echo ""
+log_message "INFO" "Research Dashboard 部署完成"

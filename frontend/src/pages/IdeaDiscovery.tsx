@@ -4,251 +4,105 @@ import {
   Button,
   Upload,
   Typography,
-  Space,
-  Steps,
-  Progress,
   Alert,
-  Divider,
-  Row,
-  Col,
   Spin,
   Result,
   message,
+  Select,
+  Space,
 } from 'antd';
 import {
-  UploadOutlined,
   FileExcelOutlined,
   RobotOutlined,
   DownloadOutlined,
   BulbOutlined,
-  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { ideaDiscoveryApi } from '../services/api';
 
 const { Title, Text, Paragraph } = Typography;
-const { Step } = Steps;
+const { Option } = Select;
 
-interface ProcessingStage {
-  current: number;
-  status: 'wait' | 'process' | 'finish' | 'error';
-  description: string;
-  progress: number;
-}
-
-interface UploadedFileInfo {
-  file: File;
-  fileId: string;
-  fileName: string;
-  fileSize: number;
-  columns: string[];
-  rowCount: number;
+// 处理状态枚举
+enum ProcessingState {
+  IDLE = 'idle',           // 空闲状态
+  UPLOADING = 'uploading', // 上传中
+  PROCESSING = 'processing', // 处理中
+  COMPLETED = 'completed',   // 完成
+  ERROR = 'error'           // 错误
 }
 
 const IdeaDiscovery: React.FC = () => {
-  const [uploadedFile, setUploadedFile] = useState<UploadedFileInfo | null>(null);
-  const [processing, setProcessing] = useState(false);
-  const [processStage, setProcessStage] = useState<ProcessingStage>({
-    current: 0,
-    status: 'wait',
-    description: '等待开始处理...',
-    progress: 0
-  });
-  const [_processingId, setProcessingId] = useState<string | null>(null);
-  const [resultFileId, setResultFileId] = useState<string | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [state, setState] = useState<ProcessingState>(ProcessingState.IDLE);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [aiProvider, setAiProvider] = useState<string>('openai');
+  const [resultBlob, setResultBlob] = useState<Blob | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [processingStartTime, setProcessingStartTime] = useState<number>(0);
 
-  // 处理文件上传
-  const handleFileUpload = async (file: File) => {
-    setUploading(true);
-    setErrorMessage(null);
-    
-    try {
-      const response = await ideaDiscoveryApi.uploadFile(file);
-      
-      setUploadedFile({
-        file,
-        fileId: response.file_id,
-        fileName: response.file_name,
-        fileSize: response.file_size,
-        columns: response.columns,
-        rowCount: response.row_count,
-      });
-      
-      setProcessStage({
-        current: 0,
-        status: 'finish',
-        description: '文件上传完成',
-        progress: 0
-      });
-      
-      setResultFileId(null);
-      message.success('文件上传成功！');
-      
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : '文件上传失败');
-      message.error('文件上传失败');
-    } finally {
-      setUploading(false);
-    }
-    
-    return false; // 阻止antd的自动上传
+  // 处理文件选择
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setResultBlob(null);
+    setErrorMessage('');
+    setState(ProcessingState.IDLE);
+    return false; // 阻止自动上传
   };
 
-  // 开始处理流程
+  // 开始处理
   const handleStartProcessing = async () => {
-    if (!uploadedFile) return;
+    if (!selectedFile) return;
 
-    setProcessing(true);
-    setErrorMessage(null);
+    setState(ProcessingState.PROCESSING);
+    setProcessingStartTime(Date.now());
+    setErrorMessage('');
 
     try {
-      // 启动处理任务
-      const response = await ideaDiscoveryApi.startProcessing({
-        file_id: uploadedFile.fileId,
-        ai_provider: 'openai',
-      });
-
-      const newProcessingId = response.data.processing_id;
-      setProcessingId(newProcessingId);
-
-      // 开始轮询处理状态
-      pollProcessingStatus(newProcessingId);
-
-    } catch (error) {
-      setProcessStage({
-        current: 0,
-        status: 'error',
-        description: '启动处理失败',
-        progress: 0
-      });
-      setErrorMessage(error instanceof Error ? error.message : '处理启动失败');
-      setProcessing(false);
+      const blob = await ideaDiscoveryApi.processExcel(selectedFile, aiProvider);
+      setResultBlob(blob);
+      setState(ProcessingState.COMPLETED);
+      message.success('处理完成！');
+    } catch (error: any) {
+      console.error('处理失败:', error);
+      const errorMsg = error.response?.data?.detail || error.message || '处理失败，请重试';
+      setErrorMessage(errorMsg);
+      setState(ProcessingState.ERROR);
+      message.error('处理失败');
     }
   };
 
-  // 轮询处理状态
-  const pollProcessingStatus = async (procId: string) => {
-    const poll = async () => {
-      try {
-        const status = await ideaDiscoveryApi.getProcessingStatus(procId);
-        
-        setProcessStage({
-          current: status.current_step,
-          status: status.status === 'completed' ? 'finish' : 
-                  status.status === 'error' ? 'error' : 'process',
-          description: status.message,
-          progress: status.progress
-        });
+  // 下载结果
+  const handleDownload = () => {
+    if (!resultBlob || !selectedFile) return;
 
-        if (status.status === 'completed') {
-          // 处理完成，提取结果文件ID
-          const resultMatch = status.message.match(/结果文件ID: (result_proc_[^)]+)/);
-          if (resultMatch && resultMatch[1]) {
-            setResultFileId(resultMatch[1]);
-          }
-          setProcessing(false);
-          message.success('处理完成！');
-          
-        } else if (status.status === 'error') {
-          setProcessing(false);
-          setErrorMessage(status.message);
-          message.error('处理失败');
-          
-        } else {
-          // 继续轮询
-          setTimeout(poll, 2000);
-        }
-        
-      } catch (error) {
-        setProcessStage({
-          current: processStage.current,
-          status: 'error',
-          description: '获取处理状态失败',
-          progress: 0
-        });
-        setErrorMessage(error instanceof Error ? error.message : '状态查询失败');
-        setProcessing(false);
-      }
-    };
-
-    poll();
-  };
-
-  // 下载结果文件
-  const handleDownload = async () => {
-    if (!resultFileId) return;
-    
-    try {
-      const blob = await ideaDiscoveryApi.downloadResult(resultFileId);
-      
-      // 创建下载链接
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `enhanced_${uploadedFile?.fileName || 'result.xlsx'}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
-      message.success('文件下载成功！');
-    } catch (error) {
-      message.error('文件下载失败');
-      console.error('下载错误:', error);
-    }
+    const url = window.URL.createObjectURL(resultBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `enhanced_${selectedFile.name}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+    message.success('文件下载成功！');
   };
 
   // 重置状态
-  const handleReset = async () => {
-    // 清理服务器上的临时文件
-    if (uploadedFile?.fileId) {
-      try {
-        await ideaDiscoveryApi.cleanupFile(uploadedFile.fileId);
-      } catch (error) {
-        console.error('清理文件失败:', error);
-      }
-    }
-    
-    setUploadedFile(null);
-    setProcessing(false);
-    setProcessStage({
-      current: 0,
-      status: 'wait',
-      description: '等待开始处理...',
-      progress: 0
-    });
-    setProcessingId(null);
-    setResultFileId(null);
-    setErrorMessage(null);
-    setUploading(false);
+  const handleReset = () => {
+    setSelectedFile(null);
+    setResultBlob(null);
+    setErrorMessage('');
+    setState(ProcessingState.IDLE);
+    setProcessingStartTime(0);
   };
 
-  const steps = [
-    {
-      title: '上传Excel',
-      description: '上传包含研究数据的Excel文件',
-      icon: <UploadOutlined />,
-    },
-    {
-      title: '格式转换',
-      description: '将Excel转换为CSV格式进行处理',
-      icon: <FileExcelOutlined />,
-    },
-    {
-      title: 'AI分析',
-      description: '使用AI模型分析数据并生成研究建议',
-      icon: <RobotOutlined />,
-    },
-    {
-      title: '生成结果',
-      description: '导出包含AI建议的增强Excel文件',
-      icon: <DownloadOutlined />,
-    },
-  ];
+  // 获取处理时间
+  const getProcessingTime = () => {
+    if (processingStartTime === 0) return '';
+    const elapsed = Math.round((Date.now() - processingStartTime) / 1000);
+    return `耗时: ${elapsed}秒`;
+  };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '800px', margin: '0 auto' }}>
       {/* 页面标题 */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
@@ -256,208 +110,142 @@ const IdeaDiscovery: React.FC = () => {
           研究Idea发掘系统
         </Title>
         <Paragraph type="secondary">
-          上传Excel文件，让AI帮助您发现新的研究方向和想法
+          上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 
-      {/* 处理流程步骤 */}
-      <Card style={{ marginBottom: '24px' }}>
-        <Steps current={processStage.current} status={processStage.status}>
-          {steps.map((step, index) => (
-            <Step
-              key={index}
-              title={step.title}
-              description={step.description}
-              icon={step.icon}
-            />
-          ))}
-        </Steps>
-        
-        {processing && (
-          <div style={{ marginTop: '16px', textAlign: 'center' }}>
-            <Progress type="line" percent={((processStage.current + 1) / steps.length) * 100} />
-            <Text type="secondary" style={{ marginTop: '8px', display: 'block' }}>
-              {processStage.description}
-            </Text>
+      <Card>
+        <Space direction="vertical" size="large" style={{ width: '100%' }}>
+          {/* AI提供商选择 */}
+          <div>
+            <Text strong>选择AI提供商:</Text>
+            <Select
+              value={aiProvider}
+              onChange={setAiProvider}
+              style={{ width: 200, marginLeft: 16 }}
+              disabled={state === ProcessingState.PROCESSING}
+            >
+              <Option value="openai">OpenAI</Option>
+              <Option value="anthropic">Anthropic (Claude)</Option>
+            </Select>
           </div>
-        )}
+
+          {/* 文件上传区域 */}
+          <Upload.Dragger
+            name="file"
+            accept=".xlsx,.xls"
+            beforeUpload={handleFileSelect}
+            showUploadList={false}
+            disabled={state === ProcessingState.PROCESSING}
+          >
+            <p className="ant-upload-drag-icon">
+              <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+            </p>
+            <p className="ant-upload-text">
+              点击或拖拽Excel文件到此区域上传
+            </p>
+            <p className="ant-upload-hint">
+              支持.xlsx和.xls格式，文件需包含"摘要"和"标题"列
+            </p>
+          </Upload.Dragger>
+
+          {/* 文件信息显示 */}
+          {selectedFile && (
+            <Alert
+              message="文件已选择"
+              description={
+                <div>
+                  <div>文件名: {selectedFile.name}</div>
+                  <div>文件大小: {(selectedFile.size / 1024).toFixed(2)} KB</div>
+                </div>
+              }
+              type="info"
+              showIcon
+            />
+          )}
+
+          {/* 处理状态显示 */}
+          {state === ProcessingState.PROCESSING && (
+            <Card style={{ textAlign: 'center', backgroundColor: '#f0f9ff' }}>
+              <Spin size="large" />
+              <div style={{ marginTop: '16px' }}>
+                <Text strong>正在处理中，请稍候...</Text>
+                <div style={{ marginTop: '8px' }}>
+                  <Text type="secondary">
+                    AI正在逐行分析数据并生成研究迁移建议 {getProcessingTime()}
+                  </Text>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* 错误显示 */}
+          {state === ProcessingState.ERROR && (
+            <Result
+              status="error"
+              title="处理失败"
+              subTitle={errorMessage}
+              extra={[
+                <Button key="retry" type="primary" onClick={handleStartProcessing}>
+                  重试
+                </Button>,
+                <Button key="reset" onClick={handleReset}>
+                  重新选择文件
+                </Button>,
+              ]}
+            />
+          )}
+
+          {/* 成功完成 */}
+          {state === ProcessingState.COMPLETED && (
+            <Result
+              status="success"
+              title="处理完成！"
+              subTitle={`AI已完成分析并生成研究迁移建议 ${getProcessingTime()}`}
+              extra={[
+                <Button
+                  key="download"
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={handleDownload}
+                  size="large"
+                >
+                  下载增强文件
+                </Button>,
+                <Button key="reset" onClick={handleReset}>
+                  处理新文件
+                </Button>,
+              ]}
+            />
+          )}
+
+          {/* 操作按钮 */}
+          {state === ProcessingState.IDLE && selectedFile && (
+            <div style={{ textAlign: 'center' }}>
+              <Button
+                type="primary"
+                size="large"
+                icon={<RobotOutlined />}
+                onClick={handleStartProcessing}
+                style={{ minWidth: '200px' }}
+              >
+                开始AI分析处理
+              </Button>
+            </div>
+          )}
+        </Space>
       </Card>
 
-      <Row gutter={24}>
-        {/* 左侧：文件上传区域 */}
-        <Col span={12}>
-          <Card title="文件上传" style={{ height: '400px' }}>
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <Upload.Dragger
-                name="file"
-                accept=".xlsx,.xls"
-                beforeUpload={handleFileUpload}
-                showUploadList={false}
-                disabled={processing || uploading}
-              >
-                <p className="ant-upload-drag-icon">
-                  <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
-                </p>
-                <p className="ant-upload-text">
-                  {uploading ? '正在上传...' : '点击或拖拽Excel文件到此区域上传'}
-                </p>
-                <p className="ant-upload-hint">
-                  支持.xlsx和.xls格式文件
-                </p>
-              </Upload.Dragger>
-
-              {uploadedFile && (
-                <div style={{ marginTop: '16px' }}>
-                  <Alert
-                    message="文件已上传"
-                    description={
-                      <div>
-                        <div>文件名: {uploadedFile.fileName}</div>
-                        <div>文件大小: {(uploadedFile.fileSize / 1024).toFixed(2)} KB</div>
-                        <div>数据行数: {uploadedFile.rowCount}</div>
-                        <div>列数: {uploadedFile.columns.length}</div>
-                      </div>
-                    }
-                    type="success"
-                    showIcon
-                  />
-                </div>
-              )}
-
-              <Divider />
-
-              <Space direction="vertical" size="large" style={{ width: '100%' }}>
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<RobotOutlined />}
-                  onClick={handleStartProcessing}
-                  disabled={!uploadedFile || processing || uploading}
-                  loading={processing}
-                  block
-                >
-                  开始AI分析处理
-                </Button>
-
-                <Button
-                  onClick={handleReset}
-                  disabled={processing || uploading}
-                  block
-                >
-                  重置
-                </Button>
-              </Space>
-            </div>
-          </Card>
-        </Col>
-
-        {/* 右侧：处理状态和结果 */}
-        <Col span={12}>
-          <Card title="处理状态" style={{ height: '400px' }}>
-            {!processing && !resultFileId && !errorMessage && !uploading && (
-              <div style={{ textAlign: 'center', padding: '80px 20px' }}>
-                <Text type="secondary">
-                  上传Excel文件后点击"开始AI分析处理"开始处理
-                </Text>
-              </div>
-            )}
-
-            {uploading && (
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <Spin size="large" />
-                <div style={{ marginTop: '16px' }}>
-                  <Text strong>正在上传文件...</Text>
-                </div>
-              </div>
-            )}
-
-            {processing && (
-              <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-                <Spin size="large" />
-                <div style={{ marginTop: '16px' }}>
-                  <Text strong>{processStage.description}</Text>
-                  <Progress
-                    percent={processStage.progress}
-                    status="active"
-                    strokeColor="#1890ff"
-                    style={{ marginTop: '12px' }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {resultFileId && !processing && (
-              <Result
-                status="success"
-                title="处理完成！"
-                subTitle="AI已完成分析并生成增强的Excel文件"
-                extra={[
-                  <Button
-                    key="download"
-                    type="primary"
-                    icon={<DownloadOutlined />}
-                    onClick={handleDownload}
-                    size="large"
-                  >
-                    下载结果文件
-                  </Button>,
-                  <Button key="reset" onClick={handleReset}>
-                    处理新文件
-                  </Button>,
-                ]}
-              />
-            )}
-
-            {errorMessage && (
-              <Result
-                status="error"
-                title="处理失败"
-                subTitle={errorMessage}
-                extra={[
-                  <Button key="retry" type="primary" onClick={handleStartProcessing}>
-                    重试
-                  </Button>,
-                  <Button key="reset" onClick={handleReset}>
-                    重置
-                  </Button>,
-                ]}
-              />
-            )}
-          </Card>
-        </Col>
-      </Row>
-
-      {/* 功能说明 */}
-      <Card title="功能说明" style={{ marginTop: '24px' }}>
-        <Row gutter={16}>
-          <Col span={8}>
-            <div style={{ textAlign: 'center', padding: '16px' }}>
-              <FileExcelOutlined style={{ fontSize: '32px', color: '#52c41a', marginBottom: '8px' }} />
-              <Title level={4}>智能文件处理</Title>
-              <Text type="secondary">
-                自动解析Excel文件内容，提取关键信息进行结构化处理
-              </Text>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div style={{ textAlign: 'center', padding: '16px' }}>
-              <RobotOutlined style={{ fontSize: '32px', color: '#1890ff', marginBottom: '8px' }} />
-              <Title level={4}>AI智能分析</Title>
-              <Text type="secondary">
-                运用先进AI模型深度分析研究数据，发现潜在的研究机会和方向
-              </Text>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div style={{ textAlign: 'center', padding: '16px' }}>
-              <CheckCircleOutlined style={{ fontSize: '32px', color: '#722ed1', marginBottom: '8px' }} />
-              <Title level={4}>结果导出</Title>
-              <Text type="secondary">
-                生成包含AI建议和洞察的增强Excel文件，便于进一步研究
-              </Text>
-            </div>
-          </Col>
-        </Row>
+      {/* 使用说明 */}
+      <Card title="使用说明" style={{ marginTop: '24px' }}>
+        <div style={{ lineHeight: '1.8' }}>
+          <Text>
+            <strong>1. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+            <strong>2. 处理流程：</strong>AI将读取每行的标题和摘要，生成研究迁移建议<br />
+            <strong>3. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
+            <strong>4. 注意事项：</strong>处理时间取决于数据行数，请耐心等待
+          </Text>
+        </div>
       </Card>
     </div>
   );

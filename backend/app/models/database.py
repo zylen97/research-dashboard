@@ -120,7 +120,6 @@ class User(Base):
     last_login = Column(DateTime)
     
     # 关系定义
-    # 文献相关关系已删除
 
 class SystemConfig(Base):
     """系统配置模型 - 存储系统设置和AI配置信息"""

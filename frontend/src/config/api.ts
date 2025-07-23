@@ -53,13 +53,6 @@ export const API_ENDPOINTS = {
     UPDATE: (id: number) => `/api/collaborators/${id}`,
     DELETE: (id: number) => `/api/collaborators/${id}`,
   },
-  // 文献
-  LITERATURE: {
-    LIST: '/api/literature',
-    CREATE: '/api/literature',
-    UPDATE: (id: number) => `/api/literature/${id}`,
-    DELETE: (id: number) => `/api/literature/${id}`,
-  },
   // 想法
   IDEAS: {
     LIST: '/api/ideas',

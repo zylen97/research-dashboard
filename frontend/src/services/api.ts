@@ -333,64 +333,24 @@ export const backupApi = {
   },
 };
 
-// Idea发掘 API
+// Idea发掘 API (简化版)
 export const ideaDiscoveryApi = {
-  // 上传Excel文件
-  uploadFile: (file: File): Promise<{
-    success: boolean;
-    message: string;
-    file_id: string;
-    file_name: string;
-    file_size: number;
-    columns: string[];
-    row_count: number;
-  }> => {
+  // 直接处理Excel文件
+  processExcel: (file: File, aiProvider: string = 'openai'): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/api/ideas/upload', formData, {
+    formData.append('ai_provider', aiProvider);
+    return api.post('/api/ideas/process-excel', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      responseType: 'blob'
     });
   },
 
-  // 开始处理文件
-  startProcessing: (data: {
-    file_id: string;
-    ai_provider?: string;
-    prompt_template?: string;
-  }): Promise<{
-    success: boolean;
-    message: string;
-    data: {
-      processing_id: string;
-      status: string;
-    };
-  }> =>
-    api.post('/api/ideas/process', data),
-
-  // 获取处理状态
-  getProcessingStatus: (processingId: string): Promise<{
-    current_step: number;
-    total_steps: number;
-    status: string;
-    message: string;
-    progress: number;
-  }> =>
-    api.get(`/api/ideas/status/${processingId}`),
-
-  // 下载结果文件
-  downloadResult: (resultFileId: string): Promise<Blob> =>
-    api.get(`/api/ideas/download/${resultFileId}`, {
-      responseType: 'blob'
-    }),
-
-  // 清理临时文件
-  cleanupFile: (fileId: string): Promise<{
-    success: boolean;
-    message: string;
-  }> =>
-    api.delete(`/api/ideas/cleanup/${fileId}`),
+  // 健康检查
+  healthCheck: (): Promise<{ status: string; service: string }> =>
+    api.get('/api/ideas/health'),
 };
 
 export default api;

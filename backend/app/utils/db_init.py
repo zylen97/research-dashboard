@@ -3,7 +3,7 @@
 """
 import logging
 from ..models.database import create_tables, engine, SessionLocal, User
-from ..models import Collaborator, ResearchProject, Literature, CommunicationLog
+from ..models import Collaborator, ResearchProject, CommunicationLog
 from ..utils.auth import get_password_hash
 
 # 配置日志
@@ -153,36 +153,6 @@ def create_sample_data():
         
         db.add(log)
         
-        # 创建示例文献
-        literature = Literature(
-            title="Attention Is All You Need",
-            authors="Vaswani, A., Shazeer, N., Parmar, N., et al.",
-            journal="Advances in Neural Information Processing Systems",
-            year=2017,
-            abstract="We propose a new simple network architecture, the Transformer...",
-            keywords="transformer, attention, neural networks",
-            citation_count=50000,
-            validation_status="validated",
-            validation_score=0.95
-        )
-        
-        db.add(literature)
-        
-        # 创建示例idea
-        idea = Idea(
-            title="基于Transformer的代码生成研究",
-            description="利用Transformer架构进行自动代码生成，提高编程效率",
-            source="literature",
-            source_literature_id=literature.id,
-            difficulty_level="medium",
-            estimated_duration="6个月",
-            required_skills="深度学习，自然语言处理，编程语言理论",
-            potential_impact="high",
-            priority="high",
-            tags="transformer,代码生成,NLP"
-        )
-        
-        db.add(idea)
         
         db.commit()
         logger.info("Sample data created successfully")
