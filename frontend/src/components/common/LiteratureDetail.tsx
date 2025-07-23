@@ -23,6 +23,7 @@ import {
   DeleteOutlined,
   BulbOutlined,
   StarOutlined,
+  FolderOutlined,
 } from '@ant-design/icons';
 import { Literature } from '../../types';
 import dayjs from 'dayjs';
@@ -198,6 +199,16 @@ const LiteratureDetail: React.FC<LiteratureDetailProps> = ({
             {literature.year}
           </Descriptions.Item>
         )}
+        
+        <Descriptions.Item 
+          label={<><FolderOutlined /> 文件夹</>}
+        >
+          {literature.folder ? (
+            <Tag color="blue">{literature.folder.name}</Tag>
+          ) : (
+            <Text type="secondary">未分类</Text>
+          )}
+        </Descriptions.Item>
         
         {literature.doi && (
           <Descriptions.Item 

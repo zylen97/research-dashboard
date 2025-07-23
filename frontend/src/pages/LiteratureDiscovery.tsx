@@ -539,6 +539,30 @@ const LiteratureDiscovery: React.FC = () => {
       ),
     },
     {
+      title: '文件夹',
+      dataIndex: 'folder',
+      key: 'folder',
+      width: 100,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (folder) => {
+        if (!folder) {
+          return <Text type="secondary">未分类</Text>;
+        }
+        return (
+          <Tooltip title={folder.name} placement="topLeft">
+            <Space size={4}>
+              <FolderOutlined style={{ color: '#1890ff' }} />
+              <Text style={{ color: '#1890ff', cursor: 'pointer' }}>
+                {folder.name}
+              </Text>
+            </Space>
+          </Tooltip>
+        );
+      },
+    },
+    {
       title: '年份',
       dataIndex: 'year',
       key: 'year',
