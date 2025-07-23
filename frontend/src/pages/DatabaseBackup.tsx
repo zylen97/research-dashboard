@@ -34,7 +34,6 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
 import { BackupStatsResponse, BackupItem } from '../types';
-import { ApiResponse } from '../types/api';
 
 const { Title, Text } = Typography;
 
@@ -49,10 +48,9 @@ const DatabaseBackup: React.FC = () => {
   const fetchBackups = async () => {
     setLoading(true);
     try {
-      const response: ApiResponse<BackupItem[]> = await api.get('/api/backup/list');
-      if (response.success) {
-        setBackups(response.data);
-      }
+      const response: BackupItem[] = await api.get('/api/backup/list');
+      console.log('备份列表响应:', response);
+      setBackups(response);
     } catch (error) {
       message.error('获取备份列表失败');
       console.error(error);
@@ -64,10 +62,9 @@ const DatabaseBackup: React.FC = () => {
   // 获取备份统计
   const fetchStats = async () => {
     try {
-      const response: ApiResponse<BackupStatsResponse> = await api.get('/api/backup/stats');
-      if (response.success) {
-        setStats(response.data);
-      }
+      const response: BackupStatsResponse = await api.get('/api/backup/stats');
+      console.log('备份统计响应:', response);
+      setStats(response);
     } catch (error) {
       console.error(error);
     }
@@ -93,14 +90,12 @@ const DatabaseBackup: React.FC = () => {
         const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
         setCreating(true);
         try {
-          const response: ApiResponse<BackupItem> = await api.post('/api/backup/create', null, {
+          await api.post('/api/backup/create', null, {
             params: { reason }
           });
-          if (response.success) {
-            message.success('备份创建成功');
-            fetchBackups();
-            fetchStats();
-          }
+          message.success('备份创建成功');
+          fetchBackups();
+          fetchStats();
         } catch (error) {
           message.error('创建备份失败');
           console.error(error);
@@ -115,14 +110,12 @@ const DatabaseBackup: React.FC = () => {
   const handleRestore = async (backupId: string) => {
     setRestoring(backupId);
     try {
-      const response: ApiResponse<{ message: string }> = await api.post(`/api/backup/restore/${backupId}`);
-      if (response.success) {
-        message.success('数据库恢复成功');
-        // 可能需要刷新整个应用
-        setTimeout(() => {
-          window.location.reload();
-        }, 2000);
-      }
+      await api.post(`/api/backup/restore/${backupId}`);
+      message.success('数据库恢复成功');
+      // 可能需要刷新整个应用
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (error) {
       message.error('恢复备份失败');
       console.error(error);
@@ -134,12 +127,10 @@ const DatabaseBackup: React.FC = () => {
   // 删除备份
   const handleDelete = async (backupId: string) => {
     try {
-      const response: ApiResponse<{ message: string }> = await api.delete(`/api/backup/${backupId}`);
-      if (response.success) {
-        message.success('备份删除成功');
-        fetchBackups();
-        fetchStats();
-      }
+      await api.delete(`/api/backup/${backupId}`);
+      message.success('备份删除成功');
+      fetchBackups();
+      fetchStats();
     } catch (error) {
       message.error('删除备份失败');
       console.error(error);
@@ -153,7 +144,7 @@ const DatabaseBackup: React.FC = () => {
         responseType: 'blob'
       });
       
-      // 创建下载链接
+      // 创建下载链接 - 注意：blob响应会返回完整的response对象
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
