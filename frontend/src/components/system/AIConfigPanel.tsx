@@ -7,7 +7,6 @@ import {
   Select,
   Table,
   Space,
-  Modal,
   message,
   Spin,
   Tag,
@@ -22,7 +21,6 @@ import {
   List
 } from 'antd';
 import {
-  PlusOutlined,
   EditOutlined,
   DeleteOutlined,
   ApiOutlined,
@@ -76,7 +74,6 @@ const AIConfigPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
   const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
   const [testingProvider, setTestingProvider] = useState<string | null>(null);
   
@@ -117,7 +114,6 @@ const AIConfigPanel: React.FC = () => {
         await api.post('/config/ai/providers', values);
         message.success('AI配置创建成功');
       }
-      setModalVisible(false);
       form.resetFields();
       setEditingProvider(null);
       fetchProviders();
@@ -310,7 +306,6 @@ const AIConfigPanel: React.FC = () => {
               onClick={() => {
                 setEditingProvider(record);
                 form.setFieldsValue(record);
-                setModalVisible(true);
               }}
             />
           </Tooltip>
@@ -331,24 +326,130 @@ const AIConfigPanel: React.FC = () => {
 
   return (
     <div>
-      <Row gutter={24}>
-        {/* 左侧：AI配置管理 */}
-        <Col xs={24} lg={14}>
+      <Row gutter={16}>
+        {/* 左侧：AI配置表单 */}
+        <Col xs={24} md={8}>
           <Card
-            title="AI模型配置"
-            extra={
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingProvider(null);
-                  form.resetFields();
-                  setModalVisible(true);
-                }}
-              >
-                添加配置
-              </Button>
+            title={
+              <Space>
+                <ApiOutlined />
+                <span>{editingProvider ? '编辑AI配置' : '添加AI配置'}</span>
+              </Space>
             }
+            size="small"
+          >
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSubmit}
+              initialValues={{
+                is_active: true,
+                temperature: 0.7,
+                max_tokens: 2000
+              }}
+            >
+              <Form.Item
+                name="provider"
+                label="提供商"
+                rules={[{ required: true, message: '请选择提供商' }]}
+              >
+                <Select placeholder="选择AI提供商" disabled={!!editingProvider}>
+                  <Option value="openai">OpenAI</Option>
+                  <Option value="anthropic">Anthropic</Option>
+                  <Option value="deepseek">DeepSeek</Option>
+                  <Option value="qwen">通义千问</Option>
+                  <Option value="custom">自定义</Option>
+                </Select>
+              </Form.Item>
+
+              <Form.Item
+                name="api_key"
+                label="API密钥"
+                rules={[{ required: true, message: '请输入API密钥' }]}
+              >
+                <Input.Password 
+                  placeholder="输入API密钥" 
+                  autoComplete="off"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="api_url"
+                label="API地址（可选）"
+                tooltip="留空使用默认地址"
+              >
+                <Input placeholder="https://api.example.com/v1" />
+              </Form.Item>
+
+              <Form.Item
+                name="model"
+                label="默认模型（可选）"
+              >
+                <Input placeholder="例如：gpt-4, claude-3-opus" />
+              </Form.Item>
+
+              <Row gutter={8}>
+                <Col span={12}>
+                  <Form.Item
+                    name="max_tokens"
+                    label="最大Token"
+                  >
+                    <InputNumber
+                      min={100}
+                      max={32000}
+                      style={{ width: '100%' }}
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="temperature"
+                    label="温度参数"
+                  >
+                    <InputNumber
+                      min={0}
+                      max={2}
+                      step={0.1}
+                      style={{ width: '100%' }}
+                      size="small"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Form.Item
+                name="is_active"
+                label="启用状态"
+                valuePropName="checked"
+              >
+                <Switch checkedChildren="启用" unCheckedChildren="禁用" />
+              </Form.Item>
+
+              <Form.Item>
+                <Space style={{ width: '100%' }}>
+                  <Button type="primary" htmlType="submit" loading={loading}>
+                    {editingProvider ? '更新' : '创建'}
+                  </Button>
+                  {editingProvider && (
+                    <Button onClick={() => {
+                      setEditingProvider(null);
+                      form.resetFields();
+                    }}>
+                      取消编辑
+                    </Button>
+                  )}
+                </Space>
+              </Form.Item>
+            </Form>
+          </Card>
+        </Col>
+
+        {/* 中间：当前配置列表 */}
+        <Col xs={24} md={8}>
+          <Card
+            title="当前配置"
+            size="small"
           >
             <Spin spinning={loading}>
               <Table
@@ -357,13 +458,14 @@ const AIConfigPanel: React.FC = () => {
                 rowKey="provider"
                 pagination={false}
                 size="small"
+                scroll={{ y: 400 }}
               />
             </Spin>
           </Card>
         </Col>
 
         {/* 右侧：AI聊天测试 */}
-        <Col xs={24} lg={10}>
+        <Col xs={24} md={8}>
           <Card
             title={
               <Space>
@@ -512,116 +614,6 @@ const AIConfigPanel: React.FC = () => {
           </Card>
         </Col>
       </Row>
-
-      <Modal
-        title={editingProvider ? '编辑AI配置' : '添加AI配置'}
-        visible={modalVisible}
-        onCancel={() => {
-          setModalVisible(false);
-          form.resetFields();
-          setEditingProvider(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-          initialValues={{
-            is_active: true,
-            temperature: 0.7,
-            max_tokens: 2000
-          }}
-        >
-          <Form.Item
-            name="provider"
-            label="提供商"
-            rules={[{ required: true, message: '请选择提供商' }]}
-          >
-            <Select placeholder="选择AI提供商" disabled={!!editingProvider}>
-              <Option value="openai">OpenAI</Option>
-              <Option value="anthropic">Anthropic</Option>
-              <Option value="deepseek">DeepSeek</Option>
-              <Option value="qwen">通义千问</Option>
-              <Option value="custom">自定义</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="api_key"
-            label="API密钥"
-            rules={[{ required: true, message: '请输入API密钥' }]}
-          >
-            <Input.Password 
-              placeholder="输入API密钥" 
-              autoComplete="off"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="api_url"
-            label="API地址（可选）"
-            tooltip="留空使用默认地址"
-          >
-            <Input placeholder="https://api.example.com/v1" />
-          </Form.Item>
-
-          <Form.Item
-            name="model"
-            label="默认模型（可选）"
-          >
-            <Input placeholder="例如：gpt-4, claude-3-opus" />
-          </Form.Item>
-
-          <Form.Item
-            name="max_tokens"
-            label="最大Token数"
-          >
-            <InputNumber
-              min={100}
-              max={32000}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="temperature"
-            label="温度参数"
-            tooltip="控制输出的随机性，0-2之间"
-          >
-            <InputNumber
-              min={0}
-              max={2}
-              step={0.1}
-              style={{ width: '100%' }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="is_active"
-            label="启用状态"
-            valuePropName="checked"
-          >
-            <Switch checkedChildren="启用" unCheckedChildren="禁用" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={() => {
-                setModalVisible(false);
-                form.resetFields();
-                setEditingProvider(null);
-              }}>
-                取消
-              </Button>
-              <Button type="primary" htmlType="submit">
-                {editingProvider ? '更新' : '创建'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
-      </Modal>
     </div>
   );
 };
