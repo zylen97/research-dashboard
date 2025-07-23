@@ -1228,3 +1228,38 @@ async def batch_move_literature_to_folder(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Batch move failed: {str(e)}"
         )
+
+
+@router.get("/prompts")
+async def get_prompts(
+    current_user: User = Depends(get_current_user)
+):
+    """获取AI分析的提示词模板"""
+    prompts = [
+        {
+            "id": 1,
+            "name": "文献摘要",
+            "prompt": "请为这篇文献生成一个200字左右的中文摘要，包括研究背景、方法、主要发现和结论。"
+        },
+        {
+            "id": 2,
+            "name": "研究价值评估",
+            "prompt": "请评估这篇文献的研究价值，包括：1. 创新性 2. 实用性 3. 方法论贡献 4. 潜在影响力。并给出1-10分的综合评分。"
+        },
+        {
+            "id": 3,
+            "name": "关键词提取",
+            "prompt": "请从这篇文献中提取5-8个关键词，并简要说明每个关键词的重要性。"
+        },
+        {
+            "id": 4,
+            "name": "相关文献推荐",
+            "prompt": "基于这篇文献的内容，请推荐3-5篇相关的研究文献，并说明推荐理由。"
+        },
+        {
+            "id": 5,
+            "name": "研究局限性分析",
+            "prompt": "请分析这篇文献的研究局限性，包括方法论局限、数据局限、结论的适用范围等。"
+        }
+    ]
+    return prompts
