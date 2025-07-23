@@ -10,21 +10,16 @@ import {
   message,
   Select,
   Space,
-  Tabs,
 } from 'antd';
 import {
   FileExcelOutlined,
   RobotOutlined,
   DownloadOutlined,
-  BulbOutlined,
-  UnorderedListOutlined,
 } from '@ant-design/icons';
 import { ideaDiscoveryApi } from '../services/api';
-import IdeasManagement from '../components/IdeasManagement';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
-const { TabPane } = Tabs;
 
 // 处理状态枚举
 enum ProcessingState {
@@ -110,31 +105,15 @@ const IdeaDiscovery: React.FC = () => {
       {/* 页面标题 */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
-          <BulbOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
-          研究Idea管理系统
+          <FileExcelOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
+          研究Idea发掘
         </Title>
         <Paragraph type="secondary">
-          管理研究想法和发掘新的研究方向
+          上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 
-      <Tabs defaultActiveKey="discovery" size="large">
-        <TabPane 
-          tab={
-            <span>
-              <FileExcelOutlined />
-              Excel处理
-            </span>
-          } 
-          key="discovery"
-        >
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-            <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-              <Title level={3}>研究Idea发掘</Title>
-              <Paragraph type="secondary">
-                上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
-              </Paragraph>
-            </div>
+      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
 
       <Card>
         <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -258,32 +237,18 @@ const IdeaDiscovery: React.FC = () => {
         </Space>
       </Card>
 
-            {/* 使用说明 */}
-            <Card title="使用说明" style={{ marginTop: '24px' }}>
-              <div style={{ lineHeight: '1.8' }}>
-                <Text>
-                  <strong>1. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-                  <strong>2. 处理流程：</strong>AI将读取每行的标题和摘要，生成研究迁移建议<br />
-                  <strong>3. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
-                  <strong>4. 注意事项：</strong>处理时间取决于数据行数，请耐心等待
-                </Text>
-              </div>
-            </Card>
+        {/* 使用说明 */}
+        <Card title="使用说明" style={{ marginTop: '24px' }}>
+          <div style={{ lineHeight: '1.8' }}>
+            <Text>
+              <strong>1. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+              <strong>2. 处理流程：</strong>AI将读取每行的标题和摘要，生成研究迁移建议<br />
+              <strong>3. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
+              <strong>4. 注意事项：</strong>处理时间取决于数据行数，请耐心等待
+            </Text>
           </div>
-        </TabPane>
-
-        <TabPane 
-          tab={
-            <span>
-              <UnorderedListOutlined />
-              Ideas管理
-            </span>
-          } 
-          key="management"
-        >
-          <IdeasManagement />
-        </TabPane>
-      </Tabs>
+        </Card>
+      </div>
     </div>
   );
 };

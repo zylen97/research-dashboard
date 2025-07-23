@@ -4,6 +4,7 @@ import {
   DashboardOutlined,
   TeamOutlined,
   BulbOutlined,
+  UnorderedListOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
@@ -64,6 +65,12 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         icon: <BulbOutlined />,
         label: 'Idea发掘',
         onClick: () => navigate('/ideas'),
+      },
+      {
+        key: '/ideas-management',
+        icon: <UnorderedListOutlined />,
+        label: 'Ideas管理',
+        onClick: () => navigate('/ideas-management'),
       },
       {
         key: '/backup',
