@@ -387,7 +387,6 @@ const LiteratureDiscovery: React.FC = () => {
   const handleSubmit = (values: any) => {
     const data: LiteratureCreate = {
       ...values,
-      citation_count: values.citation_count || 0,
     };
 
     if (editingLiterature) {
@@ -493,52 +492,64 @@ const LiteratureDiscovery: React.FC = () => {
       title: '标题',
       dataIndex: 'title',
       key: 'title',
-      ellipsis: true,
+      width: 400,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text, record) => (
-        <a 
-          onClick={() => handleRowSelect(record)}
-          style={{ 
-            fontWeight: selectedLiterature?.id === record.id ? 'bold' : 'normal',
-            color: selectedLiterature?.id === record.id ? '#1890ff' : undefined
-          }}
-        >
-          {text}
-        </a>
+        <Tooltip title={text} placement="topLeft">
+          <a 
+            onClick={() => handleRowSelect(record)}
+            style={{ 
+              fontWeight: selectedLiterature?.id === record.id ? 'bold' : 'normal',
+              color: selectedLiterature?.id === record.id ? '#1890ff' : undefined
+            }}
+          >
+            {text}
+          </a>
+        </Tooltip>
       ),
     },
     {
       title: '作者',
       dataIndex: 'authors',
       key: 'authors',
-      width: 200,
-      ellipsis: true,
+      width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text} placement="topLeft">
+          <span>{text}</span>
+        </Tooltip>
+      ),
     },
     {
       title: '期刊',
       dataIndex: 'journal',
       key: 'journal',
-      width: 150,
-      ellipsis: true,
+      width: 120,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text} placement="topLeft">
+          <span>{text}</span>
+        </Tooltip>
+      ),
     },
     {
       title: '年份',
       dataIndex: 'year',
       key: 'year',
-      width: 80,
+      width: 60,
       sorter: (a, b) => (a.year || 0) - (b.year || 0),
     },
     {
-      title: '引用数',
-      dataIndex: 'citation_count',
-      key: 'citation_count',
-      width: 80,
-      sorter: (a, b) => a.citation_count - b.citation_count,
-    },
-    {
-      title: '验证状态',
+      title: '状态',
       dataIndex: 'validation_status',
       key: 'validation_status',
-      width: 100,
+      width: 90,
       render: (status) => {
         const statusInfo = getValidationStatus(status);
         return (
@@ -551,7 +562,8 @@ const LiteratureDiscovery: React.FC = () => {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 100,
+      fixed: 'right',
       render: (_, record) => (
         <Space size={0}>
           <Tooltip title="编辑">
@@ -670,7 +682,45 @@ const LiteratureDiscovery: React.FC = () => {
         </Sider>
 
         {/* 中间文献列表 */}
-        <Content style={{ padding: 16, background: 'white', overflow: 'hidden' }}>
+        <Content style={{ padding: 16, background: 'white', overflow: 'hidden', position: 'relative' }}>
+          {/* 左侧折叠恢复按钮 */}
+          {leftCollapsed && (
+            <Button
+              type="primary"
+              icon={<MenuUnfoldOutlined />}
+              onClick={() => setLeftCollapsed(false)}
+              style={{
+                position: 'absolute',
+                left: 16,
+                top: 16,
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              }}
+              size="small"
+            >
+              展开文件夹
+            </Button>
+          )}
+          
+          {/* 右侧折叠恢复按钮 */}
+          {rightCollapsed && (
+            <Button
+              type="primary"
+              icon={<MenuUnfoldOutlined />}
+              onClick={() => setRightCollapsed(false)}
+              style={{
+                position: 'absolute',
+                right: 16,
+                top: 16,
+                zIndex: 10,
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.15)',
+              }}
+              size="small"
+            >
+              展开详情
+            </Button>
+          )}
+          
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {/* 操作栏和统计 */}
             <div style={{ marginBottom: 16 }}>
@@ -913,7 +963,7 @@ const LiteratureDiscovery: React.FC = () => {
           </Row>
 
           <Row gutter={16}>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="year"
                 label="年份"
@@ -921,15 +971,7 @@ const LiteratureDiscovery: React.FC = () => {
                 <Input type="number" placeholder="年份" />
               </Form.Item>
             </Col>
-            <Col span={8}>
-              <Form.Item
-                name="citation_count"
-                label="引用数"
-              >
-                <Input type="number" placeholder="引用数" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="doi"
                 label="DOI"
@@ -1053,45 +1095,17 @@ const LiteratureDiscovery: React.FC = () => {
                 />
               </Form.Item>
 
-              <Row gutter={16}>
-                <Col span={8}>
-                  <Form.Item
-                    name="priority"
-                    label="优先级"
-                    initialValue="medium"
-                  >
-                    <Select>
-                      <Select.Option value="high">高</Select.Option>
-                      <Select.Option value="medium">中</Select.Option>
-                      <Select.Option value="low">低</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="difficulty_level"
-                    label="难度等级"
-                  >
-                    <Select placeholder="选择难度">
-                      <Select.Option value="easy">简单</Select.Option>
-                      <Select.Option value="medium">中等</Select.Option>
-                      <Select.Option value="hard">困难</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-                <Col span={8}>
-                  <Form.Item
-                    name="potential_impact"
-                    label="潜在影响"
-                  >
-                    <Select placeholder="选择潜在影响">
-                      <Select.Option value="low">低</Select.Option>
-                      <Select.Option value="medium">中</Select.Option>
-                      <Select.Option value="high">高</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
+              <Form.Item
+                name="priority"
+                label="优先级"
+                initialValue="medium"
+              >
+                <Select>
+                  <Select.Option value="high">高</Select.Option>
+                  <Select.Option value="medium">中</Select.Option>
+                  <Select.Option value="low">低</Select.Option>
+                </Select>
+              </Form.Item>
             </Form>
           </div>
         )}

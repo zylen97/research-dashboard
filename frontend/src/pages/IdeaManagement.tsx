@@ -11,7 +11,6 @@ import {
   Space,
   Tooltip,
   message,
-  Rate,
   Statistic,
   Dropdown,
   Table,
@@ -209,16 +208,6 @@ const IdeaManagement: React.FC = () => {
       converted_to_project: 'success',
     };
     return colors[status] || 'default';
-  };
-
-  // 获取难度等级显示
-  const getDifficultyDisplay = (level?: string) => {
-    const levels: Record<string, { stars: number; color: string }> = {
-      easy: { stars: 1, color: '#52c41a' },
-      medium: { stars: 2, color: '#fa8c16' },
-      hard: { stars: 3, color: '#f5222d' },
-    };
-    return levels[level || 'medium'] || levels['medium'];
   };
 
   // 过滤ideas
@@ -421,45 +410,11 @@ const IdeaManagement: React.FC = () => {
             onFilter: (value, record) => record.status === value,
           },
           {
-            title: '难度',
-            dataIndex: 'difficulty_level',
-            key: 'difficulty_level',
-            width: 100,
-            render: (level: string) => {
-              if (!level) return '-';
-              const difficultyDisplay = getDifficultyDisplay(level);
-              if (!difficultyDisplay) return '-';
-              return (
-                <Tooltip title={level}>
-                  <Rate 
-                    disabled 
-                    count={3} 
-                    value={difficultyDisplay.stars}
-                    style={{ fontSize: '12px', color: difficultyDisplay.color }}
-                  />
-                </Tooltip>
-              );
-            },
-          },
-          {
             title: '预计时长',
             dataIndex: 'estimated_duration',
             key: 'estimated_duration',
             width: 120,
             render: (duration: string) => duration || '-',
-          },
-          {
-            title: '潜在影响',
-            dataIndex: 'potential_impact',
-            key: 'potential_impact',
-            width: 100,
-            render: (impact: string) => 
-              impact ? (
-                <Tag color={impact === 'high' ? 'red' : 
-                           impact === 'medium' ? 'orange' : 'green'}>
-                  {impact}
-                </Tag>
-              ) : '-',
           },
           {
             title: '标签',
@@ -653,37 +608,10 @@ const IdeaManagement: React.FC = () => {
             </Col>
             <Col span={8}>
               <Form.Item
-                name="difficulty_level"
-                label="难度等级"
-              >
-                <Select placeholder="选择难度">
-                  <Select.Option value="easy">简单</Select.Option>
-                  <Select.Option value="medium">中等</Select.Option>
-                  <Select.Option value="hard">困难</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
                 name="estimated_duration"
                 label="预计耗时"
               >
                 <Input placeholder="例如：3个月、半年等" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="potential_impact"
-                label="潜在影响"
-              >
-                <Select placeholder="选择潜在影响">
-                  <Select.Option value="low">低</Select.Option>
-                  <Select.Option value="medium">中</Select.Option>
-                  <Select.Option value="high">高</Select.Option>
-                </Select>
               </Form.Item>
             </Col>
           </Row>
