@@ -5,11 +5,6 @@ from datetime import datetime
 # Collaborator schemas
 class CollaboratorBase(BaseModel):
     name: str = Field(..., max_length=100)
-    email: Optional[str] = Field(None, max_length=200)
-    institution: Optional[str] = Field(None, max_length=200)
-    research_area: Optional[str] = Field(None, max_length=200)
-    level: Optional[str] = Field(default="senior", max_length=20)
-    # 兼容性字段
     gender: Optional[str] = Field(None, max_length=10)
     class_name: Optional[str] = Field(None, max_length=100)
     future_plan: Optional[str] = None
@@ -22,11 +17,6 @@ class CollaboratorCreate(CollaboratorBase):
 
 class CollaboratorUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
-    email: Optional[str] = Field(None, max_length=200)
-    institution: Optional[str] = Field(None, max_length=200)
-    research_area: Optional[str] = Field(None, max_length=200)
-    level: Optional[str] = Field(None, max_length=20)
-    # 兼容性字段
     gender: Optional[str] = Field(None, max_length=10)
     class_name: Optional[str] = Field(None, max_length=100)
     future_plan: Optional[str] = None
@@ -36,9 +26,8 @@ class CollaboratorUpdate(BaseModel):
 
 class Collaborator(CollaboratorBase):
     id: int
-    level: str
-    deleted_at: Optional[datetime] = None
     is_deleted: bool = False
+    deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
     
