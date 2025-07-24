@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Ideas API 测试</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <h1>Ideas管理API测试工具</h1>
+    <button onclick="testAPI()">测试API</button>
+    <button onclick="clearCache()">清除缓存并刷新</button>
+    <div id="results"></div>
+    
+    <script>
+    async function testAPI() {
+        const results = document.getElementById('results');
+        results.innerHTML = '<h2>测试结果：</h2>';
+        
+        // 测试1: 检查JS版本
+        const scripts = document.querySelectorAll('script[src*="main"]');
+        results.innerHTML += `<p>1. 当前JS版本: ${scripts.length > 0 ? scripts[0].src : '未找到'}</p>`;
+        
+        // 测试2: 直接测试API
+        try {
+            const response = await fetch('http://45.149.156.216:3001/api/ideas-management');
+            const text = await response.text();
+            const isJSON = text.startsWith('{') || text.startsWith('[');
+            results.innerHTML += `<p>2. API响应类型: ${isJSON ? '✅ JSON' : '❌ HTML'}</p>`;
+            results.innerHTML += `<p>   响应内容: <code>${text.substring(0, 100)}...</code></p>`;
+        } catch (e) {
+            results.innerHTML += `<p>2. API测试失败: ${e.message}</p>`;
+        }
+        
+        // 测试3: 检查axios配置
+        results.innerHTML += `<h3>3. 调试信息：</h3>`;
+        results.innerHTML += `<p>- 页面URL: ${window.location.href}</p>`;
+        results.innerHTML += `<p>- 时间戳: ${new Date().toISOString()}</p>`;
+        
+        // 测试4: 模拟axios请求
+        results.innerHTML += `<h3>4. 修复建议：</h3>`;
+        results.innerHTML += `<ul>
+            <li>按 Ctrl+Shift+R (Windows) 或 Cmd+Shift+R (Mac) 强制刷新</li>
+            <li>打开开发者工具 → Network → 勾选 "Disable cache"</li>
+            <li>尝试隐私模式访问</li>
+        </ul>`;
+    }
+    
+    function clearCache() {
+        // 强制刷新
+        location.reload(true);
+    }
+    
+    // 自动运行测试
+    window.onload = testAPI;
+    </script>
+    
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        button { margin: 10px; padding: 10px 20px; font-size: 16px; }
+        code { background: #f0f0f0; padding: 2px 5px; }
+        #results { margin-top: 20px; border: 1px solid #ddd; padding: 20px; }
+    </style>
+</body>
+</html>

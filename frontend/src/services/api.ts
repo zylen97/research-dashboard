@@ -25,6 +25,11 @@ api.interceptors.request.use(
   (config) => {
     // 自动为所有请求添加 /api 前缀
     if (config.url && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
+      // 特别记录Ideas管理API的请求
+      if (config.url.includes('ideas-management')) {
+        console.log('[Ideas API] 原始URL:', config.url);
+        console.log('[Ideas API] 修改后URL:', '/api' + config.url);
+      }
       config.url = '/api' + config.url;
     }
     
@@ -420,7 +425,13 @@ export const ideasApi = {
     limit?: number;
     importance_filter?: number;
   }): Promise<import('../types').Idea[]> => {
-    const response = await api.get('/ideas-management', { params });
+    // 添加时间戳避免缓存问题
+    const response = await api.get('/ideas-management', { 
+      params: {
+        ...params,
+        _t: Date.now() // 缓存破坏参数
+      }
+    });
     return ensureArray<import('../types').Idea>(response, 'API.getIdeas');
   },
 
@@ -442,7 +453,11 @@ export const ideasApi = {
 
   // 获取高级合作者列表
   getSeniorCollaborators: async (): Promise<import('../types').Collaborator[]> => {
-    const response = await api.get('/ideas-management/collaborators/senior');
+    const response = await api.get('/ideas-management/collaborators/senior', {
+      params: {
+        _t: Date.now() // 缓存破坏参数
+      }
+    });
     return ensureArray<import('../types').Collaborator>(response, 'API.getSeniorCollaborators');
   },
 };
