@@ -41,6 +41,18 @@ cd backend && python migrations/migration.py  # 测试迁移
 ./deploy-scripts/verify-deployment.sh
 ```
 
+## 🚨 数据库危险操作禁令
+**以下操作绝对禁止，违反将导致数据灾难：**
+
+1. **绝不重建表结构** - 永远不允许DROP TABLE + CREATE TABLE
+2. **绝不修改字段名** - 只能添加新字段，不能删除或重命名现有字段  
+3. **Migration前必须验证** - 测试数据完整性，确保字段映射正确
+4. **保持向后兼容** - 新字段必须有默认值，旧代码能正常工作
+5. **一次一个Migration版本** - 绝不创建多个连续版本
+6. **充分测试后再部署** - Migration必须在开发环境完全验证
+
+**血的教训**: 2025-07-24因违反以上规则导致27条collaborator数据字段错位，API全部返回空数组
+
 ## ⚡ 核心规则
 1. **部署**: 只用 deploy.sh
 2. **数据库**: 只改 migration.py + 版本号
