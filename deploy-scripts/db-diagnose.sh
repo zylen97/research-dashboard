@@ -4,9 +4,9 @@ echo "🔍 Research Dashboard 数据库诊断开始..."
 echo "执行时间: $(date)"
 echo "=" * 60
 
-# 进入后端目录
-cd /var/www/research-backend || {
-    echo "❌ 无法进入 /var/www/research-backend 目录"
+# 进入项目目录
+cd /var/www/research-dashboard || {
+    echo "❌ 无法进入 /var/www/research-dashboard 目录"
     exit 1
 }
 
@@ -15,7 +15,7 @@ echo ""
 
 # 检查数据库文件
 echo "1️⃣ 检查数据库文件状态..."
-DB_FILE="data/research_dashboard_prod.db"
+DB_FILE="backend/data/research_dashboard_prod.db"
 
 if [ -f "$DB_FILE" ]; then
     echo "✅ 数据库文件存在: $DB_FILE"
@@ -32,14 +32,14 @@ echo ""
 
 # 检查数据目录权限
 echo "2️⃣ 检查data目录权限..."
-if [ -d "data" ]; then
-    echo "📁 data目录权限: $(ls -ld data)"
-    echo "👤 data目录所有者: $(stat -c '%U:%G' data 2>/dev/null || stat -f '%Su:%Sg' data)"
+if [ -d "backend/data" ]; then
+    echo "📁 data目录权限: $(ls -ld backend/data)"
+    echo "👤 data目录所有者: $(stat -c '%U:%G' backend/data 2>/dev/null || stat -f '%Su:%Sg' backend/data)"
 else
-    echo "❌ data目录不存在"
-    echo "正在尝试创建data目录..."
-    mkdir -p data
-    echo "✅ data目录已创建"
+    echo "❌ backend/data目录不存在"
+    echo "正在尝试创建backend/data目录..."
+    mkdir -p backend/data
+    echo "✅ backend/data目录已创建"
 fi
 
 echo ""
@@ -85,11 +85,11 @@ echo "5️⃣ 测试Python数据库连接..."
 python3 -c "
 import sys
 import os
-sys.path.insert(0, '/var/www/research-backend')
+sys.path.insert(0, '/var/www/research-dashboard/backend')
 
 try:
     import sqlite3
-    conn = sqlite3.connect('data/research_dashboard_prod.db')
+    conn = sqlite3.connect('backend/data/research_dashboard_prod.db')
     cursor = conn.cursor()
     cursor.execute('SELECT 1')
     print('✅ Python SQLite连接正常')
@@ -143,9 +143,9 @@ echo ""
 # 权限修复建议
 echo "9️⃣ 权限修复建议..."
 echo "如果发现权限问题，可以执行以下命令修复:"
-echo "sudo chown -R research-user:research-user /var/www/research-backend/data/"
-echo "sudo chmod 755 /var/www/research-backend/data/"
-echo "sudo chmod 644 /var/www/research-backend/data/*.db"
+echo "sudo chown -R www-data:www-data /var/www/research-dashboard/backend/data/"
+echo "sudo chmod 755 /var/www/research-dashboard/backend/data/"
+echo "sudo chmod 644 /var/www/research-dashboard/backend/data/*.db"
 
 echo ""
 echo "🎯 诊断完成！"
