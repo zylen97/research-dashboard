@@ -19,6 +19,7 @@ async def get_research_projects(
     skip: int = 0, 
     limit: int = 100, 
     status_filter: str = None,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取研究项目列表（数据共享，包含交流记录）"""

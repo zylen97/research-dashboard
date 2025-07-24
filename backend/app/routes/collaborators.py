@@ -7,10 +7,11 @@ import re
 from datetime import datetime
 from ..models import (
     get_db, Collaborator, CollaboratorSchema, 
-    CollaboratorCreate, CollaboratorUpdate, FileUploadResponse
+    CollaboratorCreate, CollaboratorUpdate, FileUploadResponse, User
 )
 from ..services import AuditService
 from ..utils import DataValidator
+from ..utils.auth import get_current_user
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ async def get_collaborators(
     skip: int = 0, 
     limit: int = 100,
     include_deleted: bool = False,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取合作者列表"""
@@ -67,6 +69,7 @@ async def create_collaborator(
 async def update_collaborator(
     collaborator_id: int,
     collaborator_update: CollaboratorUpdate,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """更新合作者信息"""

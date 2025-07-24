@@ -5,6 +5,7 @@ from app.routes import research, collaborators, validation, audit, auth, backup,
 from app.routes import idea_discovery
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
+from app.middleware.error_handler import setup_exception_handlers
 from app.core.config import settings
 import logging
 
@@ -60,6 +61,9 @@ app.add_middleware(AuthMiddleware)  # 认证中间件放在最后添加，这样
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
+
+# 设置统一错误处理
+setup_exception_handlers(app)
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])

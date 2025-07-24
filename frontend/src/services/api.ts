@@ -69,8 +69,10 @@ api.interceptors.response.use(
           localStorage.removeItem('auth_token');
           localStorage.removeItem('auth_user');
           
-          // 跳转到登录页面
-          window.location.href = '/auth';
+          // 只在非登录页面时跳转
+          if (!window.location.pathname.includes('/auth')) {
+            window.location.href = '/';
+          }
           break;
           
         case 403:
