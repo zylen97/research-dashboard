@@ -384,8 +384,8 @@ if [ -f "migrations/migration.py" ]; then
             log_message "WARN" "📋 请稍后手动修复迁移问题"
         else
             log_message "ERROR" "❌ 迁移失败且服务无法启动"
-            # 这里仍然会触发error_exit的自动恢复逻辑
-            error_exit "数据库迁移失败且服务无法恢复，需要手动干预"
+            log_message "WARN" "⚠️ 将在后续步骤中继续尝试恢复服务"
+            # 不再直接error_exit，而是继续执行后续恢复逻辑
         fi
     fi
     

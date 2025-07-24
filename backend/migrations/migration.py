@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 自动修复字段映射错误
-MIGRATION_VERSION = "v1.21_auto_fix_field_mapping"
+# 迁移版本号 - 自动修复字段映射错误（修复level字段问题）
+MIGRATION_VERSION = "v1.22_fix_field_mapping_safe"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,11 +85,11 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.21迁移任务：自动修复数据库字段映射错误
-        # 自动修复方案 - 2025-07-24
+        # 🔧 v1.22迁移任务：安全修复数据库字段映射错误
+        # 修复level字段查询导致的migration中断问题 - 2025-07-24
         # ===========================================
         
-        logger.info("🚨 开始v1.21迁移：自动修复数据库字段映射错误...")
+        logger.info("🚨 开始v1.22迁移：安全修复数据库字段映射错误...")
         
         # 第一步：检查并诊断数据库问题
         logger.info("🔍 诊断当前数据库字段映射问题...")
@@ -120,23 +120,33 @@ def run_migration():
             cursor.execute("UPDATE collaborators SET updated_at = datetime('now') WHERE updated_at = 'senior' OR updated_at = 'junior' OR updated_at NOT LIKE '____-__-__%'")
             logger.info(f"✅ 修复了 {bad_updated_at} 条updated_at错误数据")
         
-        # 第三步：恢复正确的level字段数据
-        logger.info("🔧 恢复level字段的正确数据...")
+        # 第三步：安全检查和修复level字段数据
+        logger.info("🔧 安全检查level字段...")
         
-        # 检查level字段分布
-        cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
-        level_distribution = cursor.fetchall()
-        logger.info(f"当前level字段分布: {level_distribution}")
+        # 先检查level字段是否存在
+        cursor.execute("PRAGMA table_info(collaborators)")
+        columns_info = cursor.fetchall()
+        level_exists = any(col[1] == 'level' for col in columns_info)
         
-        # 如果所有人都是senior，检查是否有备份数据可以恢复level信息
-        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior'")
-        all_senior = cursor.fetchone()[0]
-        cursor.execute("SELECT COUNT(*) FROM collaborators")
-        total_count = cursor.fetchone()[0]
-        
-        if all_senior == total_count and total_count > 1:
-            logger.warning("⚠️ 所有collaborators都被设置为senior级别，这可能是错误的")
-            logger.info("💡 保持当前level设置，需要手动调整")
+        if level_exists:
+            logger.info("✅ level字段存在，检查分布...")
+            # 检查level字段分布
+            cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
+            level_distribution = cursor.fetchall()
+            logger.info(f"当前level字段分布: {level_distribution}")
+            
+            # 如果所有人都是senior，检查是否有备份数据可以恢复level信息
+            cursor.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior'")
+            all_senior = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM collaborators")
+            total_count = cursor.fetchone()[0]
+            
+            if all_senior == total_count and total_count > 1:
+                logger.warning("⚠️ 所有collaborators都被设置为senior级别，这可能是错误的")
+                logger.info("💡 保持当前level设置，需要手动调整")
+        else:
+            logger.warning("⚠️ level字段不存在，跳过level相关操作")
+            logger.info("💡 如果需要level字段，请手动添加")
         
         # 第四步：清理deleted_at字段
         logger.info("🧹 清理deleted_at字段...")
@@ -180,9 +190,13 @@ def run_migration():
         active_collaborators = cursor.fetchone()[0]
         logger.info(f"活跃collaborators数: {active_collaborators}")
         
-        cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
-        final_level_distribution = cursor.fetchall()
-        logger.info(f"最终level分布: {final_level_distribution}")
+        # 安全检查level字段分布（如果存在）
+        if level_exists:
+            cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
+            final_level_distribution = cursor.fetchall()
+            logger.info(f"最终level分布: {final_level_distribution}")
+        else:
+            logger.info("level字段不存在，跳过分布统计")
         
         # 检查是否还有格式错误的时间字段
         cursor.execute("SELECT COUNT(*) FROM collaborators WHERE created_at NOT LIKE '____-__-__%' OR updated_at NOT LIKE '____-__-__%'")
@@ -198,14 +212,16 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 60)
-        logger.info("🎉 v1.21 数据库字段映射自动修复完成！")
+        logger.info("🎉 v1.22 数据库字段映射安全修复完成！")
         logger.info("✅ 修复了created_at和updated_at字段中的'senior'字符串错误")
         logger.info("✅ 清理了deleted_at字段的错误值")
         logger.info("✅ 修复了所有表的时间字段格式问题")
+        logger.info("✅ 安全检查level字段存在性，避免查询错误")
         logger.info(f"✅ 保留了 {total_collaborators} 个collaborators记录")
         logger.info(f"✅ 其中 {active_collaborators} 个处于活跃状态")
         logger.info("📝 Pydantic Invalid isoformat string 错误应该彻底解决")
         logger.info("🚀 所有API应该恢复正常工作")
+        logger.info("🔧 修复了migration执行中断导致的502错误")
         logger.info("=" * 60)
         
         conn.close()
