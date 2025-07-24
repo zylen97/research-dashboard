@@ -119,11 +119,15 @@ async def get_senior_collaborators(
             raise HTTPException(status_code=500, detail="Database schema error - please run migration")
 
 @router.get("/health")
-async def health_check(db: Session = Depends(get_db)):
-    """健康检查端点 - 不需要认证"""
+async def health_check():
+    """健康检查端点 - 不需要认证，不依赖注入"""
     from sqlalchemy import text
+    from ..models.database import SessionLocal
     
     logger.info("Health check endpoint called - starting execution")
+    
+    # 直接创建数据库会话，避免依赖注入导致的认证问题
+    db = SessionLocal()
     
     try:
         logger.info("Step 1: Testing database connection")
@@ -176,3 +180,6 @@ async def health_check(db: Session = Depends(get_db)):
         }
         logger.error(f"Returning error response: {error_response}")
         return error_response
+    finally:
+        # 确保关闭数据库连接
+        db.close()

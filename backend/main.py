@@ -54,11 +54,12 @@ app.add_middleware(
     ],
 )
 
-# 安全中间件
+# 安全中间件 - 注意：最后添加的中间件最先执行
+# 顺序：AuthMiddleware -> RateLimitMiddleware -> RequestValidationMiddleware -> SecurityHeadersMiddleware -> CORSMiddleware
+app.add_middleware(AuthMiddleware)  # 认证中间件放在最后添加，这样它会在CORS之后执行
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
-app.add_middleware(AuthMiddleware)  # 启用认证中间件
 
 # Include routers
 app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
@@ -78,13 +79,16 @@ async def root():
 @app.get("/api/health")
 async def global_health_check():
     """全局健康检查 - 不需要认证"""
+    from datetime import datetime
     return {
         "status": "healthy",
         "service": "research-dashboard-api",
         "version": "1.0.0",
-        "timestamp": "2025-07-24",
+        "timestamp": datetime.utcnow().isoformat(),
+        "environment": settings.ENVIRONMENT,
         "endpoints": {
-            "ideas_management": "/api/ideas-management/health"
+            "ideas_management": "/api/ideas-management/health",
+            "auth": "/api/auth/login"
         }
     }
 
