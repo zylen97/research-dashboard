@@ -1,23 +1,20 @@
 #!/usr/bin/env python3
 """
-通用数据库迁移脚本
-- 每次数据库修改时，更新此文件内容
-- 执行完成后自动标记为已完成
-- 下次部署时如无新迁移则跳过
+重置所有用户密码为123
 """
 
 import sqlite3
 import sys
 import os
-import logging
 from datetime import datetime
 
 # 导入迁移工具
-from migration_utils import setup_migration_logging, find_database_path, backup_database, get_table_columns, table_exists
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from migrations.migration_utils import setup_migration_logging, find_database_path, backup_database
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 重置所有用户密码为123
+# 迁移版本号
 MIGRATION_VERSION = "v1.15_reset_passwords"
 
 def check_if_migration_completed(db_path):
@@ -88,7 +85,6 @@ def run_migration():
         logger.info("开始重置所有用户密码...")
         
         # 导入密码加密函数
-        import sys
         sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         from app.utils.auth import get_password_hash
         
@@ -98,18 +94,17 @@ def run_migration():
         
         if not users:
             logger.warning("没有找到任何用户")
-        else:
-            # 生成密码123的hash
-            password_hash = get_password_hash('123')
-            
-            # 更新所有用户的密码
-            updated_count = 0
-            for user_id, username in users:
-                cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (password_hash, user_id))
-                logger.info(f"✅ 用户 {username} 密码已重置为: 123")
-                updated_count += 1
-            
-            logger.info(f"✅ 共重置 {updated_count} 个用户的密码")
+            return True
+        
+        # 生成密码123的hash
+        password_hash = get_password_hash('123')
+        
+        # 更新所有用户的密码
+        updated_count = 0
+        for user_id, username in users:
+            cursor.execute('UPDATE users SET password_hash = ? WHERE id = ?', (password_hash, user_id))
+            logger.info(f"✅ 用户 {username} 密码已重置为: 123")
+            updated_count += 1
         
         # 提交更改
         conn.commit()
@@ -121,8 +116,10 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 60)
-        logger.info("🎉 密码重置完成！")
-        logger.info("✅ 所有用户现在都可以使用密码 123 登录")
+        logger.info(f"🎉 密码重置完成！")
+        logger.info(f"📊 重置统计:")
+        logger.info(f"   - 重置用户数: {updated_count}")
+        logger.info(f"✅ 所有用户现在都可以使用密码 123 登录")
         logger.info("=" * 60)
         
         return True
