@@ -119,7 +119,7 @@ const IdeaDiscovery: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: 'none', width: '100%' }}>
       {/* 页面标题 */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
@@ -131,14 +131,14 @@ const IdeaDiscovery: React.FC = () => {
         </Paragraph>
       </div>
 
-      <Row gutter={[24, 24]}>
+      <Row gutter={[32, 32]} style={{ maxWidth: '2000px', margin: '0 auto' }}>
         {/* 左侧：AI配置面板 */}
-        <Col xs={24} md={24} lg={6} xl={6}>
+        <Col xs={24} md={8} lg={5} xl={4}>
           <EmbeddedAIConfig onConfigChange={setAiConfig} />
         </Col>
 
         {/* 右侧：文件处理面板 */}
-        <Col xs={24} md={24} lg={18} xl={18}>
+        <Col xs={24} md={16} lg={19} xl={20}>
           <Card title="Excel文件处理">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
@@ -149,7 +149,7 @@ const IdeaDiscovery: React.FC = () => {
                 beforeUpload={handleFileSelect}
                 showUploadList={false}
                 disabled={state === ProcessingState.PROCESSING}
-                style={{ padding: '48px 24px' }}
+                style={{ padding: '60px 40px' }}
               >
                 <p className="ant-upload-drag-icon">
                   <FileExcelOutlined style={{ fontSize: '64px', color: '#1890ff' }} />
