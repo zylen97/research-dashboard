@@ -12,25 +12,31 @@ export interface TodoStatus {
 
 export const useProjectData = () => {
   // 获取用户的待办项目列表
-  const { data: userTodos = [], refetch: refetchTodos } = useQuery({
+  const { data: userTodosData, refetch: refetchTodos } = useQuery({
     queryKey: ['user-todos'],
     queryFn: () => researchApi.getUserTodos(),
   });
+  
+  const userTodos = Array.isArray(userTodosData) ? userTodosData : [];
 
   // 缓存待办状态
   const [todoStatusCache, setTodoStatusCache] = useState<Record<number, TodoStatus>>({});
 
   // 获取研究项目数据
-  const { data: projects = [], isLoading: isProjectsLoading, refetch: refetchProjects } = useQuery({
+  const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useQuery({
     queryKey: ['research-projects'],
     queryFn: () => researchApi.getProjects(),
   });
 
   // 获取合作者数据（用于下拉选择）
-  const { data: collaborators = [], isLoading: isCollaboratorsLoading, refetch: refetchCollaborators } = useQuery({
+  const { data: collaboratorsData, isLoading: isCollaboratorsLoading, refetch: refetchCollaborators } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getCollaborators(),
   });
+
+  // 确保数据始终是数组
+  const projects = Array.isArray(projectsData) ? projectsData : [];
+  const collaborators = Array.isArray(collaboratorsData) ? collaboratorsData : [];
 
   // 更新待办缓存
   useEffect(() => {

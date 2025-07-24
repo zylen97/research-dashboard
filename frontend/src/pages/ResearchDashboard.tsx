@@ -83,7 +83,7 @@ const ResearchDashboard: React.FC = () => {
     setEditingProject(project);
     form.setFieldsValue({
       ...project,
-      collaborator_ids: project.collaborators.map(c => c.id),
+      collaborator_ids: Array.isArray(project.collaborators) ? project.collaborators.map(c => c.id) : [],
     });
     setIsModalVisible(true);
   };
@@ -244,7 +244,7 @@ const ResearchDashboard: React.FC = () => {
                 (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
             >
-              {collaborators.map((collaborator) => (
+              {Array.isArray(collaborators) && collaborators.map((collaborator) => (
                 <Select.Option key={collaborator.id} value={collaborator.id}>
                   {collaborator.name}
                 </Select.Option>
