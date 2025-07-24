@@ -290,7 +290,7 @@ fi
 if [ -f "migrations/migration.py" ]; then
     log_message "INFO" "运行数据库迁移脚本..."
     
-    if python3 migrations/migration.py; then
+    if ENVIRONMENT=production python3 migrations/migration.py; then
         log_message "INFO" "数据库迁移完成"
     else
         log_message "WARN" "数据库迁移出现警告，但继续部署"
