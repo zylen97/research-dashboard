@@ -136,7 +136,15 @@ curl -s http://localhost:8080/api/health | head -200 2>/dev/null && echo "✅ �
 
 echo ""
 echo "🔍 测试Ideas健康检查:"
-curl -s http://localhost:8080/api/ideas-management/health | head -200 2>/dev/null && echo "✅ Ideas健康检查响应正常" || echo "❌ Ideas健康检查失败"
+HEALTH_RESPONSE=$(curl -s http://localhost:8080/api/ideas-management/health 2>/dev/null)
+echo "$HEALTH_RESPONSE"
+if echo "$HEALTH_RESPONSE" | grep -q '"status":"healthy"'; then
+    echo "✅ Ideas健康检查正常"
+elif echo "$HEALTH_RESPONSE" | grep -q '"detail":"Not authenticated"'; then
+    echo "❌ Ideas健康检查失败 - 需要认证（应该在白名单中）"
+else
+    echo "❌ Ideas健康检查失败 - 未知错误"
+fi
 
 echo ""
 

@@ -99,18 +99,20 @@ async def get_senior_collaborators(
 ):
     """获取高级合作者列表（senior级别）"""
     try:
-        # 首先检查表结构是否正确
+        # 使用is_senior字段而不是level字段
         collaborators = db.query(Collaborator).filter(
-            Collaborator.level == "senior",
-            Collaborator.deleted_at.is_(None)
+            Collaborator.is_senior == True,
+            Collaborator.is_deleted == False
         ).all()
         return collaborators
     except Exception as e:
-        # 如果字段不存在，返回所有合作者作为fallback
+        # 如果查询失败，返回所有未删除的合作者作为fallback
         logger.warning(f"Senior collaborator query failed: {e}")
         try:
-            # Fallback: 返回所有合作者
-            collaborators = db.query(Collaborator).all()
+            # Fallback: 返回所有未删除的合作者
+            collaborators = db.query(Collaborator).filter(
+                Collaborator.is_deleted == False
+            ).all()
             return collaborators
         except Exception as e2:
             logger.error(f"Fallback query also failed: {e2}")
@@ -126,12 +128,12 @@ async def health_check(db: Session = Depends(get_db)):
         # 检查collaborators表结构
         result = db.execute("PRAGMA table_info(collaborators)").fetchall()
         columns = [row[1] for row in result]
-        has_level = 'level' in columns
-        has_deleted_at = 'deleted_at' in columns
+        has_is_senior = 'is_senior' in columns
+        has_is_deleted = 'is_deleted' in columns
         
         # 检查是否有senior collaborators
         try:
-            senior_count = db.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior' AND deleted_at IS NULL").fetchone()[0]
+            senior_count = db.execute("SELECT COUNT(*) FROM collaborators WHERE is_senior = 1 AND is_deleted = 0").fetchone()[0]
         except:
             senior_count = 0
         
@@ -140,8 +142,8 @@ async def health_check(db: Session = Depends(get_db)):
             "database": "connected",
             "collaborators_table": {
                 "exists": True,
-                "has_level_field": has_level,
-                "has_deleted_at_field": has_deleted_at,
+                "has_is_senior_field": has_is_senior,
+                "has_is_deleted_field": has_is_deleted,
                 "senior_collaborators_count": senior_count
             },
             "timestamp": datetime.utcnow().isoformat()

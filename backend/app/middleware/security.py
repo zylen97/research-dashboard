@@ -207,8 +207,13 @@ class AuthMiddleware(BaseHTTPMiddleware):
         from app.models.database import get_db, User
 
         # 检查是否为公开路径
-        if request.url.path in self.public_paths:
+        current_path = request.url.path
+        if current_path in self.public_paths:
+            logger.debug(f"Public path accessed: {current_path}")
             return await call_next(request)
+        
+        # 记录被拦截的路径以便调试
+        logger.debug(f"Auth required for path: {current_path}, public_paths: {self.public_paths}")
 
         # 获取Authorization头
         authorization = request.headers.get("Authorization")
