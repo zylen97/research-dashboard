@@ -17,8 +17,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 重置所有用户密码为123
-MIGRATION_VERSION = "v1.15_reset_passwords"
+# 迁移版本号 - 强制重置所有用户密码为123
+MIGRATION_VERSION = "v1.16_force_password_reset"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -82,10 +82,11 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.15迁移任务：重置所有用户密码为123
+        # 🔧 v1.16迁移任务：强制重置所有用户密码为123
+        # 修复登录问题 - 2025-07-24
         # ===========================================
         
-        logger.info("开始重置所有用户密码...")
+        logger.info("🚨 开始强制重置所有用户密码为123...")
         
         # 导入密码加密函数
         import sys
@@ -121,8 +122,9 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 60)
-        logger.info("🎉 密码重置完成！")
+        logger.info("🎉 v1.16 强制密码重置完成！")
         logger.info("✅ 所有用户现在都可以使用密码 123 登录")
+        logger.info("📝 用户名/密码: zl/123, admin/123, test/123")
         logger.info("=" * 60)
         
         return True
