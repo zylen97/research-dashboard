@@ -108,33 +108,33 @@ api.interceptors.response.use(
 export const collaboratorApi = {
   // 获取合作者列表
   getCollaborators: (params?: PaginationParams): Promise<Collaborator[]> =>
-    api.get('/api/collaborators/', { params }),
+    api.get('/collaborators/', { params }),
 
   // 获取单个合作者
   getCollaborator: (id: number): Promise<Collaborator> =>
-    api.get(`/api/collaborators/${id}`),
+    api.get(`/collaborators/${id}`),
 
   // 创建合作者
   createCollaborator: (data: CollaboratorCreate): Promise<Collaborator> =>
-    api.post('/api/collaborators/', data),
+    api.post('/collaborators/', data),
 
   // 更新合作者
   updateCollaborator: (id: number, data: CollaboratorUpdate): Promise<Collaborator> =>
-    api.put(`/api/collaborators/${id}`, data),
+    api.put(`/collaborators/${id}`, data),
 
   // 删除合作者
   deleteCollaborator: (id: number, permanent: boolean = false): Promise<{ message: string }> =>
-    api.delete(`/api/collaborators/${id}${permanent ? '?permanent=true' : ''}`),
+    api.delete(`/collaborators/${id}${permanent ? '?permanent=true' : ''}`),
 
   // 获取合作者参与的项目
   getCollaboratorProjects: (id: number): Promise<ResearchProject[]> =>
-    api.get(`/api/collaborators/${id}/projects`),
+    api.get(`/collaborators/${id}/projects`),
 
   // 上传合作者文件
   uploadCollaboratorsFile: (file: File): Promise<FileUploadResponse> => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/api/collaborators/upload', formData, {
+    return api.post('/collaborators/upload', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -147,14 +147,14 @@ export const collaboratorApi = {
     cleaned_count: number;
     total_found: number;
   }> =>
-    api.post(`/api/collaborators/clean-names?keyword=${keyword}`),
+    api.post(`/collaborators/clean-names?keyword=${keyword}`),
   
   // 批量创建合作者
   createCollaboratorsBatch: (collaborators: CollaboratorCreate[]): Promise<{
     message: string;
     created_count: number;
   }> =>
-    api.post('/api/collaborators/create-batch', collaborators),
+    api.post('/collaborators/create-batch', collaborators),
   
   // 创建合作者组
   createCollaboratorGroup: (groupName: string, memberNames: string[]): Promise<{
@@ -162,7 +162,7 @@ export const collaboratorApi = {
     updated_count: number;
     not_found: string[];
   }> =>
-    api.post('/api/collaborators/create-group', {
+    api.post('/collaborators/create-group', {
       group_name: groupName,
       member_names: memberNames,
     }),
@@ -180,15 +180,15 @@ export const collaboratorApi = {
     can_soft_delete?: boolean;
     can_hard_delete?: boolean;
   }> =>
-    api.get(`/api/validation/collaborator/${id}/dependencies`),
+    api.get(`/validation/collaborator/${id}/dependencies`),
     
   // 恢复已删除的合作者
   restoreCollaborator: (id: number): Promise<{ message: string }> =>
-    api.post(`/api/collaborators/${id}/restore`),
+    api.post(`/collaborators/${id}/restore`),
     
   // 获取已删除的合作者列表
   getDeletedCollaborators: (): Promise<Collaborator[]> =>
-    api.get('/api/collaborators/deleted/list'),
+    api.get('/collaborators/deleted/list'),
     
   // 检查合作者的依赖关系（在合作者路由中）
   checkCollaboratorDependencies: (id: number): Promise<{
@@ -198,64 +198,64 @@ export const collaboratorApi = {
     can_soft_delete: boolean;
     can_hard_delete: boolean;
   }> =>
-    api.get(`/api/collaborators/${id}/check-dependencies`),
+    api.get(`/collaborators/${id}/check-dependencies`),
 };
 
 // 研究项目API
 export const researchApi = {
   // 获取研究项目列表
   getProjects: (params?: PaginationParams & { status_filter?: string }): Promise<ResearchProject[]> =>
-    api.get('/api/research/', { params }),
+    api.get('/research/', { params }),
 
   // 获取单个研究项目
   getProject: (id: number): Promise<ResearchProject> =>
-    api.get(`/api/research/${id}`),
+    api.get(`/research/${id}`),
 
   // 创建研究项目
   createProject: (data: ResearchProjectCreate): Promise<ResearchProject> =>
-    api.post('/api/research/', data),
+    api.post('/research/', data),
 
   // 更新研究项目
   updateProject: (id: number, data: ResearchProjectUpdate): Promise<ResearchProject> =>
-    api.put(`/api/research/${id}`, data),
+    api.put(`/research/${id}`, data),
 
   // 删除研究项目
   deleteProject: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/research/${id}`),
+    api.delete(`/research/${id}`),
 
   // 获取项目交流日志
   getCommunicationLogs: (id: number): Promise<CommunicationLog[]> =>
-    api.get(`/api/research/${id}/logs`),
+    api.get(`/research/${id}/logs`),
 
   // 创建交流日志
   createCommunicationLog: (projectId: number, data: CommunicationLogCreate): Promise<CommunicationLog> => {
     console.log('API调用参数:', { projectId, data });
-    return api.post(`/api/research/${projectId}/logs`, data);
+    return api.post(`/research/${projectId}/logs`, data);
   },
 
   // 更新交流日志
   updateCommunicationLog: (projectId: number, logId: number, data: CommunicationLogUpdate): Promise<CommunicationLog> =>
-    api.put(`/api/research/${projectId}/logs/${logId}`, data),
+    api.put(`/research/${projectId}/logs/${logId}`, data),
 
   // 删除交流日志
   deleteCommunicationLog: (projectId: number, logId: number): Promise<{ message: string }> =>
-    api.delete(`/api/research/${projectId}/logs/${logId}`),
+    api.delete(`/research/${projectId}/logs/${logId}`),
 
   // 更新项目进度
   updateProgress: (id: number, progress: number): Promise<{ message: string; progress: number }> =>
-    api.put(`/api/research/${id}/progress`, null, { params: { progress } }),
+    api.put(`/research/${id}/progress`, null, { params: { progress } }),
 
   // 获取用户的待办项目列表
   getUserTodos: (): Promise<ResearchProject[]> =>
-    api.get('/api/research/todos'),
+    api.get('/research/todos'),
 
   // 将项目标记为待办
   markAsTodo: (projectId: number, priority?: number, notes?: string): Promise<{ message: string }> =>
-    api.post(`/api/research/${projectId}/todo`, { priority, notes }),
+    api.post(`/research/${projectId}/todo`, { priority, notes }),
 
   // 取消项目的待办标记
   unmarkTodo: (projectId: number): Promise<{ message: string }> =>
-    api.delete(`/api/research/${projectId}/todo`),
+    api.delete(`/research/${projectId}/todo`),
 
   // 获取项目的待办状态
   getTodoStatus: (projectId: number): Promise<{
@@ -264,7 +264,7 @@ export const researchApi = {
     priority: number | null;
     notes: string | null;
   }> =>
-    api.get(`/api/research/${projectId}/todo-status`),
+    api.get(`/research/${projectId}/todo-status`),
     
   // 检查项目的依赖关系
   checkProjectDependencies: (id: number): Promise<{
@@ -273,7 +273,7 @@ export const researchApi = {
     collaborators: number;
     can_delete: boolean;
   }> =>
-    api.get(`/api/research/${id}/check-dependencies`),
+    api.get(`/research/${id}/check-dependencies`),
 };
 
 
@@ -282,11 +282,11 @@ export const researchApi = {
 export const authApi = {
   // 用户登录
   login: (credentials: UserLogin): Promise<AuthToken> =>
-    api.post('/api/auth/login', credentials),
+    api.post('/auth/login', credentials),
 
   // 获取当前用户信息
   getCurrentUser: (): Promise<User> =>
-    api.get('/api/auth/me'),
+    api.get('/auth/me'),
 
   // 用户登出（本地操作）
   logout: (): void => {
@@ -315,65 +315,65 @@ export const configApi = {
     category?: string;
     is_active?: boolean;
   }): Promise<SystemConfig[]> =>
-    api.get('/api/config/', { params }),
+    api.get('/config/', { params }),
 
   // 获取单个配置
   getConfig: (id: number): Promise<SystemConfig> =>
-    api.get(`/api/config/${id}`),
+    api.get(`/config/${id}`),
 
   // 创建配置
   createConfig: (data: SystemConfigCreate): Promise<SystemConfig> =>
-    api.post('/api/config/', data),
+    api.post('/config/', data),
 
   // 更新配置
   updateConfig: (id: number, data: SystemConfigUpdate): Promise<SystemConfig> =>
-    api.put(`/api/config/${id}`, data),
+    api.put(`/config/${id}`, data),
 
   // 删除配置
   deleteConfig: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/config/${id}`),
+    api.delete(`/config/${id}`),
 
   // 获取AI提供商列表
   getAIProviders: (): Promise<AIProvider[]> =>
-    api.get('/api/config/ai/providers'),
+    api.get('/config/ai/providers'),
 
   // 创建AI提供商配置
   createAIProvider: (data: AIProviderCreate): Promise<SystemConfig> =>
-    api.post('/api/config/ai/providers', data),
+    api.post('/config/ai/providers', data),
 
   // 测试AI提供商连接
   testAIProvider: (data: {
     provider: string;
     test_prompt?: string;
   }): Promise<AITestResponse> =>
-    api.post('/api/config/ai/test', data),
+    api.post('/config/ai/test', data),
 };
 
 // 备份管理 API
 export const backupApi = {
   // 获取备份统计
   getStats: (): Promise<BackupStats> =>
-    api.get('/api/backup/stats'),
+    api.get('/backup/stats'),
 
   // 获取备份列表
   getBackups: (): Promise<BackupListResponse> =>
-    api.get('/api/backup/list'),
+    api.get('/backup/list'),
 
   // 创建备份
   createBackup: (): Promise<BackupCreateResponse> =>
-    api.post('/api/backup/create'),
+    api.post('/backup/create'),
 
   // 恢复备份
   restoreBackup: (backupId: string): Promise<{ message: string }> =>
-    api.post(`/api/backup/restore/${backupId}`),
+    api.post(`/backup/restore/${backupId}`),
 
   // 删除备份
   deleteBackup: (backupId: string): Promise<{ message: string }> =>
-    api.delete(`/api/backup/${backupId}`),
+    api.delete(`/backup/${backupId}`),
 
   // 下载备份
   downloadBackup: (backupId: string): Promise<Blob> => {
-    return api.get(`/api/backup/download/${backupId}`, {
+    return api.get(`/backup/download/${backupId}`, {
       responseType: 'blob'
     });
   },
@@ -385,7 +385,7 @@ export const ideaDiscoveryApi = {
   processExcel: (file: File): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
-    return api.post('/api/ideas/process-excel', formData, {
+    return api.post('/ideas/process-excel', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -395,7 +395,7 @@ export const ideaDiscoveryApi = {
 
   // 健康检查
   healthCheck: (): Promise<{ status: string; service: string }> =>
-    api.get('/api/ideas/health'),
+    api.get('/ideas/health'),
 };
 
 // Ideas管理 API
@@ -406,27 +406,27 @@ export const ideasApi = {
     limit?: number;
     importance_filter?: number;
   }): Promise<import('../types').Idea[]> =>
-    api.get('/api/ideas-management', { params }),
+    api.get('/ideas-management', { params }),
 
   // 获取单个Idea
   getIdea: (id: number): Promise<import('../types').Idea> =>
-    api.get(`/api/ideas-management/${id}`),
+    api.get(`/ideas-management/${id}`),
 
   // 创建Idea
   createIdea: (data: import('../types').IdeaCreate): Promise<import('../types').Idea> =>
-    api.post('/api/ideas-management', data),
+    api.post('/ideas-management', data),
 
   // 更新Idea  
   updateIdea: (id: number, data: import('../types').IdeaUpdate): Promise<import('../types').Idea> =>
-    api.put(`/api/ideas-management/${id}`, data),
+    api.put(`/ideas-management/${id}`, data),
 
   // 删除Idea
   deleteIdea: (id: number): Promise<{ message: string }> =>
-    api.delete(`/api/ideas-management/${id}`),
+    api.delete(`/ideas-management/${id}`),
 
   // 获取高级合作者列表
   getSeniorCollaborators: (): Promise<import('../types').Collaborator[]> =>
-    api.get('/api/ideas-management/collaborators/senior'),
+    api.get('/ideas-management/collaborators/senior'),
 };
 
 // 验证 API
@@ -441,7 +441,7 @@ export const validationApi = {
     warnings?: string[];
     can_delete?: boolean;
   }> =>
-    api.get(`/api/validation/project/${id}/dependencies`),
+    api.get(`/validation/project/${id}/dependencies`),
 
   // 验证项目数据
   validateProject: (data: any): Promise<{
@@ -449,7 +449,7 @@ export const validationApi = {
     errors?: string[];
     warnings?: string[];
   }> =>
-    api.post('/api/validation/project/validate', data),
+    api.post('/validation/project/validate', data),
 
   // 验证合作者数据
   validateCollaborator: (data: any): Promise<{
@@ -457,7 +457,7 @@ export const validationApi = {
     errors?: string[];
     warnings?: string[];
   }> =>
-    api.post('/api/validation/collaborator/validate', data),
+    api.post('/validation/collaborator/validate', data),
 
   // 检查数据一致性
   checkConsistency: (): Promise<{
@@ -468,7 +468,7 @@ export const validationApi = {
       severity: 'error' | 'warning';
     }>;
   }> =>
-    api.get('/api/validation/consistency'),
+    api.get('/validation/consistency'),
 };
 
 // 审计日志 API
@@ -483,11 +483,11 @@ export const auditApi = {
     start_date?: string;
     end_date?: string;
   }): Promise<any[]> =>
-    api.get('/api/audit/', { params }),
+    api.get('/audit/', { params }),
 
   // 获取单条审计日志
   getAuditLog: (id: number): Promise<any> =>
-    api.get(`/api/audit/${id}`),
+    api.get(`/audit/${id}`),
 
   // 获取审计统计
   getAuditStats: (): Promise<{
@@ -496,14 +496,14 @@ export const auditApi = {
     actions_by_table: Record<string, number>;
     recent_actions: any[];
   }> =>
-    api.get('/api/audit/stats'),
+    api.get('/audit/stats'),
 
   // 获取用户操作历史
   getUserActions: (userId: number, params?: {
     skip?: number;
     limit?: number;
   }): Promise<any[]> =>
-    api.get(`/api/audit/user/${userId}`, { params }),
+    api.get(`/audit/user/${userId}`, { params }),
 };
 
 export default api;
