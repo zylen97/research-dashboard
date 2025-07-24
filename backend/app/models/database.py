@@ -34,6 +34,47 @@ class Collaborator(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
+    # 兼容性属性 - 保持旧代码工作
+    @property
+    def is_deleted(self):
+        return self.deleted_at is not None
+    
+    @is_deleted.setter
+    def is_deleted(self, value):
+        if value:
+            self.deleted_at = datetime.utcnow()
+        else:
+            self.deleted_at = None
+    
+    @property
+    def is_senior(self):
+        return self.level == 'senior'
+    
+    @is_senior.setter
+    def is_senior(self, value):
+        self.level = 'senior' if value else 'junior'
+    
+    # 向后兼容的假字段
+    @property
+    def gender(self):
+        return None
+    
+    @property
+    def class_name(self):
+        return None
+    
+    @property
+    def future_plan(self):
+        return None
+    
+    @property
+    def background(self):
+        return None
+    
+    @property
+    def contact_info(self):
+        return self.email
+    
     # Relationships
     projects = relationship("ResearchProject", secondary=project_collaborators, back_populates="collaborators")
 
