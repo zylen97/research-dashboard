@@ -47,50 +47,6 @@ log_message() {
     esac
 }
 
-# nginx CORS紧急修复函数
-fix_nginx_cors() {
-    log_message "INFO" "🚨 开始nginx CORS紧急修复..."
-    
-    # 备份当前配置
-    backup_name="/etc/nginx/sites-available/research-dashboard-3001.backup.$(date +%Y%m%d_%H%M%S)"
-    cp /etc/nginx/sites-available/research-dashboard-3001 "$backup_name"
-    log_message "INFO" "✅ 已备份nginx配置到: $backup_name"
-    
-    # 修复proxy_pass配置 - 添加结尾斜杠
-    sed -i 's|proxy_pass http://localhost:8080;|proxy_pass http://localhost:8080/;|g' /etc/nginx/sites-available/research-dashboard-3001
-    
-    # 修复Host头配置
-    sed -i 's|proxy_set_header Host \$host;|proxy_set_header Host \$host:\$server_port;|g' /etc/nginx/sites-available/research-dashboard-3001
-    
-    # 移除nginx中的CORS头配置，避免与FastAPI冲突
-    sed -i '/add_header.*Access-Control/d' /etc/nginx/sites-available/research-dashboard-3001
-    sed -i '/add_header.*Content-Type.*text\/plain/d' /etc/nginx/sites-available/research-dashboard-3001
-    sed -i '/add_header.*Content-Length.*0/d' /etc/nginx/sites-available/research-dashboard-3001
-    sed -i '/return 204/d' /etc/nginx/sites-available/research-dashboard-3001
-    
-    # 移除OPTIONS处理块
-    sed -i '/if (\$request_method = OPTIONS)/,/}/d' /etc/nginx/sites-available/research-dashboard-3001
-    
-    # 测试nginx配置
-    if nginx -t >/dev/null 2>&1; then
-        log_message "INFO" "✅ nginx配置测试通过"
-        systemctl reload nginx
-        log_message "INFO" "✅ nginx已重新加载"
-        
-        # 测试修复结果
-        log_message "INFO" "🧪 测试修复结果..."
-        if curl -I http://localhost:3001/api/ideas-management/ >/dev/null 2>&1; then
-            log_message "INFO" "🎉 nginx CORS修复成功！"
-        else
-            log_message "WARN" "⚠️ nginx修复完成，但测试连接失败"
-        fi
-    else
-        log_message "ERROR" "❌ nginx配置测试失败，恢复备份"
-        cp "$backup_name" /etc/nginx/sites-available/research-dashboard-3001
-        return 1
-    fi
-}
-
 # 错误处理函数
 error_exit() {
     log_message "ERROR" "$1"
@@ -397,10 +353,6 @@ if [ -f "data/research_dashboard_prod.db" ]; then
 fi
 
 cd ..
-
-# 4.5. 紧急修复nginx CORS配置
-log_message "INFO" "执行nginx CORS紧急修复..."
-fix_nginx_cors || log_message "WARN" "nginx修复失败，但继续部署"
 
 # 5. 智能服务重启
 BACKEND_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "backend/" || echo "0")
