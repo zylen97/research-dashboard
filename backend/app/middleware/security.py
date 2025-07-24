@@ -32,6 +32,11 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """处理请求，应用速率限制"""
         client_ip = self.get_client_ip(request)
         current_time = time.time()
+        path = request.url.path
+        
+        # 添加调试日志
+        if path.startswith('/api/'):
+            logger.info(f"RateLimitMiddleware: Processing {path} from {client_ip}")
 
         # 定期清理所有过期记录（每分钟一次）
         if current_time - self.last_cleanup > 60:
@@ -148,6 +153,12 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next):
         """验证请求"""
+        path = request.url.path
+        
+        # 添加调试日志
+        if path.startswith('/api/'):
+            logger.info(f"RequestValidationMiddleware: Processing {path}")
+        
         # 检查请求体大小
         content_length = request.headers.get("content-length")
         if content_length and int(content_length) > self.max_content_length:
@@ -208,12 +219,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         # 检查是否为公开路径
         current_path = request.url.path
+        logger.info(f"AuthMiddleware: Checking path '{current_path}' against public_paths: {self.public_paths}")
+        
         if current_path in self.public_paths:
-            logger.debug(f"Public path accessed: {current_path}")
+            logger.info(f"AuthMiddleware: Public path accessed, allowing: {current_path}")
             return await call_next(request)
         
         # 记录被拦截的路径以便调试
-        logger.debug(f"Auth required for path: {current_path}, public_paths: {self.public_paths}")
+        logger.info(f"AuthMiddleware: Auth required for path: {current_path}")
 
         # 获取Authorization头
         authorization = request.headers.get("Authorization")
