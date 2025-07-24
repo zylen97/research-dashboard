@@ -154,9 +154,10 @@ class Idea(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     research_question = Column(Text, nullable=False)  # 研究问题
-    research_method = Column(Text)  # 研究方法
-    source_literature = Column(Text)  # 来源文献
-    importance = Column(Integer, default=3)  # 重要性 (1-5)
+    research_method = Column(Text, nullable=False)  # 研究方法 (改为必填)
+    source_journal = Column(Text, nullable=False)  # 来源期刊 (新增必填)
+    source_literature = Column(Text, nullable=False)  # 来源文献 (改为必填)
+    maturity = Column(String(20), nullable=False, default='immature')  # 成熟度: mature/immature
     description = Column(Text)  # 额外描述
     collaborator_id = Column(Integer, ForeignKey('collaborators.id'), nullable=True)  # 负责人
     created_at = Column(DateTime, default=datetime.utcnow)

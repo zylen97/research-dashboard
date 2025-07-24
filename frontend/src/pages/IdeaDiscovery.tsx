@@ -131,14 +131,14 @@ const IdeaDiscovery: React.FC = () => {
         </Paragraph>
       </div>
 
-      <Row gutter={[32, 32]} style={{ maxWidth: '2000px', margin: '0 auto' }}>
+      <Row gutter={[32, 32]} style={{ width: '100%' }}>
         {/* 左侧：AI配置面板 */}
-        <Col xs={24} md={8} lg={5} xl={4}>
+        <Col xs={24} md={6} lg={4} xl={3}>
           <EmbeddedAIConfig onConfigChange={setAiConfig} />
         </Col>
 
         {/* 右侧：文件处理面板 */}
-        <Col xs={24} md={16} lg={19} xl={20}>
+        <Col xs={24} md={18} lg={20} xl={21}>
           <Card title="Excel文件处理">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 

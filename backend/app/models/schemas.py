@@ -245,11 +245,18 @@ class AITestResponse(BaseModel):
 # Idea schemas
 class IdeaBase(BaseModel):
     research_question: str = Field(..., description="研究问题")
-    research_method: Optional[str] = Field(None, description="研究方法")
-    source_literature: Optional[str] = Field(None, description="来源文献")
-    importance: int = Field(default=3, ge=1, le=5, description="重要性评级 1-5")
+    research_method: str = Field(..., description="研究方法")
+    source_journal: str = Field(..., description="来源期刊")
+    source_literature: str = Field(..., description="来源文献")
+    maturity: str = Field(default="immature", description="成熟度：mature/immature")
     description: Optional[str] = Field(None, description="额外描述")
     collaborator_id: Optional[int] = Field(None, description="负责人ID")
+    
+    @field_validator('maturity')
+    def validate_maturity(cls, v):
+        if v not in ['mature', 'immature']:
+            raise ValueError('maturity must be either "mature" or "immature"')
+        return v
 
 class IdeaCreate(IdeaBase):
     pass
@@ -257,10 +264,17 @@ class IdeaCreate(IdeaBase):
 class IdeaUpdate(BaseModel):
     research_question: Optional[str] = None
     research_method: Optional[str] = None
+    source_journal: Optional[str] = None
     source_literature: Optional[str] = None
-    importance: Optional[int] = Field(None, ge=1, le=5)
+    maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
     description: Optional[str] = None
     collaborator_id: Optional[int] = None
+    
+    @field_validator('maturity')
+    def validate_maturity(cls, v):
+        if v is not None and v not in ['mature', 'immature']:
+            raise ValueError('maturity must be either "mature" or "immature"')
+        return v
 
 class Idea(IdeaBase):
     id: int

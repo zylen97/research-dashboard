@@ -5,7 +5,6 @@ import {
   Modal,
   Form,
   Input,
-  Rate,
   Select,
   Space,
   message,
@@ -77,8 +76,9 @@ const IdeasManagement: React.FC = () => {
       form.setFieldsValue({
         research_question: idea.research_question,
         research_method: idea.research_method,
+        source_journal: idea.source_journal,
         source_literature: idea.source_literature,
-        importance: idea.importance,
+        maturity: idea.maturity,
         description: idea.description,
         collaborator_id: idea.collaborator_id,
       });
@@ -129,42 +129,13 @@ const IdeasManagement: React.FC = () => {
     }
   };
 
-  // 重要性显示
-  const renderImportance = (importance: number) => {
-    let color: string;
-    let label: string;
-    
-    switch (importance) {
-      case 1:
-        color = '#ff4d4f';
-        label = '很低';
-        break;
-      case 2:
-        color = '#ff7a45';
-        label = '低';
-        break;
-      case 3:
-        color = '#ffa940';
-        label = '中等';
-        break;
-      case 4:
-        color = '#52c41a';
-        label = '高';
-        break;
-      case 5:
-        color = '#1890ff';
-        label = '很高';
-        break;
-      default:
-        color = '#ffa940';
-        label = '中等';
-    }
+  // 成熟度显示
+  const renderMaturity = (maturity: 'mature' | 'immature') => {
+    const color = maturity === 'mature' ? '#52c41a' : '#ffa940';
+    const label = maturity === 'mature' ? '成熟' : '不成熟';
     
     return (
-      <Space>
-        <Rate disabled value={importance} style={{ fontSize: '16px' }} />
-        <Tag color={color as any}>{label}</Tag>
-      </Space>
+      <Tag color={color}>{label}</Tag>
     );
   };
 
@@ -174,7 +145,7 @@ const IdeasManagement: React.FC = () => {
       title: '研究问题',
       dataIndex: 'research_question',
       key: 'research_question',
-      width: '30%',
+      width: '25%',
       render: (text: string) => (
         <Text style={{ wordBreak: 'break-word' }}>
           {text}
@@ -185,7 +156,15 @@ const IdeasManagement: React.FC = () => {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
-      width: '20%',
+      width: '15%',
+      ellipsis: true,
+      render: (text: string) => text || <Text type="secondary">未填写</Text>,
+    },
+    {
+      title: '来源期刊',
+      dataIndex: 'source_journal',
+      key: 'source_journal',
+      width: '15%',
       ellipsis: true,
       render: (text: string) => text || <Text type="secondary">未填写</Text>,
     },
@@ -193,7 +172,7 @@ const IdeasManagement: React.FC = () => {
       title: '来源文献',
       dataIndex: 'source_literature',
       key: 'source_literature',
-      width: '20%',
+      width: '15%',
       ellipsis: true,
       render: (text: string) => text || <Text type="secondary">未填写</Text>,
     },
@@ -206,12 +185,12 @@ const IdeasManagement: React.FC = () => {
         collaborator ? collaborator.name : <Text type="secondary">未分配</Text>,
     },
     {
-      title: '重要性',
-      dataIndex: 'importance',
-      key: 'importance',
+      title: '成熟度',
+      dataIndex: 'maturity',
+      key: 'maturity',
       width: '10%',
-      render: renderImportance,
-      sorter: (a, b) => a.importance - b.importance,
+      render: renderMaturity,
+      sorter: (a, b) => a.maturity.localeCompare(b.maturity),
     },
     {
       title: '创建时间',
@@ -302,7 +281,7 @@ const IdeasManagement: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          initialValues={{ importance: 3 }}
+          initialValues={{ maturity: 'immature' }}
         >
           <Form.Item
             name="research_question"
@@ -318,6 +297,7 @@ const IdeasManagement: React.FC = () => {
           <Form.Item
             name="research_method"
             label="研究方法"
+            rules={[{ required: true, message: '请输入研究方法' }]}
           >
             <TextArea 
               placeholder="请描述研究方法..."
@@ -326,8 +306,19 @@ const IdeasManagement: React.FC = () => {
           </Form.Item>
 
           <Form.Item
+            name="source_journal"
+            label="来源期刊"
+            rules={[{ required: true, message: '请输入来源期刊' }]}
+          >
+            <Input 
+              placeholder="请输入来源期刊..."
+            />
+          </Form.Item>
+
+          <Form.Item
             name="source_literature"
             label="来源文献"
+            rules={[{ required: true, message: '请输入来源文献' }]}
           >
             <TextArea 
               placeholder="请输入相关文献..."
@@ -352,11 +343,14 @@ const IdeasManagement: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="importance"
-            label="重要性评级"
-            rules={[{ required: true, message: '请选择重要性评级' }]}
+            name="maturity"
+            label="成熟度"
+            rules={[{ required: true, message: '请选择成熟度' }]}
           >
-            <Rate />
+            <Select placeholder="请选择成熟度">
+              <Option value="immature">不成熟</Option>
+              <Option value="mature">成熟</Option>
+            </Select>
           </Form.Item>
 
           <Form.Item

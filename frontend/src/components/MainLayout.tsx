@@ -243,7 +243,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             overflow: 'auto',
           }}
         >
-          <div className="content-wrapper">
+          <div className="content-wrapper" style={{ width: '100%', maxWidth: 'none' }}>
             {children}
           </div>
         </Content>

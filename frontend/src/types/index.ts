@@ -153,9 +153,10 @@ export const PROJECT_STATUSES = ['active', 'completed', 'paused'] as const;
 export interface Idea {
   id: number;
   research_question: string;
-  research_method?: string;
-  source_literature?: string;
-  importance: number; // 1-5
+  research_method: string;
+  source_journal: string;
+  source_literature: string;
+  maturity: 'mature' | 'immature';
   description?: string;
   collaborator_id?: number;
   collaborator?: {
@@ -168,9 +169,10 @@ export interface Idea {
 
 export interface IdeaCreate {
   research_question: string;
-  research_method?: string;
-  source_literature?: string;
-  importance?: number; // 1-5, default 3
+  research_method: string;
+  source_journal: string;
+  source_literature: string;
+  maturity?: 'mature' | 'immature'; // default 'immature'
   description?: string;
   collaborator_id?: number;
 }
@@ -178,8 +180,9 @@ export interface IdeaCreate {
 export interface IdeaUpdate {
   research_question?: string;
   research_method?: string;
+  source_journal?: string;
   source_literature?: string;
-  importance?: number; // 1-5
+  maturity?: 'mature' | 'immature';
   description?: string;
   collaborator_id?: number;
 }
