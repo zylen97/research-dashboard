@@ -287,16 +287,39 @@ if ! python3 -c "import fastapi, sqlalchemy, pydantic, httpx" 2>/dev/null; then
 fi
 
 # 执行数据库迁移
+log_message "INFO" "检查数据库迁移..."
 if [ -f "migrations/migration.py" ]; then
-    log_message "INFO" "运行数据库迁移脚本..."
+    log_message "INFO" "找到迁移脚本，开始执行..."
     
-    if ENVIRONMENT=production python3 migrations/migration.py; then
-        log_message "INFO" "数据库迁移完成"
+    # 记录迁移前的状态
+    if [ -f "data/research_dashboard_prod.db" ]; then
+        log_message "INFO" "迁移前数据库大小: $(du -sh data/research_dashboard_prod.db | cut -f1)"
+    fi
+    
+    # 执行迁移并捕获输出
+    MIGRATION_OUTPUT=$(ENVIRONMENT=production python3 migrations/migration.py 2>&1)
+    MIGRATION_EXIT_CODE=$?
+    
+    # 记录迁移输出
+    echo "$MIGRATION_OUTPUT" | while IFS= read -r line; do
+        log_message "MIGRATION" "$line"
+    done
+    
+    if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
+        log_message "INFO" "✅ 数据库迁移成功完成"
     else
-        log_message "WARN" "数据库迁移出现警告，但继续部署"
+        log_message "ERROR" "❌ 数据库迁移失败 (退出码: $MIGRATION_EXIT_CODE)"
+        log_message "WARN" "继续部署但可能存在问题"
+    fi
+    
+    # 记录迁移后的状态
+    if [ -f "data/research_dashboard_prod.db" ]; then
+        log_message "INFO" "迁移后数据库大小: $(du -sh data/research_dashboard_prod.db | cut -f1)"
     fi
 else
-    log_message "INFO" "未找到迁移脚本，跳过数据库迁移"
+    log_message "WARN" "⚠️ 未找到迁移脚本 migrations/migration.py"
+    log_message "INFO" "当前目录: $(pwd)"
+    log_message "INFO" "目录内容: $(ls -la | head -5)"
 fi
 
 # 验证数据库完整性
