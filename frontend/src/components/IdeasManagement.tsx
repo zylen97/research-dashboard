@@ -40,10 +40,12 @@ const IdeasManagement: React.FC = () => {
     setLoading(true);
     try {
       const data = await ideasApi.getIdeas();
-      setIdeas(data);
+      // 确保data是数组
+      setIdeas(Array.isArray(data) ? data : []);
     } catch (error) {
       message.error('加载Ideas失败');
       console.error('加载Ideas失败:', error);
+      setIdeas([]); // 错误时设置为空数组
     } finally {
       setLoading(false);
     }
@@ -53,9 +55,11 @@ const IdeasManagement: React.FC = () => {
   const loadCollaborators = async () => {
     try {
       const data = await ideasApi.getSeniorCollaborators();
-      setCollaborators(data);
+      // 确保data是数组
+      setCollaborators(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('加载合作者失败:', error);
+      setCollaborators([]); // 错误时设置为空数组
     }
   };
 
@@ -273,7 +277,7 @@ const IdeasManagement: React.FC = () => {
 
         <Table
           columns={columns}
-          dataSource={ideas}
+          dataSource={Array.isArray(ideas) ? ideas : []}
           rowKey="id"
           loading={loading}
           pagination={{
@@ -339,7 +343,7 @@ const IdeasManagement: React.FC = () => {
               placeholder="选择负责人（高级合作者）"
               allowClear
             >
-              {collaborators.map(collaborator => (
+              {Array.isArray(collaborators) && collaborators.map(collaborator => (
                 <Option key={collaborator.id} value={collaborator.id}>
                   {collaborator.name}
                 </Option>
