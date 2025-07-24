@@ -49,8 +49,8 @@ else
 fi
 
 # 3.2 全局健康检查
-echo -n "  全局健康检查 /api/health ... "
-HEALTH_RESPONSE=$(curl -s "$API_BASE/api/health")
+echo -n "  全局健康检查 /health ... "
+HEALTH_RESPONSE=$(curl -s "$API_BASE/health")
 if echo "$HEALTH_RESPONSE" | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
     echo "    环境: $(echo "$HEALTH_RESPONSE" | grep -o '"environment":"[^"]*"' | cut -d'"' -f4)"

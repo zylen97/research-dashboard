@@ -37,7 +37,7 @@ ss -tlnp | grep :8080 && echo "✅ 8080端口正常监听" || echo "❌ 8080端�
 echo ""
 echo "=== 3. API连通性测试 ==="
 echo "本地backend测试:"
-curl_result=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/api/health 2>/dev/null)
+curl_result=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/health 2>/dev/null)
 if [ "$curl_result" = "200" ]; then
     echo "✅ backend API正常响应 (200)"
 else
@@ -45,7 +45,7 @@ else
 fi
 
 echo "nginx代理测试:"
-nginx_result=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/api/health 2>/dev/null)
+nginx_result=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3001/health 2>/dev/null)
 if [ "$nginx_result" = "200" ]; then
     echo "✅ nginx代理正常 (200)"
 else

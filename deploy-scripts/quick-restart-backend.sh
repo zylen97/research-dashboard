@@ -71,7 +71,7 @@ fi
 
 # 测试健康检查
 echo -n "健康检查: "
-if curl -s http://localhost:8080/api/health | grep -q '"status":"healthy"'; then
+if curl -s http://localhost:8080/health | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
 else
     echo -e "${RED}❌${NC}"
@@ -79,7 +79,7 @@ fi
 
 # 测试通过nginx访问
 echo -n "通过nginx (3001): "
-if curl -s http://localhost:3001/api/health | grep -q '"status":"healthy"'; then
+if curl -s http://localhost:3001/health | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
 else
     echo -e "${RED}❌${NC}"

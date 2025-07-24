@@ -102,7 +102,7 @@ else
 fi
 
 echo -n "全局健康检查: "
-HEALTH=$(curl -s http://localhost:8080/api/health)
+HEALTH=$(curl -s http://localhost:8080/health)
 if echo "$HEALTH" | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
 else

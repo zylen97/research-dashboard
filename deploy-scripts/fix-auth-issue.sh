@@ -48,7 +48,7 @@ systemctl status research-backend --no-pager | head -10
 
 echo "8️⃣ 测试健康检查端点..."
 echo "  测试全局健康检查..."
-curl -s http://localhost:8080/api/health | head -100
+curl -s http://localhost:8080/health | head -100
 
 echo ""
 echo "  测试Ideas健康检查..."

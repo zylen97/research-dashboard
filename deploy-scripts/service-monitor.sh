@@ -91,10 +91,10 @@ monitor_services() {
         elif ! check_service_status "research-backend"; then
             log_message "❌ Research Backend服务异常"
             ((FAILURE_COUNT++))
-        elif ! check_api_health "http://localhost:8080/api/health"; then
+        elif ! check_api_health "http://localhost:8080/health"; then
             log_message "❌ Backend API健康检查失败"
             ((FAILURE_COUNT++))
-        elif ! check_api_health "http://localhost:3001/api/health"; then
+        elif ! check_api_health "http://localhost:3001/health"; then
             log_message "❌ Nginx代理健康检查失败"
             ((FAILURE_COUNT++))
         else
@@ -170,10 +170,10 @@ case "${1:-}" in
         check_service_status "research-backend" && echo "✅ 正常" || echo "❌ 异常"
         
         echo -n "Backend API: "
-        check_api_health "http://localhost:8080/api/health" && echo "✅ 正常" || echo "❌ 异常"
+        check_api_health "http://localhost:8080/health" && echo "✅ 正常" || echo "❌ 异常"
         
         echo -n "Nginx代理: "
-        check_api_health "http://localhost:3001/api/health" && echo "✅ 正常" || echo "❌ 异常"
+        check_api_health "http://localhost:3001/health" && echo "✅ 正常" || echo "❌ 异常"
         
         echo ""
         echo "详细信息请查看日志: $LOG_FILE"

@@ -132,7 +132,7 @@ echo ""
 # API健康检查
 echo "8️⃣ 执行API健康检查..."
 echo "🔍 测试全局健康检查:"
-curl -s http://localhost:8080/api/health | head -200 2>/dev/null && echo "✅ 全局健康检查响应正常" || echo "❌ 全局健康检查失败"
+curl -s http://localhost:8080/health | head -200 2>/dev/null && echo "✅ 全局健康检查响应正常" || echo "❌ 全局健康检查失败"
 
 echo ""
 echo "🔍 测试Ideas健康检查:"

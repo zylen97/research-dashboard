@@ -35,7 +35,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         
         # 添加调试日志
-        if path.startswith('/api/'):
+        if path.startswith('/'):
             logger.info(f"RateLimitMiddleware: Processing {path} from {client_ip}")
 
         # 定期清理所有过期记录（每分钟一次）
@@ -156,7 +156,7 @@ class RequestValidationMiddleware(BaseHTTPMiddleware):
         path = request.url.path
         
         # 添加调试日志
-        if path.startswith('/api/'):
+        if path.startswith('/'):
             logger.info(f"RequestValidationMiddleware: Processing {path}")
         
         # 检查请求体大小
@@ -207,9 +207,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/docs", 
             "/redoc",
             "/openapi.json",
-            "/api/auth/login",
-            "/api/health",  # 健康检查
-            "/api/ideas-management/health",  # Ideas健康检查
+            "/auth/login",
+            "/health",  # 健康检查
+            "/ideas-management/health",  # Ideas健康检查
         }
 
     async def dispatch(self, request: Request, call_next):

@@ -66,21 +66,21 @@ app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次
 setup_exception_handlers(app)
 
 # Include routers
-app.include_router(auth.router, prefix="/api/auth", tags=["authentication"])
-app.include_router(research.router, prefix="/api/research", tags=["research"])
-app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
-app.include_router(idea_discovery.router, prefix="/api/ideas", tags=["idea-discovery"])
-app.include_router(ideas.router, prefix="/api/ideas-management", tags=["ideas-management"])
-app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
-app.include_router(audit.router, prefix="/api/audit", tags=["audit"])
-app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
-app.include_router(config.router, prefix="/api/config", tags=["configuration"])
+app.include_router(auth.router, prefix="/auth", tags=["authentication"])
+app.include_router(research.router, prefix="/research", tags=["research"])
+app.include_router(collaborators.router, prefix="/collaborators", tags=["collaborators"])
+app.include_router(idea_discovery.router, prefix="/ideas", tags=["idea-discovery"])
+app.include_router(ideas.router, prefix="/ideas-management", tags=["ideas-management"])
+app.include_router(validation.router, prefix="/validation", tags=["validation"])
+app.include_router(audit.router, prefix="/audit", tags=["audit"])
+app.include_router(backup.router, prefix="/backup", tags=["backup"])
+app.include_router(config.router, prefix="/config", tags=["configuration"])
 
 @app.get("/")
 async def root():
     return {"message": "Research Dashboard API"}
 
-@app.get("/api/health")
+@app.get("/health")
 async def global_health_check():
     """全局健康检查 - 不需要认证"""
     from datetime import datetime
@@ -91,8 +91,8 @@ async def global_health_check():
         "timestamp": datetime.utcnow().isoformat(),
         "environment": settings.ENVIRONMENT,
         "endpoints": {
-            "ideas_management": "/api/ideas-management/health",
-            "auth": "/api/auth/login"
+            "ideas_management": "/ideas-management/health",
+            "auth": "/auth/login"
         }
     }
 

@@ -46,7 +46,7 @@ else
 fi
 
 echo -n "健康检查: "
-HEALTH=$(curl -s http://localhost:8080/api/health)
+HEALTH=$(curl -s http://localhost:8080/health)
 if echo "$HEALTH" | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
 else
@@ -57,7 +57,7 @@ fi
 # 4. 测试nginx代理
 echo -e "\n${YELLOW}4. 测试nginx代理...${NC}"
 echo -n "通过nginx访问API: "
-NGINX_API=$(curl -s http://localhost:3001/api/health)
+NGINX_API=$(curl -s http://localhost:3001/health)
 if echo "$NGINX_API" | grep -q '"status":"healthy"'; then
     echo -e "${GREEN}✅${NC}"
 else
