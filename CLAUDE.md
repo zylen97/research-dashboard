@@ -1,4 +1,5 @@
 不要直接git！部署到vps用deploy！！！
+以后所有迁移都必须写在 migration.py 里，绝不创建新的迁移文件！
 
 # Research Dashboard 项目规范
 
