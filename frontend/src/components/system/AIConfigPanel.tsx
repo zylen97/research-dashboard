@@ -128,7 +128,7 @@ const AIConfigPanel: React.FC = () => {
       const response = await api.get('/config/', {
         params: { category: 'ai_config' }
       });
-      const configData = response.data.find((c: SystemConfig) => c.key === 'main_ai_config');
+      const configData = response.data?.find((c: SystemConfig) => c.key === 'main_ai_config');
       if (configData) {
         const parsedConfig = JSON.parse(configData.value);
         setConfig(parsedConfig);

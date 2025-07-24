@@ -115,3 +115,41 @@ async def get_senior_collaborators(
         except Exception as e2:
             logger.error(f"Fallback query also failed: {e2}")
             raise HTTPException(status_code=500, detail="Database schema error - please run migration")
+
+@router.get("/health")
+async def health_check(db: Session = Depends(get_db)):
+    """健康检查端点 - 不需要认证"""
+    try:
+        # 检查数据库连接
+        db.execute("SELECT 1")
+        
+        # 检查collaborators表结构
+        result = db.execute("PRAGMA table_info(collaborators)").fetchall()
+        columns = [row[1] for row in result]
+        has_level = 'level' in columns
+        has_deleted_at = 'deleted_at' in columns
+        
+        # 检查是否有senior collaborators
+        try:
+            senior_count = db.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior' AND deleted_at IS NULL").fetchone()[0]
+        except:
+            senior_count = 0
+        
+        return {
+            "status": "healthy",
+            "database": "connected",
+            "collaborators_table": {
+                "exists": True,
+                "has_level_field": has_level,
+                "has_deleted_at_field": has_deleted_at,
+                "senior_collaborators_count": senior_count
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }

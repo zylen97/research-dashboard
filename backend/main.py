@@ -75,6 +75,19 @@ app.include_router(config.router, prefix="/api/config", tags=["configuration"])
 async def root():
     return {"message": "Research Dashboard API"}
 
+@app.get("/api/health")
+async def global_health_check():
+    """全局健康检查 - 不需要认证"""
+    return {
+        "status": "healthy",
+        "service": "research-dashboard-api",
+        "version": "1.0.0",
+        "timestamp": "2025-07-24",
+        "endpoints": {
+            "ideas_management": "/api/ideas-management/health"
+        }
+    }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(

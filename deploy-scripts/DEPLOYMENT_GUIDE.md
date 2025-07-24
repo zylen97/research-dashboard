@@ -44,6 +44,34 @@
     ./deploy-scripts/vps-update.sh
     ```
 
+### diagnose-nginx-config.sh - Nginx配置诊断脚本
+- **用途**：诊断和修复nginx配置问题
+- **功能**：
+  - 检查nginx服务状态和配置语法
+  - 检查端口3001和8080的监听状态
+  - 检查后端服务运行状态
+  - 测试API连接和重定向问题
+  - 分析nginx错误日志和访问日志
+  - 提供针对性的修复建议
+- **特别解决**：
+  - 502 Bad Gateway 错误
+  - 端口重定向导致端口号丢失问题
+  - 后端服务连接问题
+- **使用方法**：
+  ```bash
+  # 完整诊断（推荐）
+  ./deploy-scripts/diagnose-nginx-config.sh
+  
+  # 快速检查
+  ./deploy-scripts/diagnose-nginx-config.sh --quick
+  
+  # 自动修复
+  ./deploy-scripts/diagnose-nginx-config.sh --fix
+  
+  # 仅查看日志
+  ./deploy-scripts/diagnose-nginx-config.sh --logs-only
+  ```
+
 ## 🤖 智能检测功能
 
 ### 检测原理
@@ -189,6 +217,15 @@ A: 目前自动生成，如需自定义建议手动 git 操作。
 
 ### Q: 预览模式显示的操作准确吗？
 A: 是的，预览模式显示的就是实际将要执行的操作。
+
+### Q: 部署后访问出现502错误怎么办？
+A: 运行nginx诊断脚本：`./deploy-scripts/diagnose-nginx-config.sh`，它会自动检测问题并提供修复建议。
+
+### Q: API请求被重定向且端口号丢失？
+A: 这是nginx配置问题，使用 `./deploy-scripts/diagnose-nginx-config.sh --fix` 自动修复。
+
+### Q: 如何快速查看nginx错误日志？
+A: 使用 `./deploy-scripts/diagnose-nginx-config.sh --logs-only` 查看相关日志。
 
 ## 📝 维护说明
 

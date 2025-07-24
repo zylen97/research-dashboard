@@ -197,6 +197,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
             "/redoc",
             "/openapi.json",
             "/api/auth/login",
+            "/api/health",  # 健康检查
+            "/api/ideas-management/health",  # Ideas健康检查
         }
 
     async def dispatch(self, request: Request, call_next):
