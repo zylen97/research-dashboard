@@ -70,6 +70,14 @@ export const API_ENDPOINTS = {
     SEARCH: '/api/ideas/search',
     CONVERT_TO_PROJECT: (id: number) => `/api/ideas/${id}/convert-to-project`,
   },
+  // 想法管理
+  IDEAS_MANAGEMENT: {
+    LIST: '/api/ideas-management',
+    CREATE: '/api/ideas-management',
+    UPDATE: (id: number) => `/api/ideas-management/${id}`,
+    DELETE: (id: number) => `/api/ideas-management/${id}`,
+    HEALTH: '/api/ideas-management/health',
+  },
   // 系统配置
   CONFIG: {
     LIST: '/api/config',

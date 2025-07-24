@@ -214,10 +214,48 @@ def run_migration():
         
     except Exception as e:
         logger.error(f"迁移执行失败: {e}")
+        logger.error(f"错误类型: {type(e).__name__}")
+        logger.error(f"详细错误信息: {str(e)}")
+        
+        # 尝试回滚事务
+        try:
+            conn.rollback()
+            logger.info("事务已回滚")
+        except:
+            logger.error("无法回滚事务")
+        
+        # 关闭连接
+        try:
+            conn.close()
+        except:
+            pass
+            
         logger.info(f"数据库备份位于: {backup_path}")
+        logger.error("建议从备份恢复数据库")
         return False
 
 if __name__ == "__main__":
-    logger.info(f"迁移版本: {MIGRATION_VERSION}")
-    success = run_migration()
-    sys.exit(0 if success else 1)
+    logger.info(f"开始执行迁移版本: {MIGRATION_VERSION}")
+    logger.info(f"执行时间: {datetime.now()}")
+    
+    try:
+        success = run_migration()
+        
+        if success:
+            logger.info("✅ 迁移执行成功")
+            print("Migration completed successfully")
+            sys.exit(0)
+        else:
+            logger.error("❌ 迁移执行失败")
+            print("Migration failed")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        logger.warning("迁移被用户中断")
+        print("Migration interrupted by user")
+        sys.exit(1)
+        
+    except Exception as e:
+        logger.error(f"未预期的错误: {e}")
+        print(f"Unexpected error: {e}")
+        sys.exit(1)
