@@ -210,7 +210,7 @@ if [ -f "frontend/build.tar.gz" ]; then
         log_message "INFO" "前端部署完成"
         
         # 获取构建信息
-        local build_size=$(du -sh /var/www/html | cut -f1)
+        build_size=$(du -sh /var/www/html | cut -f1)
         log_message "INFO" "前端文件大小: $build_size"
     else
         error_exit "前端部署验证失败"
@@ -328,8 +328,8 @@ if [ -f "data/research_dashboard_prod.db" ]; then
         log_message "INFO" "数据库完整性验证通过"
         
         # 获取数据库统计信息
-        local table_count=$(sqlite3 data/research_dashboard_prod.db ".tables" | wc -w)
-        local db_size=$(du -sh data/research_dashboard_prod.db | cut -f1)
+        table_count=$(sqlite3 data/research_dashboard_prod.db ".tables" | wc -w)
+        db_size=$(du -sh data/research_dashboard_prod.db | cut -f1)
         log_message "INFO" "数据库状态: $table_count个表，大小 $db_size"
     else
         error_exit "数据库完整性验证失败"
@@ -418,12 +418,12 @@ echo -e "  📖 API文档: ${BLUE}http://45.149.156.216:8080/docs${NC}"
 
 # 性能信息
 if [ -f "/var/www/html/index.html" ]; then
-    local frontend_size=$(du -sh /var/www/html | cut -f1)
+    frontend_size=$(du -sh /var/www/html | cut -f1)
     echo -e "  📦 前端大小: $frontend_size"
 fi
 
 if [ -f "$PROJECT_ROOT/backend/data/research_dashboard_prod.db" ]; then
-    local db_size=$(du -sh "$PROJECT_ROOT/backend/data/research_dashboard_prod.db" | cut -f1)
+    db_size=$(du -sh "$PROJECT_ROOT/backend/data/research_dashboard_prod.db" | cut -f1)
     echo -e "  🗄️ 数据库: $db_size"
 fi
 
