@@ -176,3 +176,19 @@ deployment*
 *_check.sh
 *_backup.sh
 DEPLOYMENT_TEST.md
+
+# 文档和分析文件 (清理阶段添加)
+docs/*.xlsx
+docs/*.xls
+ULTRA_OPTIMIZATION_*.md
+OPTIMIZATION_*.md
+*_ANALYSIS.md
+*_SUMMARY.md
+
+# 紧急修复和迁移相关临时文件
+*_emergency_*.py
+*_emergency_*.sql
+*_fix_*.py
+*_temp_*.py
+migration_backup_*
+security_emergency_*
