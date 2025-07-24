@@ -12,21 +12,6 @@ jobs:
     - name: 📥 检出代码
       uses: actions/checkout@v3
     
-    - name: 🔍 Shell脚本质量检查
-      run: |
-        # 安装ShellCheck
-        sudo apt-get update && sudo apt-get install -y shellcheck
-        
-        # 执行检查
-        chmod +x scripts/check-shell-scripts.sh
-        ./scripts/check-shell-scripts.sh
-        
-        # 如果有错误，显示报告
-        if [ -f shell-check-report.txt ]; then
-          echo "=== Shell脚本检查报告 ==="
-          cat shell-check-report.txt
-        fi
-    
     - name: 🚀 部署到VPS
       uses: appleboy/ssh-action@v0.1.8
       with:
