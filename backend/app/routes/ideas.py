@@ -121,20 +121,23 @@ async def get_senior_collaborators(
 @router.get("/health")
 async def health_check(db: Session = Depends(get_db)):
     """健康检查端点 - 不需要认证"""
+    from sqlalchemy import text
+    
     try:
-        # 检查数据库连接
-        db.execute("SELECT 1")
+        # 检查数据库连接 - 修复SQLAlchemy版本兼容性
+        db.execute(text("SELECT 1"))
         
         # 检查collaborators表结构
-        result = db.execute("PRAGMA table_info(collaborators)").fetchall()
+        result = db.execute(text("PRAGMA table_info(collaborators)")).fetchall()
         columns = [row[1] for row in result]
         has_is_senior = 'is_senior' in columns
         has_is_deleted = 'is_deleted' in columns
         
         # 检查是否有senior collaborators
         try:
-            senior_count = db.execute("SELECT COUNT(*) FROM collaborators WHERE is_senior = 1 AND is_deleted = 0").fetchone()[0]
-        except:
+            senior_count = db.execute(text("SELECT COUNT(*) FROM collaborators WHERE is_senior = 1 AND is_deleted = 0")).fetchone()[0]
+        except Exception as e:
+            logger.warning(f"Could not count senior collaborators: {e}")
             senior_count = 0
         
         return {
