@@ -123,24 +123,33 @@ async def health_check(db: Session = Depends(get_db)):
     """健康检查端点 - 不需要认证"""
     from sqlalchemy import text
     
+    logger.info("Health check endpoint called - starting execution")
+    
     try:
+        logger.info("Step 1: Testing database connection")
         # 检查数据库连接 - 修复SQLAlchemy版本兼容性
         db.execute(text("SELECT 1"))
+        logger.info("Step 1: Database connection successful")
         
+        logger.info("Step 2: Checking table structure")
         # 检查collaborators表结构
         result = db.execute(text("PRAGMA table_info(collaborators)")).fetchall()
         columns = [row[1] for row in result]
         has_is_senior = 'is_senior' in columns
         has_is_deleted = 'is_deleted' in columns
+        logger.info(f"Step 2: Table columns found: {columns}")
         
+        logger.info("Step 3: Counting senior collaborators")
         # 检查是否有senior collaborators
         try:
             senior_count = db.execute(text("SELECT COUNT(*) FROM collaborators WHERE is_senior = 1 AND is_deleted = 0")).fetchone()[0]
+            logger.info(f"Step 3: Senior count successful: {senior_count}")
         except Exception as e:
-            logger.warning(f"Could not count senior collaborators: {e}")
+            logger.error(f"Step 3: Senior count failed: {e}")
             senior_count = 0
         
-        return {
+        logger.info("Step 4: Preparing response")
+        response = {
             "status": "healthy",
             "database": "connected",
             "collaborators_table": {
@@ -151,10 +160,19 @@ async def health_check(db: Session = Depends(get_db)):
             },
             "timestamp": datetime.utcnow().isoformat()
         }
+        logger.info(f"Step 4: Response prepared: {response}")
+        return response
+        
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        return {
+        logger.error(f"Health check failed with exception: {e}")
+        logger.error(f"Exception type: {type(e).__name__}")
+        logger.error(f"Exception details: {str(e)}")
+        
+        error_response = {
             "status": "unhealthy",
             "error": str(e),
+            "error_type": type(e).__name__,
             "timestamp": datetime.utcnow().isoformat()
         }
+        logger.error(f"Returning error response: {error_response}")
+        return error_response
