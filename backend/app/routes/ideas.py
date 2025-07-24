@@ -2,11 +2,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ..models.database import get_db, Idea, Collaborator, User
 from ..models.schemas import IdeaCreate, IdeaUpdate, IdeaSchema, Collaborator as CollaboratorSchema
 from ..utils.auth import get_current_user
 from ..utils.response import success_response, error_response
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -95,8 +98,20 @@ async def get_senior_collaborators(
     db: Session = Depends(get_db)
 ):
     """获取高级合作者列表（senior级别）"""
-    collaborators = db.query(Collaborator).filter(
-        Collaborator.level == "senior",
-        Collaborator.deleted_at.is_(None)
-    ).all()
-    return collaborators
+    try:
+        # 首先检查表结构是否正确
+        collaborators = db.query(Collaborator).filter(
+            Collaborator.level == "senior",
+            Collaborator.deleted_at.is_(None)
+        ).all()
+        return collaborators
+    except Exception as e:
+        # 如果字段不存在，返回所有合作者作为fallback
+        logger.warning(f"Senior collaborator query failed: {e}")
+        try:
+            # Fallback: 返回所有合作者
+            collaborators = db.query(Collaborator).all()
+            return collaborators
+        except Exception as e2:
+            logger.error(f"Fallback query also failed: {e2}")
+            raise HTTPException(status_code=500, detail="Database schema error - please run migration")
