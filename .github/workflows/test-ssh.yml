@@ -1,0 +1,101 @@
+name: 🔍 测试SSH连接
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/test-ssh.yml'
+
+jobs:
+  test-ssh-connection:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 🔍 测试1 - 检查网络连通性
+      run: |
+        echo "=== 测试网络连通性 ==="
+        ping -c 3 45.149.156.216 || true
+        echo ""
+        echo "=== 测试端口连通性 ==="
+        nc -zv -w5 45.149.156.216 22 || true
+        echo ""
+        echo "=== 测试Web服务 ==="
+        curl -I http://45.149.156.216:3001 || true
+
+    - name: 🔍 测试2 - 验证SSH密钥格式
+      env:
+        SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      run: |
+        echo "=== 检查SSH密钥格式 ==="
+        echo "$SSH_KEY" | head -1
+        echo "..."
+        echo "$SSH_KEY" | tail -1
+        echo ""
+        echo "=== 密钥行数 ==="
+        echo "$SSH_KEY" | wc -l
+        echo ""
+        echo "=== 验证密钥格式 ==="
+        echo "$SSH_KEY" > temp_key
+        chmod 600 temp_key
+        ssh-keygen -l -f temp_key || echo "密钥格式可能有问题"
+        rm temp_key
+
+    - name: 🔍 测试3 - 使用原始SSH命令
+      env:
+        SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+      run: |
+        echo "=== 设置SSH密钥 ==="
+        mkdir -p ~/.ssh
+        echo "$SSH_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        echo "=== 测试SSH连接（详细模式）==="
+        ssh -vvv -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+            -o ConnectTimeout=10 -i ~/.ssh/id_rsa \
+            root@45.149.156.216 "echo 'SSH连接成功'" 2>&1 | grep -E "(debug1:|error:|Warning:|Permission denied|Connection)" | tail -30
+
+    - name: 🔍 测试4 - 使用不同的SSH Action版本
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        script_stop: true
+        script: |
+          echo "测试SSH Action v1.0.0"
+          whoami
+          pwd
+
+    - name: 🔍 测试5 - 添加调试信息
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        debug: true
+        script: |
+          echo "调试模式测试"
+
+    - name: 📊 诊断总结
+      if: always()
+      run: |
+        echo "=== GitHub Actions 环境信息 ==="
+        echo "Runner OS: ${{ runner.os }}"
+        echo "Runner IP: $(curl -s https://api.ipify.org)"
+        echo ""
+        echo "=== 可能的问题 ==="
+        echo "1. SSH密钥格式错误（需要检查secrets.VPS_SSH_KEY）"
+        echo "2. 服务器防火墙阻止了GitHub Actions的IP"
+        echo "3. SSH服务配置问题"
+        echo "4. fail2ban封禁了GitHub的IP段"
+        echo ""
+        echo "=== 建议 ==="
+        echo "1. 检查GitHub Secrets中的VPS_SSH_KEY格式是否正确"
+        echo "2. 在服务器上执行: fail2ban-client status sshd"
+        echo "3. 检查/var/log/auth.log查看SSH拒绝原因"

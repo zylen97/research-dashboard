@@ -1,0 +1,113 @@
+name: 🐛 部署调试版本
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/deploy-debug.yml'
+
+jobs:
+  deploy-with-debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 检出代码
+      uses: actions/checkout@v3
+    
+    - name: 🔍 方案1 - 使用不同端口
+      continue-on-error: true
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        port: 22
+        timeout: 30s
+        command_timeout: 10m
+        script_stop: false
+        script: |
+          echo "尝试标准SSH连接"
+          echo "当前用户: $(whoami)"
+          echo "当前目录: $(pwd)"
+
+    - name: 🔍 方案2 - 使用密码认证（如果配置了）
+      if: ${{ secrets.VPS_PASSWORD }}
+      continue-on-error: true
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        password: ${{ secrets.VPS_PASSWORD }}
+        port: 22
+        script: |
+          echo "使用密码认证"
+          cd /var/www/research-dashboard
+          git pull
+          systemctl restart research-backend
+
+    - name: 🔍 方案3 - 通过跳板机（如果有）
+      if: ${{ secrets.JUMP_HOST }}
+      continue-on-error: true
+      uses: appleboy/ssh-action@v0.1.8
+      with:
+        host: 45.149.156.216
+        username: root
+        key: ${{ secrets.VPS_SSH_KEY }}
+        proxy_host: ${{ secrets.JUMP_HOST }}
+        proxy_username: ${{ secrets.JUMP_USER }}
+        proxy_key: ${{ secrets.JUMP_KEY }}
+        script: |
+          echo "通过跳板机连接"
+          cd /var/www/research-dashboard
+          ./deploy-scripts/vps-update.sh
+
+    - name: 🔍 方案4 - 创建新的部署密钥
+      run: |
+        echo "=== 生成新的部署密钥对 ==="
+        ssh-keygen -t rsa -b 4096 -f deploy_key -N "" -C "github-actions@research-dashboard"
+        echo ""
+        echo "=== 新的公钥（需要添加到服务器）==="
+        echo "请将以下公钥添加到服务器的 /root/.ssh/authorized_keys："
+        echo "----------------------------------------"
+        cat deploy_key.pub
+        echo "----------------------------------------"
+        echo ""
+        echo "=== 新的私钥（需要更新GitHub Secrets）==="
+        echo "请将以下私钥更新到 GitHub Secrets 的 VPS_SSH_KEY："
+        echo "----------------------------------------"
+        cat deploy_key | head -5
+        echo "... (内容已截断) ..."
+        cat deploy_key | tail -5
+        echo "----------------------------------------"
+
+    - name: 📊 失败分析报告
+      if: failure()
+      run: |
+        echo "::error::SSH部署失败分析"
+        echo ""
+        echo "## 🔍 诊断结果"
+        echo ""
+        echo "### 1. 检查GitHub Secrets"
+        echo "- [ ] VPS_SSH_KEY 是否正确设置"
+        echo "- [ ] 密钥格式是否包含 -----BEGIN RSA PRIVATE KEY-----"
+        echo "- [ ] 密钥格式是否包含 -----END RSA PRIVATE KEY-----"
+        echo "- [ ] 密钥中是否有多余的空格或换行"
+        echo ""
+        echo "### 2. 服务器端检查"
+        echo "需要在服务器上执行："
+        echo "\`\`\`bash"
+        echo "# 检查SSH日志"
+        echo "tail -50 /var/log/auth.log | grep -E '(sshd|Failed|Accepted|Connection closed)'"
+        echo ""
+        echo "# 检查fail2ban"
+        echo "fail2ban-client status sshd"
+        echo ""
+        echo "# 检查SSH配置"
+        echo "grep -E '(PermitRootLogin|PubkeyAuthentication|PasswordAuthentication)' /etc/ssh/sshd_config"
+        echo "\`\`\`"
+        echo ""
+        echo "### 3. 临时解决方案"
+        echo "1. 手动通过VNC部署"
+        echo "2. 临时开启密码认证"
+        echo "3. 使用webhook触发部署"
