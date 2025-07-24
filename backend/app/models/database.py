@@ -26,13 +26,10 @@ class Collaborator(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, index=True)
-    gender = Column(String(10))
-    class_name = Column(String(100))  # 班级
-    future_plan = Column(Text)  # 未来规划
-    background = Column(Text)  # 具体情况和背景
-    contact_info = Column(String(200))  # 联系方式
-    is_senior = Column(Boolean, default=False)  # 高级合作者标记
-    is_deleted = Column(Boolean, default=False)  # 软删除标记
+    email = Column(String(200))
+    institution = Column(String(200))
+    research_area = Column(String(200))
+    level = Column(String(20), default='senior')  # senior, junior
     deleted_at = Column(DateTime, nullable=True)  # 删除时间
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

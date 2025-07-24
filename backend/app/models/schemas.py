@@ -5,29 +5,24 @@ from datetime import datetime
 # Collaborator schemas
 class CollaboratorBase(BaseModel):
     name: str = Field(..., max_length=100)
-    gender: Optional[str] = Field(None, max_length=10)
-    class_name: Optional[str] = Field(None, max_length=100)
-    future_plan: Optional[str] = None
-    background: Optional[str] = None
-    contact_info: Optional[str] = Field(None, max_length=200)
-    is_senior: Optional[bool] = Field(default=False)
+    email: Optional[str] = Field(None, max_length=200)
+    institution: Optional[str] = Field(None, max_length=200)
+    research_area: Optional[str] = Field(None, max_length=200)
+    level: Optional[str] = Field(default="senior", max_length=20)
 
 class CollaboratorCreate(CollaboratorBase):
     pass
 
 class CollaboratorUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100)
-    gender: Optional[str] = Field(None, max_length=10)
-    class_name: Optional[str] = Field(None, max_length=100)
-    future_plan: Optional[str] = None
-    background: Optional[str] = None
-    contact_info: Optional[str] = Field(None, max_length=200)
-    is_senior: Optional[bool] = None
+    email: Optional[str] = Field(None, max_length=200)
+    institution: Optional[str] = Field(None, max_length=200)
+    research_area: Optional[str] = Field(None, max_length=200)
+    level: Optional[str] = Field(None, max_length=20)
 
 class Collaborator(CollaboratorBase):
     id: int
-    is_senior: bool
-    is_deleted: bool = False
+    level: str
     deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
