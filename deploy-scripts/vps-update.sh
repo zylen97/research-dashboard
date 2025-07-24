@@ -354,8 +354,8 @@ fi
 
 cd ..
 
-# 4.5. 同步nginx配置文件到VPS
-log_message "INFO" "同步nginx配置文件..."
+# 4.5. 强制同步nginx配置文件到VPS (CORS修复)
+log_message "INFO" "🔥 强制同步nginx配置文件修复CORS问题..."
 if [ -f "deployment/nginx-3001.conf" ]; then
     # 备份当前nginx配置
     backup_name="/etc/nginx/sites-available/research-dashboard-3001.backup.$(date +%Y%m%d_%H%M%S)"
@@ -364,8 +364,9 @@ if [ -f "deployment/nginx-3001.conf" ]; then
         log_message "INFO" "已备份nginx配置到: $backup_name"
     fi
     
-    # 复制新配置
+    # 强制覆盖配置文件
     cp deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
+    log_message "INFO" "✅ 已强制覆盖nginx配置文件"
     
     # 确保软链接存在
     if [ ! -L "/etc/nginx/sites-enabled/research-dashboard-3001" ]; then
@@ -373,21 +374,42 @@ if [ -f "deployment/nginx-3001.conf" ]; then
         log_message "INFO" "创建nginx配置软链接"
     fi
     
+    # 验证关键配置
+    log_message "INFO" "验证nginx配置关键部分..."
+    if grep -q "proxy_pass http://localhost:8080/;" /etc/nginx/sites-available/research-dashboard-3001; then
+        log_message "INFO" "✅ proxy_pass配置正确 (有结尾斜杠)"
+    else
+        log_message "ERROR" "❌ proxy_pass配置错误，手动修复..."
+        sed -i 's|proxy_pass http://localhost:8080;|proxy_pass http://localhost:8080/;|g' /etc/nginx/sites-available/research-dashboard-3001
+    fi
+    
     # 测试nginx配置
+    log_message "INFO" "测试nginx配置..."
     if nginx -t >/dev/null 2>&1; then
         log_message "INFO" "nginx配置测试通过，重新加载..."
         systemctl reload nginx
         log_message "INFO" "✅ nginx配置已更新并重新加载"
+        
+        # 测试API访问
+        log_message "INFO" "测试本地API访问..."
+        if curl -I http://localhost:3001/api/ideas-management/ >/dev/null 2>&1; then
+            log_message "INFO" "🎉 本地API访问测试成功"
+        else
+            log_message "WARN" "⚠️ 本地API访问测试失败"
+        fi
     else
-        log_message "ERROR" "nginx配置测试失败，恢复备份"
+        log_message "ERROR" "❌ nginx配置测试失败，显示错误信息："
+        nginx -t 2>&1 | while read line; do log_message "ERROR" "$line"; done
+        
         if [ -f "$backup_name" ]; then
+            log_message "WARN" "恢复备份配置..."
             cp "$backup_name" /etc/nginx/sites-available/research-dashboard-3001
             systemctl reload nginx
         fi
         log_message "WARN" "nginx配置恢复完成，继续部署"
     fi
 else
-    log_message "WARN" "未找到nginx配置文件 deployment/nginx-3001.conf"
+    log_message "ERROR" "❌ 未找到nginx配置文件 deployment/nginx-3001.conf"
 fi
 
 # 5. 智能服务重启
