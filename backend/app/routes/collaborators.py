@@ -24,7 +24,7 @@ async def get_collaborators(
     """获取合作者列表"""
     query = db.query(Collaborator)
     if not include_deleted:
-        query = query.filter(Collaborator.is_deleted == False)
+        query = query.filter(Collaborator.deleted_at.is_(None))
     collaborators = query.offset(skip).limit(limit).all()
     return collaborators
 
@@ -33,7 +33,7 @@ async def get_collaborator(collaborator_id: int, db: Session = Depends(get_db)):
     """获取单个合作者详情"""
     collaborator = db.query(Collaborator).filter(
         Collaborator.id == collaborator_id,
-        Collaborator.is_deleted == False
+        Collaborator.deleted_at.is_(None)
     ).first()
     if not collaborator:
         raise HTTPException(
@@ -108,7 +108,7 @@ async def delete_collaborator(
     """删除合作者（默认软删除）"""
     db_collaborator = db.query(Collaborator).filter(
         Collaborator.id == collaborator_id,
-        Collaborator.is_deleted == False
+        Collaborator.deleted_at.is_(None)
     ).first()
     if not db_collaborator:
         raise HTTPException(
@@ -160,7 +160,7 @@ async def restore_collaborator(
     """恢复已删除的合作者"""
     db_collaborator = db.query(Collaborator).filter(
         Collaborator.id == collaborator_id,
-        Collaborator.is_deleted == True
+        Collaborator.deleted_at.is_not(None)
     ).first()
     if not db_collaborator:
         raise HTTPException(
@@ -191,7 +191,7 @@ async def get_collaborator_projects(collaborator_id: int, db: Session = Depends(
     """获取合作者参与的项目"""
     collaborator = db.query(Collaborator).filter(
         Collaborator.id == collaborator_id,
-        Collaborator.is_deleted == False
+        Collaborator.deleted_at.is_(None)
     ).first()
     if not collaborator:
         raise HTTPException(
@@ -413,7 +413,7 @@ async def restore_collaborator(
     """恢复已软删除的合作者"""
     db_collaborator = db.query(Collaborator).filter(
         Collaborator.id == collaborator_id,
-        Collaborator.is_deleted == True
+        Collaborator.deleted_at.is_not(None)
     ).first()
     
     if not db_collaborator:
@@ -442,7 +442,7 @@ async def get_deleted_collaborators(
 ):
     """获取已删除的合作者列表"""
     collaborators = db.query(Collaborator).filter(
-        Collaborator.is_deleted == True
+        Collaborator.deleted_at.is_not(None)
     ).offset(skip).limit(limit).all()
     return collaborators
 
