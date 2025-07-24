@@ -226,7 +226,7 @@ performance_check() {
     
     # 检查前端构建大小
     if [ -f "frontend/build.tar.gz" ]; then
-        local size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
+        size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
         echo -e "${CYAN}前端构建大小: $size${NC}"
         
         # 如果超过50MB警告
@@ -534,7 +534,7 @@ echo -e "${CYAN}=== 部署内容 ===${NC}"
 if [ "$NEED_BUILD" = true ]; then
     echo "  🔨 前端：已构建并打包"
     if [ -f "frontend/build.tar.gz" ]; then
-        local size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
+        size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
         echo "      📦 构建大小: $size"
     fi
 else

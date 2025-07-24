@@ -1,0 +1,81 @@
+# Shell脚本质量检查报告
+生成时间: Thu Jul 24 10:52:28 CST 2025
+
+找到的脚本文件:
+  - backend/scripts/check-backups.sh
+  - backend/scripts/emergency-data-recovery.sh
+  - backend/scripts/init-db.sh
+  - deploy-scripts/check_vps_migration.sh
+  - deploy-scripts/deploy.sh
+  - deploy-scripts/diagnose_500_error.sh
+  - deploy-scripts/quick_fix_500.sh
+  - deploy-scripts/quick-deploy.sh
+  - deploy-scripts/rollback.sh
+  - deploy-scripts/test-conflict-prevention.sh
+  - deploy-scripts/verify-deployment.sh
+  - deploy-scripts/vps-update.sh
+  - deployment/backup-research.sh
+  - deployment/backup-restore.sh
+  - deployment/setup-backup.sh
+  - deployment/setup-firewall.sh
+  - scripts/check-shell-scripts.sh
+  - start-dev.sh
+  - stop-dev.sh
+
+## 语法检查结果
+
+✅ backend/scripts/check-backups.sh - 语法正确
+✅ backend/scripts/emergency-data-recovery.sh - 语法正确
+✅ backend/scripts/init-db.sh - 语法正确
+✅ deploy-scripts/check_vps_migration.sh - 语法正确
+✅ deploy-scripts/deploy.sh - 语法正确
+✅ deploy-scripts/diagnose_500_error.sh - 语法正确
+✅ deploy-scripts/quick_fix_500.sh - 语法正确
+✅ deploy-scripts/quick-deploy.sh - 语法正确
+✅ deploy-scripts/rollback.sh - 语法正确
+✅ deploy-scripts/test-conflict-prevention.sh - 语法正确
+✅ deploy-scripts/verify-deployment.sh - 语法正确
+✅ deploy-scripts/vps-update.sh - 语法正确
+✅ deployment/backup-research.sh - 语法正确
+✅ deployment/backup-restore.sh - 语法正确
+✅ deployment/setup-backup.sh - 语法正确
+✅ deployment/setup-firewall.sh - 语法正确
+✅ scripts/check-shell-scripts.sh - 语法正确
+✅ start-dev.sh - 语法正确
+✅ stop-dev.sh - 语法正确
+
+## ShellCheck检查结果
+
+⚠️ ShellCheck未安装，跳过检查
+
+## Local关键字使用检查
+
+✅ backend/scripts/check-backups.sh - local使用正确
+✅ backend/scripts/emergency-data-recovery.sh - local使用正确
+✅ backend/scripts/init-db.sh - local使用正确
+✅ deploy-scripts/check_vps_migration.sh - local使用正确
+❌ deploy-scripts/deploy.sh - 发现在函数外使用local:
+    537:         local size=$(ls -lh frontend/build.tar.gz | awk '{print $5}')
+✅ deploy-scripts/diagnose_500_error.sh - local使用正确
+✅ deploy-scripts/quick_fix_500.sh - local使用正确
+✅ deploy-scripts/quick-deploy.sh - local使用正确
+✅ deploy-scripts/rollback.sh - local使用正确
+✅ deploy-scripts/test-conflict-prevention.sh - local使用正确
+✅ deploy-scripts/verify-deployment.sh - local使用正确
+✅ deploy-scripts/vps-update.sh - local使用正确
+✅ deployment/backup-research.sh - local使用正确
+✅ deployment/backup-restore.sh - local使用正确
+✅ deployment/setup-backup.sh - local使用正确
+✅ deployment/setup-firewall.sh - local使用正确
+✅ scripts/check-shell-scripts.sh - local使用正确
+✅ start-dev.sh - local使用正确
+✅ stop-dev.sh - local使用正确
+
+## 检查总结
+
+- 检查脚本总数: 19
+- 语法错误: 0
+- ShellCheck问题: 0
+- Local使用错误: 1
+
+⚠️ 发现 1 个需要修复的问题
