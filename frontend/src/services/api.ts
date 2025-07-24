@@ -23,6 +23,11 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
+    // 自动为所有请求添加 /api 前缀
+    if (config.url && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
+      config.url = '/api' + config.url;
+    }
+    
     // 从localStorage获取token
     const token = localStorage.getItem('auth_token');
     if (token) {
