@@ -412,35 +412,38 @@ else
     log_message "ERROR" "❌ 未找到nginx配置文件 deployment/nginx-3001.conf"
 fi
 
-# 5. 智能服务重启
+# 5. 强制服务重启 (修复502问题)
+# Ultra Think 优化：每次部署都重启后端服务，确保服务状态正确
+log_message "INFO" "🔄 执行后端服务重启（确保服务状态正确）..."
+
+# 检测变更类型用于日志记录
 BACKEND_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "backend/" || echo "0")
 CONFIG_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -E "\.(env|py)$" | wc -l || echo "0")
+NGINX_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "nginx" || echo "0")
 
-if [ "$BACKEND_CHANGED" -gt 0 ] || [ "$CONFIG_CHANGED" -gt 0 ]; then
-    log_message "INFO" "检测到后端变更 ($BACKEND_CHANGED 个文件)，重启服务..."
-    
-    # 重新加载systemd配置
-    systemctl daemon-reload || error_exit "重载systemd配置失败"
-    
-    # 优雅停止服务
-    if systemctl is-active --quiet research-backend; then
-        log_message "INFO" "优雅停止后端服务..."
-        systemctl stop research-backend || error_exit "停止后端服务失败"
-        sleep 3
-    fi
-    
-    # 启动服务
-    log_message "INFO" "启动后端服务..."
-    systemctl start research-backend || error_exit "启动后端服务失败"
-    
-    # 等待服务启动
-    sleep 5
-    
-    # 验证服务启动
-    check_service_health "research-backend"
-else
-    log_message "INFO" "后端无变更，跳过服务重启"
+log_message "INFO" "变更统计: 后端文件 $BACKEND_CHANGED 个, 配置文件 $CONFIG_CHANGED 个, nginx配置 $NGINX_CHANGED 个"
+
+# 重新加载systemd配置
+systemctl daemon-reload || error_exit "重载systemd配置失败"
+
+# 优雅停止服务
+if systemctl is-active --quiet research-backend; then
+    log_message "INFO" "优雅停止后端服务..."
+    systemctl stop research-backend || error_exit "停止后端服务失败"
+    sleep 3
 fi
+
+# 启动服务
+log_message "INFO" "启动后端服务..."
+systemctl start research-backend || error_exit "启动后端服务失败"
+
+# 等待服务启动
+sleep 5
+
+# 验证服务启动
+check_service_health "research-backend"
+
+log_message "INFO" "✅ 后端服务重启完成，避免502错误"
 
 # 6. 系统健康检查
 log_message "INFO" "执行系统健康检查..."
