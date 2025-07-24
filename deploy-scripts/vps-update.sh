@@ -512,5 +512,48 @@ echo "  systemctl status research-backend  # 查看后端状态"
 echo "  journalctl -u research-backend -f  # 查看实时日志"
 echo "  ./deploy-scripts/verify-deployment.sh  # 运行系统检查"
 echo "  ./deploy-scripts/rollback.sh       # 快速回滚"
+# 最终服务状态诊断和修复
+log_message "INFO" "🩺 执行最终服务状态诊断..."
+
+# 等待5秒确保服务完全启动
+sleep 5
+
+# 检查后端服务是否真正运行
+if ! systemctl is-active --quiet research-backend; then
+    log_message "ERROR" "❌ 后端服务未运行，执行紧急修复..."
+    
+    # 紧急修复：强制重启
+    systemctl stop research-backend || true
+    sleep 3
+    systemctl start research-backend
+    sleep 5
+    
+    if systemctl is-active --quiet research-backend; then
+        log_message "INFO" "✅ 紧急修复成功，后端服务已启动"
+    else
+        log_message "ERROR" "❌ 紧急修复失败，查看服务日志："
+        journalctl -u research-backend -n 10 --no-pager | while read line; do
+            log_message "ERROR" "  $line"
+        done
+    fi
+fi
+
+# 测试API是否可访问
+log_message "INFO" "测试API可访问性..."
+if curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
+    log_message "INFO" "✅ API测试成功，部署完成"
+else
+    log_message "ERROR" "❌ API测试失败，可能出现502错误"
+    
+    # 显示诊断信息
+    log_message "INFO" "诊断信息："
+    log_message "INFO" "  - 后端服务状态: $(systemctl is-active research-backend)"
+    log_message "INFO" "  - 端口8080占用: $(netstat -tulpn | grep :8080 | head -1 || echo '未占用')"
+    log_message "INFO" "  - 最近错误日志:"
+    journalctl -u research-backend -n 5 --no-pager | while read line; do
+        log_message "INFO" "    $line"
+    done
+fi
+
 echo ""
 log_message "INFO" "Research Dashboard 部署完成"
