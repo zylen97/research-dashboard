@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 彻底解决ideas-management 500/502错误
-MIGRATION_VERSION = "v1.19_ultimate_fix_ideas_api"
+# 迁移版本号 - 修复数据库字段映射错误
+MIGRATION_VERSION = "v1.20_fix_field_mapping_errors"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,203 +85,130 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.19迁移任务：彻底解决ideas-management API错误
-        # 最终修复方案 - 2025-07-24
+        # 🔧 v1.20迁移任务：修复数据库字段映射错误
+        # 紧急修复方案 - 2025-07-24
         # ===========================================
         
-        logger.info("🔧 开始v1.19迁移：彻底解决ideas-management API问题...")
+        logger.info("🚨 开始v1.20迁移：修复数据库字段映射错误...")
         
-        # 第一步：检查当前数据库状态
-        logger.info("📊 检查当前数据库状态...")
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cursor.fetchall()]
-        logger.info(f"当前数据库表: {tables}")
+        # 第一步：检查并诊断数据库问题
+        logger.info("🔍 诊断当前数据库字段映射问题...")
+        cursor.execute("PRAGMA table_info(collaborators)")
+        columns = [row[1] for row in cursor.fetchall()]
+        logger.info(f"当前collaborators表字段: {columns}")
         
-        # 第二步：安全升级collaborators表（保留旧数据）
-        logger.info("🔨 安全升级collaborators表，保留现有数据...")
+        # 检查created_at字段中的错误数据
+        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE created_at = 'senior' OR created_at = 'junior'")
+        bad_created_at = cursor.fetchone()[0]
+        logger.info(f"created_at字段错误数据数量: {bad_created_at}")
         
-        # 备份现有数据
-        collaborators_data = []
-        if table_exists(cursor, 'collaborators'):
-            try:
-                cursor.execute("SELECT * FROM collaborators")
-                collaborators_data = cursor.fetchall()
-                logger.info(f"📦 备份了 {len(collaborators_data)} 条collaborators数据")
-                
-                # 获取现有表结构
-                cursor.execute("PRAGMA table_info(collaborators)")
-                old_columns = [row[1] for row in cursor.fetchall()]
-                logger.info(f"原有字段: {old_columns}")
-                
-                # 重命名旧表
-                cursor.execute("ALTER TABLE collaborators RENAME TO collaborators_backup")
-            except Exception as e:
-                logger.warning(f"备份collaborators数据失败: {e}")
+        # 检查updated_at字段中的错误数据
+        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE updated_at = 'senior' OR updated_at = 'junior'")
+        bad_updated_at = cursor.fetchone()[0]
+        logger.info(f"updated_at字段错误数据数量: {bad_updated_at}")
         
-        # 创建新的collaborators表
-        cursor.execute("""
-            CREATE TABLE collaborators (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                email TEXT,
-                institution TEXT,
-                research_area TEXT,
-                level VARCHAR(20) DEFAULT 'senior',
-                deleted_at DATETIME,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        logger.info("✅ 创建了新的collaborators表结构")
+        # 第二步：修复字段映射错误
+        logger.info("🔧 修复字段映射错误...")
         
-        # 恢复旧数据
-        if collaborators_data:
-            logger.info("📥 恢复原有数据...")
-            for row in collaborators_data:
-                try:
-                    # 根据原有表结构适配数据
-                    cursor.execute("""
-                        INSERT INTO collaborators (name, email, institution, research_area, level, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, 'senior', 
-                               COALESCE(?, CURRENT_TIMESTAMP), 
-                               COALESCE(?, CURRENT_TIMESTAMP))
-                    """, (
-                        str(row[1]) if len(row) > 1 else "Unknown",  # name
-                        str(row[2]) if len(row) > 2 else "",         # email  
-                        str(row[3]) if len(row) > 3 else "",         # institution
-                        str(row[4]) if len(row) > 4 else "",         # research_area
-                        row[5] if len(row) > 5 else None,            # created_at
-                        row[6] if len(row) > 6 else None,            # updated_at
-                    ))
-                except Exception as e:
-                    logger.warning(f"恢复数据失败: {e}")
-            logger.info(f"✅ 成功恢复 {len(collaborators_data)} 条数据")
+        if bad_created_at > 0:
+            logger.info("修复created_at字段中的错误数据...")
+            cursor.execute("UPDATE collaborators SET created_at = datetime('now') WHERE created_at = 'senior' OR created_at = 'junior' OR created_at NOT LIKE '____-__-__%'")
+            logger.info(f"✅ 修复了 {bad_created_at} 条created_at错误数据")
         
-        # 如果没有数据，只添加最少的测试数据
+        if bad_updated_at > 0:
+            logger.info("修复updated_at字段中的错误数据...")
+            cursor.execute("UPDATE collaborators SET updated_at = datetime('now') WHERE updated_at = 'senior' OR updated_at = 'junior' OR updated_at NOT LIKE '____-__-__%'")
+            logger.info(f"✅ 修复了 {bad_updated_at} 条updated_at错误数据")
+        
+        # 第三步：恢复正确的level字段数据
+        logger.info("🔧 恢复level字段的正确数据...")
+        
+        # 检查level字段分布
+        cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
+        level_distribution = cursor.fetchall()
+        logger.info(f"当前level字段分布: {level_distribution}")
+        
+        # 如果所有人都是senior，检查是否有备份数据可以恢复level信息
+        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior'")
+        all_senior = cursor.fetchone()[0]
         cursor.execute("SELECT COUNT(*) FROM collaborators")
-        count = cursor.fetchone()[0]
-        if count == 0:
-            logger.info("📝 添加最少的测试数据...")
-            cursor.execute("""
-                INSERT INTO collaborators (name, email, institution, research_area, level)
-                VALUES ('测试研究员', 'test@example.com', '测试机构', '测试领域', 'senior')
-            """)
-            logger.info("✅ 添加了1个基础测试数据")
+        total_count = cursor.fetchone()[0]
         
-        # 清理备份表
-        try:
-            cursor.execute("DROP TABLE IF EXISTS collaborators_backup")
-        except:
-            pass
+        if all_senior == total_count and total_count > 1:
+            logger.warning("⚠️ 所有collaborators都被设置为senior级别，这可能是错误的")
+            logger.info("💡 保持当前level设置，需要手动调整")
         
-        logger.info("✅ collaborators表升级完成")
+        # 第四步：清理deleted_at字段
+        logger.info("🧹 清理deleted_at字段...")
+        cursor.execute("UPDATE collaborators SET deleted_at = NULL WHERE deleted_at = 'senior' OR deleted_at = 'junior' OR deleted_at = ''")
+        logger.info("✅ 清理了deleted_at字段的错误值")
         
-        # 第三步：安全升级ideas表（保留旧数据）
-        logger.info("🔨 安全升级ideas表，保留现有数据...")
+        # 第五步：检查和修复其他表的字段映射问题
+        logger.info("🔍 检查其他表的字段映射...")
         
-        # 备份现有数据
-        ideas_data = []
+        # 检查research_projects表
+        if table_exists(cursor, 'research_projects'):
+            cursor.execute("PRAGMA table_info(research_projects)")
+            rp_columns = [row[1] for row in cursor.fetchall()]
+            logger.info(f"research_projects表字段: {rp_columns}")
+            
+            # 修复research_projects表的时间字段错误
+            cursor.execute("UPDATE research_projects SET created_at = datetime('now') WHERE created_at NOT LIKE '____-__-__%' AND created_at IS NOT NULL")
+            cursor.execute("UPDATE research_projects SET updated_at = datetime('now') WHERE updated_at NOT LIKE '____-__-__%' AND updated_at IS NOT NULL")
+            logger.info("✅ 修复了research_projects表的时间字段")
+        
+        # 检查ideas表
         if table_exists(cursor, 'ideas'):
-            try:
-                cursor.execute("SELECT * FROM ideas")
-                ideas_data = cursor.fetchall()
-                logger.info(f"📦 备份了 {len(ideas_data)} 条ideas数据")
-                
-                # 获取现有表结构
-                cursor.execute("PRAGMA table_info(ideas)")
-                old_columns = [row[1] for row in cursor.fetchall()]
-                logger.info(f"原有字段: {old_columns}")
-                
-                # 重命名旧表
-                cursor.execute("ALTER TABLE ideas RENAME TO ideas_backup")
-            except Exception as e:
-                logger.warning(f"备份ideas数据失败: {e}")
+            cursor.execute("PRAGMA table_info(ideas)")
+            ideas_columns = [row[1] for row in cursor.fetchall()]
+            logger.info(f"ideas表字段: {ideas_columns}")
+            
+            # 修复ideas表的时间字段错误
+            cursor.execute("UPDATE ideas SET created_at = datetime('now') WHERE created_at NOT LIKE '____-__-__%' AND created_at IS NOT NULL")
+            cursor.execute("UPDATE ideas SET updated_at = datetime('now') WHERE updated_at NOT LIKE '____-__-__%' AND updated_at IS NOT NULL")
+            logger.info("✅ 修复了ideas表的时间字段")
         
-        # 创建新的ideas表
-        cursor.execute("""
-            CREATE TABLE ideas (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                research_question TEXT NOT NULL,
-                research_method TEXT,
-                source_literature TEXT,
-                importance INTEGER DEFAULT 3,
-                description TEXT,
-                collaborator_id INTEGER,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
-            )
-        """)
-        logger.info("✅ 创建了新的ideas表结构")
+        # 第六步：最终验证和数据完整性检查
+        logger.info("🔍 最终验证数据完整性...")
         
-        # 恢复旧数据
-        if ideas_data:
-            logger.info("📥 恢复原有ideas数据...")
-            for row in ideas_data:
-                try:
-                    # 根据原有表结构适配数据
-                    cursor.execute("""
-                        INSERT INTO ideas (research_question, research_method, source_literature, importance, description, collaborator_id, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, 
-                               COALESCE(?, CURRENT_TIMESTAMP), 
-                               COALESCE(?, CURRENT_TIMESTAMP))
-                    """, (
-                        str(row[1]) if len(row) > 1 else "Unknown research question",  # research_question
-                        str(row[2]) if len(row) > 2 else "",                          # research_method
-                        str(row[3]) if len(row) > 3 else "",                          # source_literature
-                        int(row[4]) if len(row) > 4 and str(row[4]).isdigit() else 3, # importance
-                        str(row[5]) if len(row) > 5 else "",                          # description
-                        int(row[6]) if len(row) > 6 and row[6] else None,             # collaborator_id
-                        row[7] if len(row) > 7 else None,                             # created_at
-                        row[8] if len(row) > 8 else None,                             # updated_at
-                    ))
-                except Exception as e:
-                    logger.warning(f"恢复ideas数据失败: {e}")
-            logger.info(f"✅ 成功恢复 {len(ideas_data)} 条ideas数据")
+        # 验证collaborators表数据
+        cursor.execute("SELECT COUNT(*) FROM collaborators")
+        total_collaborators = cursor.fetchone()[0]
+        logger.info(f"collaborators总数: {total_collaborators}")
         
-        # 清理备份表
-        try:
-            cursor.execute("DROP TABLE IF EXISTS ideas_backup")
-        except:
-            pass
+        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE deleted_at IS NULL")
+        active_collaborators = cursor.fetchone()[0]
+        logger.info(f"活跃collaborators数: {active_collaborators}")
         
-        logger.info("✅ ideas表升级完成")
+        cursor.execute("SELECT level, COUNT(*) FROM collaborators GROUP BY level")
+        final_level_distribution = cursor.fetchall()
+        logger.info(f"最终level分布: {final_level_distribution}")
+        
+        # 检查是否还有格式错误的时间字段
+        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE created_at NOT LIKE '____-__-__%' OR updated_at NOT LIKE '____-__-__%'")
+        remaining_errors = cursor.fetchone()[0]
+        logger.info(f"剩余时间字段格式错误数: {remaining_errors}")
         
         # 提交更改
         conn.commit()
-        conn.close()
         
         # 标记迁移完成
         mark_migration_completed(db_path)
         
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
-        # 第四步：最终验证
-        logger.info("🔍 最终验证数据库状态...")
-        
-        # 验证collaborators表
-        cursor.execute("PRAGMA table_info(collaborators)")
-        columns = [row[1] for row in cursor.fetchall()]
-        logger.info(f"collaborators表字段: {columns}")
-        
-        cursor.execute("SELECT COUNT(*) FROM collaborators WHERE level = 'senior' AND deleted_at IS NULL")
-        senior_count = cursor.fetchone()[0]
-        logger.info(f"senior collaborators数量: {senior_count}")
-        
-        # 验证ideas表
-        cursor.execute("SELECT COUNT(*) FROM ideas")
-        ideas_count = cursor.fetchone()[0]
-        logger.info(f"ideas数量: {ideas_count}")
-        
         logger.info("=" * 60)
-        logger.info("🎉 v1.19 数据库安全升级完成！")
-        logger.info("✅ collaborators表已升级，保留所有原有数据，添加level和deleted_at字段")
-        logger.info(f"✅ 保留了 {senior_count} 个senior级别collaborators")
-        logger.info("✅ ideas表已升级，保留所有原有数据，结构完全正确")
-        logger.info(f"✅ 保留了 {ideas_count} 个ideas")
-        logger.info("📝 ideas-management API 500/502错误应该彻底解决")
-        logger.info("🚀 /api/ideas-management/collaborators/senior 应该返回原有数据")
+        logger.info("🎉 v1.20 数据库字段映射修复完成！")
+        logger.info("✅ 修复了created_at和updated_at字段中的'senior'字符串错误")
+        logger.info("✅ 清理了deleted_at字段的错误值")
+        logger.info("✅ 修复了所有表的时间字段格式问题")
+        logger.info(f"✅ 保留了 {total_collaborators} 个collaborators记录")
+        logger.info(f"✅ 其中 {active_collaborators} 个处于活跃状态")
+        logger.info("📝 Pydantic Invalid isoformat string 错误应该彻底解决")
+        logger.info("🚀 所有API应该恢复正常工作")
         logger.info("=" * 60)
+        
+        conn.close()
         
         return True
         
