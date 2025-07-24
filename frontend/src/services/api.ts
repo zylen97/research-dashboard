@@ -9,10 +9,12 @@ import {
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
 } from '../types';
-import { ensureArray } from '../utils/arrayHelpers';
+import { handleListResponse, handleObjectResponse } from '../utils/dataFormatters';
+import { errorInterceptor } from '../utils/errorHandler';
 
 // API基础配置
 import { API_CONFIG } from '../config/api';
+import { ENV } from '../config/environment';
 
 const api = axios.create({
   baseURL: API_CONFIG.BASE_URL,
@@ -23,14 +25,14 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 自动为所有请求添加 /api 前缀
-    if (config.url && !config.url.startsWith('/api') && !config.url.startsWith('http')) {
-      // 特别记录Ideas管理API的请求
-      if (config.url.includes('ideas-management')) {
+    // 自动为所有请求添加 API 前缀
+    if (config.url && !config.url.startsWith(ENV.API_PREFIX) && !config.url.startsWith('http')) {
+      // 开发环境下记录API请求
+      if (ENV.LOG_LEVEL === 'debug' && config.url.includes('ideas-management')) {
         console.log('[Ideas API] 原始URL:', config.url);
-        console.log('[Ideas API] 修改后URL:', '/api' + config.url);
+        console.log('[Ideas API] 修改后URL:', ENV.API_PREFIX + config.url);
       }
-      config.url = '/api' + config.url;
+      config.url = ENV.API_PREFIX + config.url;
     }
     
     // 从localStorage获取token
@@ -67,52 +69,7 @@ api.interceptors.response.use(
     // 否则直接返回数据
     return data;
   },
-  (error) => {
-    console.error('API Error:', error);
-    
-    // 处理具体的HTTP状态码
-    if (error.response) {
-      const { status, data } = error.response;
-      
-      switch (status) {
-        case 401:
-          // 清除本地认证信息
-          localStorage.removeItem('auth_token');
-          localStorage.removeItem('auth_user');
-          
-          // 只在非登录页面时跳转
-          if (!window.location.pathname.includes('/auth')) {
-            window.location.href = '/';
-          }
-          break;
-          
-        case 403:
-          console.error('无权访问该资源');
-          break;
-          
-        case 404:
-          console.error('请求的资源不存在');
-          break;
-          
-        case 422:
-          console.error('请求数据验证失败:', data);
-          break;
-          
-        case 500:
-          console.error('服务器内部错误');
-          break;
-          
-        default:
-          console.error(`API调用失败: ${status}`);
-      }
-    } else if (error.request) {
-      console.error('网络错误或请求超时');
-    } else {
-      console.error('API调用配置错误:', error.message);
-    }
-    
-    return Promise.reject(error);
-  }
+  errorInterceptor
 );
 
 // 合作者API
@@ -120,7 +77,7 @@ export const collaboratorApi = {
   // 获取合作者列表
   getCollaborators: async (params?: PaginationParams): Promise<Collaborator[]> => {
     const response = await api.get('/collaborators/', { params });
-    return ensureArray<Collaborator>(response, 'API.getCollaborators');
+    return handleListResponse<Collaborator>(response, 'API.getCollaborators');
   },
 
   // 获取单个合作者
@@ -142,7 +99,7 @@ export const collaboratorApi = {
   // 获取合作者参与的项目
   getCollaboratorProjects: async (id: number): Promise<ResearchProject[]> => {
     const response = await api.get(`/collaborators/${id}/projects`);
-    return ensureArray<ResearchProject>(response, 'API.getCollaboratorProjects');
+    return handleListResponse<ResearchProject>(response, 'API.getCollaboratorProjects');
   },
 
   // 上传合作者文件
@@ -221,7 +178,7 @@ export const researchApi = {
   // 获取研究项目列表
   getProjects: async (params?: PaginationParams & { status_filter?: string }): Promise<ResearchProject[]> => {
     const response = await api.get('/research/', { params });
-    return ensureArray<ResearchProject>(response, 'API.getProjects');
+    return handleListResponse<ResearchProject>(response, 'API.getProjects');
   },
 
   // 获取单个研究项目
@@ -265,7 +222,7 @@ export const researchApi = {
   // 获取用户的待办项目列表
   getUserTodos: async (): Promise<ResearchProject[]> => {
     const response = await api.get('/research/todos');
-    return ensureArray<ResearchProject>(response, 'API.getUserTodos');
+    return handleListResponse<ResearchProject>(response, 'API.getUserTodos');
   },
 
   // 将项目标记为待办
@@ -432,7 +389,7 @@ export const ideasApi = {
         _t: Date.now() // 缓存破坏参数
       }
     });
-    return ensureArray<import('../types').Idea>(response, 'API.getIdeas');
+    return handleListResponse<import('../types').Idea>(response, 'API.getIdeas');
   },
 
   // 获取单个Idea
@@ -458,7 +415,7 @@ export const ideasApi = {
         _t: Date.now() // 缓存破坏参数
       }
     });
-    return ensureArray<import('../types').Collaborator>(response, 'API.getSeniorCollaborators');
+    return handleListResponse<import('../types').Collaborator>(response, 'API.getSeniorCollaborators');
   },
 };
 

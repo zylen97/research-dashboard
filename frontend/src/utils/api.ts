@@ -1,89 +1,9 @@
 /**
- * API工具函数 - 统一错误处理和响应格式化
+ * API工具函数 - 提供实用功能如响应格式化、重试、缓存等
  */
 
 import { message } from 'antd';
-
-// API错误类型定义
-export interface ApiError {
-  message: string;
-  status?: number;
-  code?: string;
-  details?: any;
-}
-
-/**
- * 统一的API错误处理函数
- */
-export const handleApiError = (error: any): ApiError => {
-  // 如果是响应错误
-  if (error.response) {
-    const { status, data } = error.response;
-    let errorMessage = '请求失败';
-    
-    // 根据状态码提供友好的错误信息
-    switch (status) {
-      case 400:
-        errorMessage = data?.message || '请求参数有误';
-        break;
-      case 401:
-        errorMessage = '未登录或登录已过期，请重新登录';
-        break;
-      case 403:
-        errorMessage = '没有权限执行此操作';
-        break;
-      case 404:
-        errorMessage = '请求的资源不存在';
-        break;
-      case 422:
-        errorMessage = data?.message || '数据验证失败';
-        break;
-      case 429:
-        errorMessage = '请求过于频繁，请稍后再试';
-        break;
-      case 500:
-        errorMessage = '服务器内部错误，请稍后重试';
-        break;
-      case 502:
-        errorMessage = '服务器网关错误';
-        break;
-      case 503:
-        errorMessage = '服务暂时不可用';
-        break;
-      default:
-        errorMessage = data?.message || `请求失败 (${status})`;
-    }
-    
-    return {
-      message: errorMessage,
-      status,
-      code: data?.code,
-      details: data
-    };
-  }
-  
-  // 网络错误
-  if (error.request) {
-    return {
-      message: '网络连接失败，请检查网络设置',
-      code: 'NETWORK_ERROR'
-    };
-  }
-  
-  // 其他错误
-  return {
-    message: error.message || '未知错误',
-    code: 'UNKNOWN_ERROR'
-  };
-};
-
-/**
- * 显示API错误消息到用户界面
- */
-export const showApiError = (error: any): void => {
-  const apiError = handleApiError(error);
-  message.error(apiError.message);
-};
+import { showError, ApiError, shouldRetry, parseError } from './errorHandler';
 
 /**
  * API响应数据格式化
@@ -128,7 +48,7 @@ export const withErrorHandling = async <T>(
     return result;
   } catch (error) {
     if (showError) {
-      showApiError(error);
+      showError(error);
     }
     throw error;
   }
@@ -150,8 +70,11 @@ export const retryApiCall = async <T>(
     } catch (error) {
       lastError = error;
       
-      // 如果是认证错误或客户端错误，不重试
-      if ((error as any).response?.status < 500) {
+      // 解析错误类型
+      const apiError = parseError(error);
+      
+      // 如果不应该重试，直接抛出错误
+      if (!shouldRetry(apiError)) {
         throw error;
       }
       
@@ -160,7 +83,7 @@ export const retryApiCall = async <T>(
         throw error;
       }
       
-      // 等待后重试
+      // 等待后重试（指数退避）
       await new Promise(resolve => setTimeout(resolve, delay * Math.pow(2, i)));
     }
   }

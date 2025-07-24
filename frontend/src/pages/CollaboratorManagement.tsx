@@ -26,7 +26,8 @@ import { Collaborator, CollaboratorCreate } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
 import CollaboratorDetailModal from '../components/collaborator/CollaboratorDetailModal';
-import { ensureArray, safeForEach, safeFilter } from '../utils/arrayHelpers';
+import { safeForEach, safeFilter } from '../utils/arrayHelpers';
+import { handleListResponse } from '../utils/dataFormatters';
 
 const { Title, Text } = Typography;
 
@@ -66,7 +67,7 @@ const CollaboratorManagement: React.FC = () => {
   });
   
   // 确保 collaborators 始终是数组
-  const collaborators = ensureArray<Collaborator>(collaboratorsData, 'CollaboratorManagement.collaborators');
+  const collaborators = handleListResponse<Collaborator>(collaboratorsData, 'CollaboratorManagement.collaborators');
 
   // 识别小组成员的函数
   const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
@@ -99,7 +100,7 @@ const CollaboratorManagement: React.FC = () => {
 
   // 排序合作者：小组 > 高级合作者 > 女生 > 男生
   const sortedCollaborators = useMemo(() => {
-    const safeCollaborators = ensureArray<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
+    const safeCollaborators = handleListResponse<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
     return [...safeCollaborators].sort((a, b) => {
       // 确保 a 和 b 存在
       if (!a || !b) return 0;
@@ -131,7 +132,7 @@ const CollaboratorManagement: React.FC = () => {
   });
   
   // 确保 projects 始终是数组
-  const projects = ensureArray(projectsData, 'CollaboratorManagement.projects');
+  const projects = handleListResponse(projectsData, 'CollaboratorManagement.projects');
 
   // 分析合作者参与状态：找出未参与任何项目的合作者
   const collaboratorParticipationStatus = useMemo(() => {
@@ -277,7 +278,7 @@ const CollaboratorManagement: React.FC = () => {
     try {
       // 先检查是否有关联的项目
       const projectsResponse = await collaboratorApi.getCollaboratorProjects(collaborator.id);
-      const projects = ensureArray(projectsResponse, 'getCollaboratorProjects');
+      const projects = handleListResponse(projectsResponse, 'getCollaboratorProjects');
       const activeProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'active', 'activeProjects');
       const completedProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'completed', 'completedProjects');
       

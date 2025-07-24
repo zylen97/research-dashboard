@@ -1,41 +1,19 @@
-// API配置管理 - 增强版本，解决CORS重定向问题
-const getApiBaseUrl = (): string => {
-  // 1. 开发环境使用本地后端
-  if (process.env['NODE_ENV'] === 'development') {
-    console.log('开发环境，使用本地API');
-    return 'http://localhost:8080';
-  }
+// API配置管理
+import { getApiBaseUrl, buildApiUrl as buildUrl, ENV } from './environment';
 
-  // 2. 生产环境使用当前origin，但确保包含完整的协议和端口
-  const origin = window.location.origin;
-  
-  // 验证origin是否包含端口号（用于诊断CORS问题）
-  if (origin.includes(':3001')) {
-    console.log('✅ 生产环境API配置正确:', origin);
-  } else {
-    console.warn('⚠️ 检测到异常的origin配置:', origin);
-  }
-  
-  return origin;
-};
-
-// 导出API配置 - 使用getter确保动态获取BASE_URL
+// 导出API配置
 export const API_CONFIG = {
   get BASE_URL() {
     return getApiBaseUrl();
   },
-  TIMEOUT: 30000,
+  TIMEOUT: ENV.API_TIMEOUT,
   HEADERS: {
     'Content-Type': 'application/json',
   },
 } as const;
 
-// 构建完整的API URL
-export const buildApiUrl = (endpoint: string): string => {
-  const baseUrl = API_CONFIG.BASE_URL.replace(/\/$/, ''); // 移除末尾斜杠
-  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-  return `${baseUrl}${cleanEndpoint}`;
-};
+// 重新导出buildApiUrl以保持向后兼容
+export const buildApiUrl = buildUrl;
 
 // API端点常量
 export const API_ENDPOINTS = {
@@ -114,14 +92,17 @@ export const checkApiHealth = async (): Promise<boolean> => {
 
 // 日志记录
 export const logApiConfig = () => {
-  console.group('📡 API配置信息');
-  console.log('基础地址:', API_CONFIG.BASE_URL);
-  console.log('环境:', process.env['NODE_ENV']);
-  console.log('超时时间:', API_CONFIG.TIMEOUT);
-  console.groupEnd();
+  if (ENV.LOG_LEVEL === 'debug' || ENV.LOG_LEVEL === 'info') {
+    console.group('📡 API配置信息');
+    console.log('基础地址:', API_CONFIG.BASE_URL);
+    console.log('环境:', process.env['NODE_ENV']);
+    console.log('超时时间:', API_CONFIG.TIMEOUT);
+    console.log('API前缀:', ENV.API_PREFIX);
+    console.groupEnd();
+  }
 };
 
 // 开发环境下自动打印配置
-if (process.env['NODE_ENV'] === 'development') {
+if (ENV.LOG_LEVEL === 'debug') {
   logApiConfig();
 }
