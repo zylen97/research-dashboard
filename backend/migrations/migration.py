@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 修复数据库字段映射错误
-MIGRATION_VERSION = "v1.20_fix_field_mapping_errors"
+# 迁移版本号 - 自动修复字段映射错误
+MIGRATION_VERSION = "v1.21_auto_fix_field_mapping"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,11 +85,11 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.20迁移任务：修复数据库字段映射错误
-        # 紧急修复方案 - 2025-07-24
+        # 🔧 v1.21迁移任务：自动修复数据库字段映射错误
+        # 自动修复方案 - 2025-07-24
         # ===========================================
         
-        logger.info("🚨 开始v1.20迁移：修复数据库字段映射错误...")
+        logger.info("🚨 开始v1.21迁移：自动修复数据库字段映射错误...")
         
         # 第一步：检查并诊断数据库问题
         logger.info("🔍 诊断当前数据库字段映射问题...")
@@ -198,7 +198,7 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 60)
-        logger.info("🎉 v1.20 数据库字段映射修复完成！")
+        logger.info("🎉 v1.21 数据库字段映射自动修复完成！")
         logger.info("✅ 修复了created_at和updated_at字段中的'senior'字符串错误")
         logger.info("✅ 清理了deleted_at字段的错误值")
         logger.info("✅ 修复了所有表的时间字段格式问题")
