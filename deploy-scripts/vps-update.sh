@@ -555,5 +555,29 @@ else
     done
 fi
 
+# 如果API测试失败，执行紧急修复
+if ! curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
+    log_message "ERROR" "🚨 检测到502错误，执行紧急修复..."
+    
+    if [ -f "$PROJECT_ROOT/emergency-fix-502.sh" ]; then
+        log_message "INFO" "执行紧急修复脚本..."
+        bash "$PROJECT_ROOT/emergency-fix-502.sh" 2>&1 | while read line; do
+            log_message "FIX" "$line"
+        done
+    else
+        log_message "WARN" "紧急修复脚本不存在，执行简单修复..."
+        systemctl stop research-backend
+        sleep 3
+        systemctl start research-backend
+        sleep 10
+        
+        if curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
+            log_message "INFO" "✅ 简单修复成功"
+        else
+            log_message "ERROR" "❌ 简单修复失败，需要手动检查"
+        fi
+    fi
+fi
+
 echo ""
 log_message "INFO" "Research Dashboard 部署完成"
