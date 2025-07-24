@@ -66,6 +66,11 @@ const CollaboratorManagement: React.FC = () => {
 
   // 识别小组成员的函数
   const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
+    // 确保 collaborator 存在
+    if (!collaborator) {
+      return false;
+    }
+    
     // 1. 优先使用后端的is_group字段（如果存在）
     if (collaborator.is_group !== undefined) {
       return collaborator.is_group;
@@ -83,14 +88,18 @@ const CollaboratorManagement: React.FC = () => {
     ];
     
     return groupIndicators.some(indicator => 
-      collaborator.name.includes(indicator) || 
+      (collaborator.name && collaborator.name.includes(indicator)) || 
       (collaborator.class_name && collaborator.class_name.includes(indicator))
     );
   }, [localGroupMarks]);
 
   // 排序合作者：小组 > 高级合作者 > 女生 > 男生
   const sortedCollaborators = useMemo(() => {
-    return [...collaborators].sort((a, b) => {
+    const safeCollaborators = Array.isArray(collaborators) ? collaborators : [];
+    return [...safeCollaborators].sort((a, b) => {
+      // 确保 a 和 b 存在
+      if (!a || !b) return 0;
+      
       const aIsGroup = isGroupCollaborator(a);
       const bIsGroup = isGroupCollaborator(b);
       
@@ -107,7 +116,7 @@ const CollaboratorManagement: React.FC = () => {
       if (a.gender !== '女' && b.gender === '女') return 1;
       
       // 4. 同性别或都不是女生时，按名字排序
-      return a.name.localeCompare(b.name);
+      return (a.name || '').localeCompare(b.name || '');
     });
   }, [collaborators, isGroupCollaborator]);
 
