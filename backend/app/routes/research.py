@@ -31,6 +31,43 @@ async def get_research_projects(
     projects = query.offset(skip).limit(limit).all()
     return projects
 
+# ============ 用户独立待办功能 API ============
+# 注意：这些路由必须在 /{project_id} 之前定义，否则会被错误匹配
+
+@router.get("/todos", response_model=List[ResearchProjectSchema])
+async def get_user_todos(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """获取当前用户的所有待办项目"""
+    # 查询用户的所有待办项目
+    todos = db.query(UserProjectTodo).filter(
+        UserProjectTodo.user_id == current_user.id
+    ).order_by(desc(UserProjectTodo.marked_at)).all()
+    
+    # 获取对应的项目信息
+    project_ids = [todo.project_id for todo in todos]
+    projects = db.query(ResearchProject).filter(
+        ResearchProject.id.in_(project_ids)
+    ).options(
+        joinedload(ResearchProject.collaborators),
+        joinedload(ResearchProject.communication_logs)
+    ).all()
+    
+    # 按照待办标记时间排序
+    project_dict = {p.id: p for p in projects}
+    sorted_projects = []
+    for todo in todos:
+        if todo.project_id in project_dict:
+            project = project_dict[todo.project_id]
+            # 添加用户待办信息到项目对象（临时属性）
+            project.user_todo_marked_at = todo.marked_at
+            project.user_todo_priority = todo.priority
+            project.user_todo_notes = todo.notes
+            sorted_projects.append(project)
+    
+    return sorted_projects
+
 @router.get("/{project_id}", response_model=ResearchProjectSchema)
 async def get_research_project(project_id: int, db: Session = Depends(get_db)):
     """获取单个研究项目详情（包含交流记录）"""
@@ -296,44 +333,6 @@ async def check_project_dependencies(project_id: int, db: Session = Depends(get_
             detail="Research project not found"
         )
     return dependencies
-
-
-# ============ 用户独立待办功能 API ============
-
-@router.get("/todos", response_model=List[ResearchProjectSchema])
-async def get_user_todos(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    """获取当前用户的所有待办项目"""
-    # 查询用户的所有待办项目
-    todos = db.query(UserProjectTodo).filter(
-        UserProjectTodo.user_id == current_user.id
-    ).order_by(desc(UserProjectTodo.marked_at)).all()
-    
-    # 获取对应的项目信息
-    project_ids = [todo.project_id for todo in todos]
-    projects = db.query(ResearchProject).filter(
-        ResearchProject.id.in_(project_ids)
-    ).options(
-        joinedload(ResearchProject.senior_collaborator),
-        joinedload(ResearchProject.postgrad_collaborator),
-        joinedload(ResearchProject.undergrad_collaborator)
-    ).all()
-    
-    # 按照待办标记时间排序
-    project_dict = {p.id: p for p in projects}
-    sorted_projects = []
-    for todo in todos:
-        if todo.project_id in project_dict:
-            project = project_dict[todo.project_id]
-            # 添加用户待办信息到项目对象（临时属性）
-            project.user_todo_marked_at = todo.marked_at
-            project.user_todo_priority = todo.priority
-            project.user_todo_notes = todo.notes
-            sorted_projects.append(project)
-    
-    return sorted_projects
 
 
 @router.post("/{project_id}/todo")

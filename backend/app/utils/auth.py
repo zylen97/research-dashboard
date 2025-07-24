@@ -90,7 +90,7 @@ def verify_token_and_get_user(token: str, db: Session) -> User:
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: Session = Depends(lambda: next(get_db()))
+    db: Session = Depends(get_db)
 ) -> User:
     """获取当前登录用户"""
     return verify_token_and_get_user(credentials.credentials, db)
