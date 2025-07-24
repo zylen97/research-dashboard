@@ -291,12 +291,21 @@ log_message "INFO" "检查数据库迁移..."
 if [ -f "migrations/migration.py" ]; then
     log_message "INFO" "找到迁移脚本，开始执行..."
     
+    # 停止后端服务避免数据库锁定
+    log_message "INFO" "临时停止后端服务以避免数据库锁定..."
+    systemctl stop research-backend || log_message "WARN" "停止服务失败，继续尝试迁移"
+    sleep 2
+    
     # 记录迁移前的状态
     if [ -f "data/research_dashboard_prod.db" ]; then
         log_message "INFO" "迁移前数据库大小: $(du -sh data/research_dashboard_prod.db | cut -f1)"
     fi
     
-    # 执行迁移并捕获输出
+    # 执行迁移并捕获输出，添加详细的环境变量和错误信息
+    log_message "INFO" "执行命令: ENVIRONMENT=production python3 migrations/migration.py"
+    log_message "INFO" "当前工作目录: $(pwd)"
+    log_message "INFO" "Python版本: $(python3 --version)"
+    
     MIGRATION_OUTPUT=$(ENVIRONMENT=production python3 migrations/migration.py 2>&1)
     MIGRATION_EXIT_CODE=$?
     
@@ -309,7 +318,13 @@ if [ -f "migrations/migration.py" ]; then
         log_message "INFO" "✅ 数据库迁移成功完成"
     else
         log_message "ERROR" "❌ 数据库迁移失败 (退出码: $MIGRATION_EXIT_CODE)"
-        log_message "WARN" "继续部署但可能存在问题"
+        log_message "ERROR" "迁移输出: $MIGRATION_OUTPUT"
+        log_message "ERROR" "这是关键错误，必须修复后才能继续"
+        
+        # 尝试启动服务（如果之前停止了）
+        systemctl start research-backend || log_message "ERROR" "重启服务也失败了"
+        
+        error_exit "数据库迁移失败，部署中止"
     fi
     
     # 记录迁移后的状态
@@ -320,6 +335,7 @@ else
     log_message "WARN" "⚠️ 未找到迁移脚本 migrations/migration.py"
     log_message "INFO" "当前目录: $(pwd)"
     log_message "INFO" "目录内容: $(ls -la | head -5)"
+    log_message "INFO" "migrations目录内容: $(ls -la migrations/ 2>/dev/null || echo 'migrations目录不存在')"
 fi
 
 # 验证数据库完整性

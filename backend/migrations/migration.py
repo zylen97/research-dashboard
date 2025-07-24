@@ -12,6 +12,9 @@ import os
 import logging
 from datetime import datetime
 
+# 修复模块路径问题
+sys.path.insert(0, os.path.dirname(__file__))
+
 # 导入迁移工具
 from migration_utils import setup_migration_logging, find_database_path, backup_database, get_table_columns, table_exists
 
