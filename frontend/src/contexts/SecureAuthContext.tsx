@@ -169,7 +169,7 @@ class SecureApiClient {
   private accessToken: string | null = null;
 
   constructor() {
-    this.baseURL = process.env.NODE_ENV === 'development' 
+    this.baseURL = process.env['NODE_ENV'] === 'development' 
       ? 'http://localhost:8080' 
       : window.location.origin;
   }

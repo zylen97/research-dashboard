@@ -35,7 +35,7 @@ export const isApiResponse = <T>(value: unknown): value is ApiResponse<T> => {
 
 // 类型守卫：检查是否为列表响应格式
 export const isApiListResponse = <T>(value: unknown): value is ApiListResponse<T> => {
-  return isObject(value) && 'data' in value && (Array.isArray(value.data) || value.data === null);
+  return isObject(value) && 'data' in value && (Array.isArray(value['data']) || value['data'] === null);
 };
 
 /**
@@ -56,23 +56,23 @@ export const handleListResponse = <T>(
     if (!response.success) {
       console.warn(`[${context || 'API'}] Response marked as unsuccessful`);
     }
-    return handleListResponse<T>(response.data, context);
+    return handleListResponse<T>(response['data'], context);
   }
 
   // 如果是列表响应格式，处理data字段
   if (isApiListResponse<T>(response)) {
-    if (response.data === null || response.data === undefined) {
+    if (response['data'] === null || response['data'] === undefined) {
       if (context) {
         console.warn(`[${context}] Received null/undefined data, returning empty array`);
       }
       return [];
     }
-    return response.data;
+    return response['data'];
   }
 
   // 如果是对象且包含data字段，尝试提取
   if (isObject(response) && 'data' in response) {
-    return handleListResponse<T>(response.data, context);
+    return handleListResponse<T>(response['data'], context);
   }
 
   // 处理null/undefined/其他情况
@@ -101,12 +101,12 @@ export const handleObjectResponse = <T>(
       console.warn(`[${context || 'API'}] Response marked as unsuccessful`);
       return null;
     }
-    return response.data;
+    return response['data'];
   }
 
   // 如果是对象且包含data字段，尝试提取
   if (isObject(response) && 'data' in response) {
-    return handleObjectResponse<T>(response.data, context);
+    return handleObjectResponse<T>(response['data'], context);
   }
 
   // 如果已经是目标类型，直接返回

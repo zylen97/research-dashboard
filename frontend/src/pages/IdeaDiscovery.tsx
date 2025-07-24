@@ -119,7 +119,7 @@ const IdeaDiscovery: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1600px', margin: '0 auto' }}>
       {/* 页面标题 */}
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
@@ -131,14 +131,14 @@ const IdeaDiscovery: React.FC = () => {
         </Paragraph>
       </div>
 
-      <Row gutter={[16, 16]}>
+      <Row gutter={[24, 24]}>
         {/* 左侧：AI配置面板 */}
-        <Col xs={24} lg={8}>
+        <Col xs={24} md={24} lg={6} xl={6}>
           <EmbeddedAIConfig onConfigChange={setAiConfig} />
         </Col>
 
         {/* 右侧：文件处理面板 */}
-        <Col xs={24} lg={16}>
+        <Col xs={24} md={24} lg={18} xl={18}>
           <Card title="Excel文件处理">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
@@ -149,14 +149,15 @@ const IdeaDiscovery: React.FC = () => {
                 beforeUpload={handleFileSelect}
                 showUploadList={false}
                 disabled={state === ProcessingState.PROCESSING}
+                style={{ padding: '48px 24px' }}
               >
                 <p className="ant-upload-drag-icon">
-                  <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                  <FileExcelOutlined style={{ fontSize: '64px', color: '#1890ff' }} />
                 </p>
-                <p className="ant-upload-text">
+                <p className="ant-upload-text" style={{ fontSize: '18px', marginBottom: '8px' }}>
                   点击或拖拽Excel文件到此区域上传
                 </p>
-                <p className="ant-upload-hint">
+                <p className="ant-upload-hint" style={{ fontSize: '14px' }}>
                   支持.xlsx和.xls格式，文件需包含"摘要"和"标题"列
                 </p>
               </Upload.Dragger>
@@ -257,16 +258,26 @@ const IdeaDiscovery: React.FC = () => {
       </Row>
 
       {/* 使用说明 */}
-      <Card title="使用说明" style={{ marginTop: '24px' }}>
-        <div style={{ lineHeight: '1.8' }}>
-          <Text>
-            <strong>1. AI配置：</strong>在左侧配置AI提供商，填写API密钥并测试连接<br />
-            <strong>2. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-            <strong>3. 处理流程：</strong>系统将使用已配置的AI读取每行数据，生成研究迁移建议<br />
-            <strong>4. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
-            <strong>5. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
-          </Text>
-        </div>
+      <Card title="使用说明" style={{ marginTop: '32px' }}>
+        <Row gutter={[32, 16]}>
+          <Col xs={24} md={12} lg={12}>
+            <div style={{ lineHeight: '2' }}>
+              <Text>
+                <strong>1. AI配置：</strong>在左侧配置AI提供商，填写API密钥并测试连接<br />
+                <strong>2. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+                <strong>3. 处理流程：</strong>系统将使用已配置的AI读取每行数据，生成研究迁移建议<br />
+              </Text>
+            </div>
+          </Col>
+          <Col xs={24} md={12} lg={12}>
+            <div style={{ lineHeight: '2' }}>
+              <Text>
+                <strong>4. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
+                <strong>5. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
+              </Text>
+            </div>
+          </Col>
+        </Row>
       </Card>
     </div>
   );

@@ -39,7 +39,7 @@ const ENV_CONFIGS: Record<Environment, EnvironmentConfig> = {
 
 // 获取当前环境
 const getCurrentEnvironment = (): Environment => {
-  const env = process.env.NODE_ENV as Environment;
+  const env = process.env['NODE_ENV'] as Environment;
   return env || 'production';
 };
 
@@ -94,7 +94,7 @@ export const logEnvironmentInfo = (): void => {
 };
 
 // 开发环境下自动打印环境信息
-if (process.env.NODE_ENV === 'development') {
+if (process.env['NODE_ENV'] === 'development') {
   logEnvironmentInfo();
 }
 

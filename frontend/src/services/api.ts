@@ -9,7 +9,7 @@ import {
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
 } from '../types';
-import { handleListResponse, handleObjectResponse } from '../utils/dataFormatters';
+import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
 
 // API基础配置

@@ -153,7 +153,7 @@ export const errorInterceptor = (error: any): Promise<never> => {
   }
   
   // 开发环境打印详细错误信息
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env['NODE_ENV'] === 'development') {
     console.error('[API Error]', {
       message: apiError.message,
       type: apiError.type,

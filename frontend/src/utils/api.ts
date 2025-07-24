@@ -3,7 +3,7 @@
  */
 
 import { message } from 'antd';
-import { showError, ApiError, shouldRetry, parseError } from './errorHandler';
+import { shouldRetry, parseError } from './errorHandler';
 
 /**
  * API响应数据格式化
@@ -48,7 +48,8 @@ export const withErrorHandling = async <T>(
     return result;
   } catch (error) {
     if (showError) {
-      showError(error);
+      const parsedError = parseError(error);
+      message.error(parsedError.message);
     }
     throw error;
   }
