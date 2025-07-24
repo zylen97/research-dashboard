@@ -377,13 +377,12 @@ export const backupApi = {
   },
 };
 
-// Idea发掘 API (简化版)
+// Idea发掘 API (智能版 - 使用系统AI配置)
 export const ideaDiscoveryApi = {
-  // 直接处理Excel文件
-  processExcel: (file: File, aiProvider: string = 'openai'): Promise<Blob> => {
+  // 智能处理Excel文件（自动使用系统配置的AI）
+  processExcel: (file: File): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('ai_provider', aiProvider);
     return api.post('/api/ideas/process-excel', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

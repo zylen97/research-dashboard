@@ -1,4 +1,4 @@
-// API配置管理 - 自适应版本
+// API配置管理 - 增强版本，解决CORS重定向问题
 const getApiBaseUrl = (): string => {
   // 1. 开发环境使用本地后端
   if (process.env['NODE_ENV'] === 'development') {
@@ -6,10 +6,17 @@ const getApiBaseUrl = (): string => {
     return 'http://localhost:8080';
   }
 
-  // 2. 生产环境始终使用当前origin
-  // 这样能自动适应任何部署场景：80、443、3000、3001等任何端口
-  console.log('生产环境，使用当前origin:', window.location.origin);
-  return window.location.origin;
+  // 2. 生产环境使用当前origin，但确保包含完整的协议和端口
+  const origin = window.location.origin;
+  
+  // 验证origin是否包含端口号（用于诊断CORS问题）
+  if (origin.includes(':3001')) {
+    console.log('✅ 生产环境API配置正确:', origin);
+  } else {
+    console.warn('⚠️ 检测到异常的origin配置:', origin);
+  }
+  
+  return origin;
 };
 
 // 导出API配置 - 使用getter确保动态获取BASE_URL

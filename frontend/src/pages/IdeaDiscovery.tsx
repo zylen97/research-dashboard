@@ -8,8 +8,9 @@ import {
   Spin,
   Result,
   message,
-  Select,
   Space,
+  Row,
+  Col,
 } from 'antd';
 import {
   FileExcelOutlined,
@@ -17,9 +18,9 @@ import {
   DownloadOutlined,
 } from '@ant-design/icons';
 import { ideaDiscoveryApi } from '../services/api';
+import EmbeddedAIConfig from '../components/idea/EmbeddedAIConfig';
 
 const { Title, Text, Paragraph } = Typography;
-const { Option } = Select;
 
 // 处理状态枚举
 enum ProcessingState {
@@ -30,10 +31,18 @@ enum ProcessingState {
   ERROR = 'error'           // 错误
 }
 
+interface AIConfig {
+  provider: string;
+  api_key: string;
+  api_url?: string;
+  model?: string;
+  is_connected?: boolean;
+}
+
 const IdeaDiscovery: React.FC = () => {
   const [state, setState] = useState<ProcessingState>(ProcessingState.IDLE);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [aiProvider, setAiProvider] = useState<string>('openai');
+  const [aiConfig, setAiConfig] = useState<AIConfig | null>(null);
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<number>(0);
@@ -49,14 +58,23 @@ const IdeaDiscovery: React.FC = () => {
 
   // 开始处理
   const handleStartProcessing = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      message.error('请先选择文件');
+      return;
+    }
+
+    if (!aiConfig || !aiConfig.is_connected) {
+      message.error('请先配置并测试AI连接');
+      return;
+    }
 
     setState(ProcessingState.PROCESSING);
     setProcessingStartTime(Date.now());
     setErrorMessage('');
 
     try {
-      const blob = await ideaDiscoveryApi.processExcel(selectedFile, aiProvider);
+      // 使用系统配置的AI提供商（自动模式）
+      const blob = await ideaDiscoveryApi.processExcel(selectedFile);
       setResultBlob(blob);
       setState(ProcessingState.COMPLETED);
       message.success('处理完成！');
@@ -106,49 +124,42 @@ const IdeaDiscovery: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
           <FileExcelOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
-          研究Idea发掘
+          研究Idea发掘与AI配置中心
         </Title>
         <Paragraph type="secondary">
-          上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
+          配置AI提供商，上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+      <Row gutter={[16, 16]}>
+        {/* 左侧：AI配置面板 */}
+        <Col xs={24} lg={8}>
+          <EmbeddedAIConfig onConfigChange={setAiConfig} />
+        </Col>
 
-      <Card>
-        <Space direction="vertical" size="large" style={{ width: '100%' }}>
-          {/* AI提供商选择 */}
-          <div>
-            <Text strong>选择AI提供商:</Text>
-            <Select
-              value={aiProvider}
-              onChange={setAiProvider}
-              style={{ width: 200, marginLeft: 16 }}
-              disabled={state === ProcessingState.PROCESSING}
-            >
-              <Option value="openai">OpenAI</Option>
-              <Option value="anthropic">Anthropic (Claude)</Option>
-            </Select>
-          </div>
+        {/* 右侧：文件处理面板 */}
+        <Col xs={24} lg={16}>
+          <Card title="Excel文件处理">
+            <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
-          {/* 文件上传区域 */}
-          <Upload.Dragger
-            name="file"
-            accept=".xlsx,.xls"
-            beforeUpload={handleFileSelect}
-            showUploadList={false}
-            disabled={state === ProcessingState.PROCESSING}
-          >
-            <p className="ant-upload-drag-icon">
-              <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
-            </p>
-            <p className="ant-upload-text">
-              点击或拖拽Excel文件到此区域上传
-            </p>
-            <p className="ant-upload-hint">
-              支持.xlsx和.xls格式，文件需包含"摘要"和"标题"列
-            </p>
-          </Upload.Dragger>
+              {/* 文件上传区域 */}
+              <Upload.Dragger
+                name="file"
+                accept=".xlsx,.xls"
+                beforeUpload={handleFileSelect}
+                showUploadList={false}
+                disabled={state === ProcessingState.PROCESSING}
+              >
+                <p className="ant-upload-drag-icon">
+                  <FileExcelOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+                </p>
+                <p className="ant-upload-text">
+                  点击或拖拽Excel文件到此区域上传
+                </p>
+                <p className="ant-upload-hint">
+                  支持.xlsx和.xls格式，文件需包含"摘要"和"标题"列
+                </p>
+              </Upload.Dragger>
 
           {/* 文件信息显示 */}
           {selectedFile && (
@@ -220,35 +231,43 @@ const IdeaDiscovery: React.FC = () => {
             />
           )}
 
-          {/* 操作按钮 */}
-          {state === ProcessingState.IDLE && selectedFile && (
-            <div style={{ textAlign: 'center' }}>
-              <Button
-                type="primary"
-                size="large"
-                icon={<RobotOutlined />}
-                onClick={handleStartProcessing}
-                style={{ minWidth: '200px' }}
-              >
-                开始AI分析处理
-              </Button>
-            </div>
-          )}
-        </Space>
-      </Card>
+              {/* 操作按钮 */}
+              {state === ProcessingState.IDLE && selectedFile && (
+                <div style={{ textAlign: 'center' }}>
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<RobotOutlined />}
+                    onClick={handleStartProcessing}
+                    style={{ minWidth: '200px' }}
+                    disabled={!aiConfig || !aiConfig.is_connected}
+                  >
+                    开始AI分析处理
+                  </Button>
+                  {(!aiConfig || !aiConfig.is_connected) && (
+                    <div style={{ marginTop: '8px' }}>
+                      <Text type="secondary">请先在左侧配置并测试AI连接</Text>
+                    </div>
+                  )}
+                </div>
+              )}
+            </Space>
+          </Card>
+        </Col>
+      </Row>
 
-        {/* 使用说明 */}
-        <Card title="使用说明" style={{ marginTop: '24px' }}>
-          <div style={{ lineHeight: '1.8' }}>
-            <Text>
-              <strong>1. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-              <strong>2. 处理流程：</strong>AI将读取每行的标题和摘要，生成研究迁移建议<br />
-              <strong>3. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
-              <strong>4. 注意事项：</strong>处理时间取决于数据行数，请耐心等待
-            </Text>
-          </div>
-        </Card>
-      </div>
+      {/* 使用说明 */}
+      <Card title="使用说明" style={{ marginTop: '24px' }}>
+        <div style={{ lineHeight: '1.8' }}>
+          <Text>
+            <strong>1. AI配置：</strong>在左侧配置AI提供商，填写API密钥并测试连接<br />
+            <strong>2. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+            <strong>3. 处理流程：</strong>系统将使用已配置的AI读取每行数据，生成研究迁移建议<br />
+            <strong>4. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
+            <strong>5. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
+          </Text>
+        </div>
+      </Card>
     </div>
   );
 };

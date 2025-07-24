@@ -7,7 +7,6 @@ import IdeaDiscovery from './pages/IdeaDiscovery';
 import IdeasManagementPage from './pages/IdeasManagement';
 import AuthPage from './pages/AuthPage';
 import DatabaseBackup from './pages/DatabaseBackup';
-import SystemSettings from './pages/SystemSettings';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 
 // 受保护的路由组件
@@ -41,7 +40,6 @@ const ProtectedRoutes: React.FC = () => {
         <Route path="/ideas" element={<IdeaDiscovery />} />
         <Route path="/ideas-management" element={<IdeasManagementPage />} />
         <Route path="/backup" element={<DatabaseBackup />} />
-        <Route path="/settings" element={<SystemSettings />} />
         <Route path="/auth" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </MainLayout>

@@ -10,7 +10,6 @@ import {
   UserOutlined,
   LogoutOutlined,
   DatabaseOutlined,
-  SettingOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -47,7 +46,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
 
   // 菜单项配置
   const getMenuItems = () => {
-    const baseItems = [
+    return [
       {
         key: '/dashboard',
         icon: <DashboardOutlined />,
@@ -63,7 +62,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {
         key: '/ideas',
         icon: <BulbOutlined />,
-        label: 'Idea发掘',
+        label: 'Idea发掘与AI配置',
         onClick: () => navigate('/ideas'),
       },
       {
@@ -79,18 +78,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClick: () => navigate('/backup'),
       },
     ];
-
-    // 只有管理员(zl用户)可以看到系统设置
-    if (user?.username === 'zl') {
-      baseItems.push({
-        key: '/settings',
-        icon: <SettingOutlined />,
-        label: '系统设置',
-        onClick: () => navigate('/settings'),
-      });
-    }
-
-    return baseItems;
   };
 
   // 用户菜单

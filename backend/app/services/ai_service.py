@@ -19,6 +19,35 @@ class AIService:
         self.db = db
         self.providers_cache = {}
         
+    async def get_main_ai_config(self) -> Optional[Dict[str, Any]]:
+        """获取主AI配置（统一系统配置）"""
+        # 检查缓存
+        if 'main_ai_config' in self.providers_cache:
+            return self.providers_cache['main_ai_config']
+            
+        # 从数据库获取主AI配置
+        config = self.db.query(SystemConfig).filter(
+            SystemConfig.key == 'main_ai_config',
+            SystemConfig.is_active == True
+        ).first()
+        
+        if not config:
+            logger.warning("Main AI config not found, please configure AI provider first")
+            return None
+            
+        try:
+            # 解密配置
+            decrypted_value = encryption_util.decrypt(config.value) if config.is_encrypted else config.value
+            main_config = json.loads(decrypted_value)
+            
+            # 缓存配置
+            self.providers_cache['main_ai_config'] = main_config
+            return main_config
+            
+        except (json.JSONDecodeError, Exception) as e:
+            logger.error(f"Failed to parse main AI config: {e}")
+            return None
+
     async def get_provider_config(self, provider_name: str) -> Optional[Dict[str, Any]]:
         """获取AI提供商配置"""
         # 检查缓存
@@ -166,6 +195,69 @@ class AIService:
                 "response": None
             }
     
+    async def generate_research_suggestions_auto(self, 
+                                               data_content: str,
+                                               custom_prompt: str = None) -> Dict[str, Any]:
+        """
+        使用系统配置的主AI提供商生成研究建议（自动模式）
+        
+        Args:
+            data_content: 数据内容
+            custom_prompt: 自定义提示词
+        
+        Returns:
+            包含建议的字典
+        """
+        # 获取主AI配置
+        main_config = await self.get_main_ai_config()
+        if not main_config:
+            return {
+                "success": False,
+                "error": "No main AI configuration found. Please configure AI provider in system settings first.",
+                "response": None
+            }
+        
+        # 检查配置是否完整
+        if not main_config.get('api_key'):
+            return {
+                "success": False,
+                "error": "AI configuration incomplete. Please set API key in system settings.",
+                "response": None
+            }
+        
+        # 检查连接状态
+        if not main_config.get('is_connected'):
+            return {
+                "success": False,
+                "error": "AI provider not connected. Please test the connection in system settings.",
+                "response": None
+            }
+        
+        # 构建默认提示词
+        default_prompt = """
+请作为一位资深研究专家，分析以下数据内容，并提供具体的研究迁移建议。
+
+要求：
+1. 分析该研究的核心技术或方法
+2. 建议如何将其应用到其他领域或问题
+3. 提出具体的迁移方向或应用场景
+4. 建议控制在50-100字内，简洁实用
+
+请直接给出建议内容，不需要格式化或额外说明。
+"""
+        
+        prompt = custom_prompt or default_prompt
+        provider_name = main_config.get('provider', 'openai')
+        
+        # 根据提供商调用相应的API
+        if provider_name == 'openai':
+            return await self.call_openai_api(main_config, prompt, data_content)
+        elif provider_name == 'anthropic':
+            return await self.call_anthropic_api(main_config, prompt, data_content)
+        else:
+            # 默认使用OpenAI兼容接口
+            return await self.call_openai_api(main_config, prompt, data_content)
+
     async def generate_research_suggestions(self, 
                                           provider_name: str, 
                                           data_content: str,

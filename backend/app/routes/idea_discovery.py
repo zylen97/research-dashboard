@@ -35,13 +35,13 @@ class ProcessExcelResponse(BaseModel):
 @router.post("/process-excel")
 async def process_excel_file(
     file: UploadFile = File(...),
-    ai_provider: str = "openai",
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    简化的Excel处理端点
-    直接上传Excel -> AI处理 -> 返回增强Excel
+    智能Excel处理端点（使用系统配置的AI）
+    自动使用系统配置的AI提供商处理Excel文件
+    直接上传Excel -> AI自动处理 -> 返回增强Excel
     """
     start_time = datetime.now()
     
@@ -75,7 +75,25 @@ async def process_excel_file(
         # 4. 创建AI服务实例
         ai_service = create_ai_service(db)
         
-        # 5. 为每行数据生成AI建议
+        # 5. 检查AI配置状态
+        main_config = await ai_service.get_main_ai_config()
+        if not main_config:
+            raise HTTPException(
+                status_code=400,
+                detail="AI未配置，请先在系统设置中配置AI提供商"
+            )
+        
+        if not main_config.get('is_connected'):
+            raise HTTPException(
+                status_code=400,
+                detail="AI连接未测试，请先在系统设置中测试AI连接"
+            )
+        
+        # 获取AI提供商名称用于文件列名
+        ai_provider_name = main_config.get('provider', 'AI')
+        ai_model_name = main_config.get('model', 'default')
+        
+        # 6. 为每行数据生成AI建议
         suggestions = []
         processed_count = 0
         
@@ -105,9 +123,8 @@ async def process_excel_file(
 请直接给出建议内容，不需要格式化或额外说明。
 """
                 
-                # 调用AI服务
-                ai_result = await ai_service.generate_research_suggestions(
-                    provider_name=ai_provider,
+                # 调用AI服务（自动模式）
+                ai_result = await ai_service.generate_research_suggestions_auto(
                     data_content=data_content,
                     custom_prompt=custom_prompt
                 )
@@ -130,21 +147,22 @@ async def process_excel_file(
                 logger.error(f"处理第{index+1}行时出错: {str(e)}")
                 suggestions.append(f"处理出错: {str(e)}")
         
-        # 6. 添加AI建议列到DataFrame
-        column_name = f"迁移意见by{ai_provider}"
+        # 7. 添加AI建议列到DataFrame
+        # 使用更详细的列名，包含AI提供商和模型信息
+        column_name = f"迁移意见by{ai_provider_name}({ai_model_name})"
         df[column_name] = suggestions
         
-        # 7. 生成增强的Excel文件
+        # 8. 生成增强的Excel文件
         excel_buffer = io.BytesIO()
         df.to_excel(excel_buffer, index=False, engine='openpyxl')
         excel_buffer.seek(0)
         
-        # 8. 计算处理时间
+        # 9. 计算处理时间
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        logger.info(f"成功处理Excel文件: {file.filename}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
+        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI: {ai_provider_name}({ai_model_name}), 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
         
-        # 9. 返回增强的Excel文件
+        # 10. 返回增强的Excel文件
         return StreamingResponse(
             io.BytesIO(excel_buffer.read()),
             media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -152,7 +170,8 @@ async def process_excel_file(
                 "Content-Disposition": f"attachment; filename=enhanced_{file.filename}",
                 "X-Processing-Time": str(processing_time),
                 "X-Rows-Processed": str(processed_count),
-                "X-AI-Provider": ai_provider
+                "X-AI-Provider": f"{ai_provider_name}({ai_model_name})",
+                "X-System-Config": "auto"
             }
         )
         
