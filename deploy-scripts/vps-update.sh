@@ -354,6 +354,42 @@ fi
 
 cd ..
 
+# 4.5. 同步nginx配置文件到VPS
+log_message "INFO" "同步nginx配置文件..."
+if [ -f "deployment/nginx-3001.conf" ]; then
+    # 备份当前nginx配置
+    backup_name="/etc/nginx/sites-available/research-dashboard-3001.backup.$(date +%Y%m%d_%H%M%S)"
+    if [ -f "/etc/nginx/sites-available/research-dashboard-3001" ]; then
+        cp /etc/nginx/sites-available/research-dashboard-3001 "$backup_name"
+        log_message "INFO" "已备份nginx配置到: $backup_name"
+    fi
+    
+    # 复制新配置
+    cp deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
+    
+    # 确保软链接存在
+    if [ ! -L "/etc/nginx/sites-enabled/research-dashboard-3001" ]; then
+        ln -s /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/research-dashboard-3001
+        log_message "INFO" "创建nginx配置软链接"
+    fi
+    
+    # 测试nginx配置
+    if nginx -t >/dev/null 2>&1; then
+        log_message "INFO" "nginx配置测试通过，重新加载..."
+        systemctl reload nginx
+        log_message "INFO" "✅ nginx配置已更新并重新加载"
+    else
+        log_message "ERROR" "nginx配置测试失败，恢复备份"
+        if [ -f "$backup_name" ]; then
+            cp "$backup_name" /etc/nginx/sites-available/research-dashboard-3001
+            systemctl reload nginx
+        fi
+        log_message "WARN" "nginx配置恢复完成，继续部署"
+    fi
+else
+    log_message "WARN" "未找到nginx配置文件 deployment/nginx-3001.conf"
+fi
+
 # 5. 智能服务重启
 BACKEND_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "backend/" || echo "0")
 CONFIG_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -E "\.(env|py)$" | wc -l || echo "0")
