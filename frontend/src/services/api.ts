@@ -9,6 +9,7 @@ import {
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse
 } from '../types';
+import { ensureArray } from '../utils/arrayHelpers';
 
 // API基础配置
 import { API_CONFIG } from '../config/api';
@@ -107,8 +108,10 @@ api.interceptors.response.use(
 // 合作者API
 export const collaboratorApi = {
   // 获取合作者列表
-  getCollaborators: (params?: PaginationParams): Promise<Collaborator[]> =>
-    api.get('/collaborators/', { params }),
+  getCollaborators: async (params?: PaginationParams): Promise<Collaborator[]> => {
+    const response = await api.get('/collaborators/', { params });
+    return ensureArray<Collaborator>(response, 'API.getCollaborators');
+  },
 
   // 获取单个合作者
   getCollaborator: (id: number): Promise<Collaborator> =>
@@ -127,8 +130,10 @@ export const collaboratorApi = {
     api.delete(`/collaborators/${id}${permanent ? '?permanent=true' : ''}`),
 
   // 获取合作者参与的项目
-  getCollaboratorProjects: (id: number): Promise<ResearchProject[]> =>
-    api.get(`/collaborators/${id}/projects`),
+  getCollaboratorProjects: async (id: number): Promise<ResearchProject[]> => {
+    const response = await api.get(`/collaborators/${id}/projects`);
+    return ensureArray<ResearchProject>(response, 'API.getCollaboratorProjects');
+  },
 
   // 上传合作者文件
   uploadCollaboratorsFile: (file: File): Promise<FileUploadResponse> => {
@@ -204,8 +209,10 @@ export const collaboratorApi = {
 // 研究项目API
 export const researchApi = {
   // 获取研究项目列表
-  getProjects: (params?: PaginationParams & { status_filter?: string }): Promise<ResearchProject[]> =>
-    api.get('/research/', { params }),
+  getProjects: async (params?: PaginationParams & { status_filter?: string }): Promise<ResearchProject[]> => {
+    const response = await api.get('/research/', { params });
+    return ensureArray<ResearchProject>(response, 'API.getProjects');
+  },
 
   // 获取单个研究项目
   getProject: (id: number): Promise<ResearchProject> =>
@@ -246,8 +253,10 @@ export const researchApi = {
     api.put(`/research/${id}/progress`, null, { params: { progress } }),
 
   // 获取用户的待办项目列表
-  getUserTodos: (): Promise<ResearchProject[]> =>
-    api.get('/research/todos'),
+  getUserTodos: async (): Promise<ResearchProject[]> => {
+    const response = await api.get('/research/todos');
+    return ensureArray<ResearchProject>(response, 'API.getUserTodos');
+  },
 
   // 将项目标记为待办
   markAsTodo: (projectId: number, priority?: number, notes?: string): Promise<{ message: string }> =>
@@ -401,12 +410,14 @@ export const ideaDiscoveryApi = {
 // Ideas管理 API
 export const ideasApi = {
   // 获取Ideas列表
-  getIdeas: (params?: {
+  getIdeas: async (params?: {
     skip?: number;
     limit?: number;
     importance_filter?: number;
-  }): Promise<import('../types').Idea[]> =>
-    api.get('/ideas-management', { params }),
+  }): Promise<import('../types').Idea[]> => {
+    const response = await api.get('/ideas-management', { params });
+    return ensureArray<import('../types').Idea>(response, 'API.getIdeas');
+  },
 
   // 获取单个Idea
   getIdea: (id: number): Promise<import('../types').Idea> =>
@@ -425,8 +436,10 @@ export const ideasApi = {
     api.delete(`/ideas-management/${id}`),
 
   // 获取高级合作者列表
-  getSeniorCollaborators: (): Promise<import('../types').Collaborator[]> =>
-    api.get('/ideas-management/collaborators/senior'),
+  getSeniorCollaborators: async (): Promise<import('../types').Collaborator[]> => {
+    const response = await api.get('/ideas-management/collaborators/senior');
+    return ensureArray<import('../types').Collaborator>(response, 'API.getSeniorCollaborators');
+  },
 };
 
 // 验证 API

@@ -26,6 +26,7 @@ import { Collaborator, CollaboratorCreate } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
 import CollaboratorDetailModal from '../components/collaborator/CollaboratorDetailModal';
+import { ensureArray, safeForEach, safeFilter } from '../utils/arrayHelpers';
 
 const { Title, Text } = Typography;
 
@@ -59,10 +60,13 @@ const CollaboratorManagement: React.FC = () => {
   
 
   // 获取合作者数据
-  const { data: collaborators = [], isLoading, refetch } = useQuery({
+  const { data: collaboratorsData, isLoading, refetch } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getCollaborators(),
   });
+  
+  // 确保 collaborators 始终是数组
+  const collaborators = ensureArray<Collaborator>(collaboratorsData, 'CollaboratorManagement.collaborators');
 
   // 识别小组成员的函数
   const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
@@ -95,7 +99,7 @@ const CollaboratorManagement: React.FC = () => {
 
   // 排序合作者：小组 > 高级合作者 > 女生 > 男生
   const sortedCollaborators = useMemo(() => {
-    const safeCollaborators = Array.isArray(collaborators) ? collaborators : [];
+    const safeCollaborators = ensureArray<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
     return [...safeCollaborators].sort((a, b) => {
       // 确保 a 和 b 存在
       if (!a || !b) return 0;
@@ -121,27 +125,39 @@ const CollaboratorManagement: React.FC = () => {
   }, [collaborators, isGroupCollaborator]);
 
   // 获取研究项目数据用于分析合作者参与状态
-  const { data: projects = [] } = useQuery({
+  const { data: projectsData } = useQuery({
     queryKey: ['research-projects'],
     queryFn: () => researchApi.getProjects(),
   });
+  
+  // 确保 projects 始终是数组
+  const projects = ensureArray(projectsData, 'CollaboratorManagement.projects');
 
   // 分析合作者参与状态：找出未参与任何项目的合作者
   const collaboratorParticipationStatus = useMemo(() => {
     const participatingCollaboratorIds = new Set<number>();
     
+    // 添加额外的安全检查和日志
+    console.log('[CollaboratorManagement] projects in useMemo:', projects, 'isArray:', Array.isArray(projects));
+    
     // 收集所有参与项目的合作者ID
-    projects.forEach(project => {
-      project.collaborators.forEach(collaborator => {
-        participatingCollaboratorIds.add(collaborator.id);
-      });
-    });
+    safeForEach(projects, (project: any) => {
+      if (project && typeof project === 'object') {
+        safeForEach(project.collaborators, (collaborator: any) => {
+          if (collaborator && typeof collaborator === 'object' && collaborator.id) {
+            participatingCollaboratorIds.add(collaborator.id);
+          }
+        }, 'project.collaborators');
+      }
+    }, 'CollaboratorManagement.projects');
     
     // 创建合作者参与状态映射
     const statusMap = new Map<number, boolean>();
-    sortedCollaborators.forEach(collaborator => {
-      statusMap.set(collaborator.id, participatingCollaboratorIds.has(collaborator.id));
-    });
+    safeForEach(sortedCollaborators, (collaborator: Collaborator) => {
+      if (collaborator && collaborator.id) {
+        statusMap.set(collaborator.id, participatingCollaboratorIds.has(collaborator.id));
+      }
+    }, 'sortedCollaborators');
     
     return statusMap;
   }, [projects, sortedCollaborators]);
@@ -260,13 +276,15 @@ const CollaboratorManagement: React.FC = () => {
   const handleDelete = async (collaborator: Collaborator) => {
     try {
       // 先检查是否有关联的项目
-      const projects = await collaboratorApi.getCollaboratorProjects(collaborator.id);
-      const activeProjects = projects.filter(p => p.status === 'active');
+      const projectsResponse = await collaboratorApi.getCollaboratorProjects(collaborator.id);
+      const projects = ensureArray(projectsResponse, 'getCollaboratorProjects');
+      const activeProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'active', 'activeProjects');
+      const completedProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'completed', 'completedProjects');
       
       const dependencies = {
         total_projects: projects.length,
         active_projects: activeProjects.length,
-        completed_projects: projects.filter(p => p.status === 'completed').length,
+        completed_projects: completedProjects.length,
       };
       
       const warnings: string[] = [];
@@ -306,7 +324,7 @@ const CollaboratorManagement: React.FC = () => {
             
             {warnings && warnings.length > 0 && (
               <div style={{ marginTop: 16 }}>
-                {warnings.map((warning: string, index: number) => (
+                {Array.isArray(warnings) && warnings.map((warning: string, index: number) => (
                   <p key={index} style={{ color: '#faad14' }}>
                     ⚠️ {warning}
                   </p>
