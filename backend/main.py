@@ -18,6 +18,7 @@ async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
     logger.info(f"🚀 正在启动研究看板 API - 环境: {settings.ENVIRONMENT}")
+    # Ultra Think测试：真正的后端代码修改应该触发智能重启
     logger.info(f"📁 数据库路径: {settings.DATABASE_URL}")
     logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
     
