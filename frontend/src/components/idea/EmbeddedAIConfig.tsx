@@ -135,8 +135,8 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     } catch (error: any) {
       console.error('保存配置失败:', error);
       let errorMessage = '未知错误';
-      if (error.response && error.response.detail) {
-        errorMessage = error.response.detail;
+      if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
       } else if (error.message) {
         errorMessage = error.message;
       }
@@ -186,8 +186,10 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       console.error('AI连接测试错误:', error);
       // 尝试从error.response获取详细信息
       let errorMessage = '未知错误';
-      if (error.response && error.response.message) {
-        errorMessage = error.response.message;
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response && error.response.data && error.response.data.detail) {
+        errorMessage = error.response.data.detail;
       } else if (error.message) {
         errorMessage = error.message;
       }
