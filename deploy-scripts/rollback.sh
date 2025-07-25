@@ -1,119 +1,66 @@
 #!/bin/bash
 
-# 🔄 Research Dashboard 快速回滚脚本
-# 回滚到上一个Git提交并重启服务
+# 快速回滚脚本 - 极简版
+# 功能：回滚到上一个Git提交
 
 set -e
-
-# 颜色
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-RED='\033[0;31m'
-BLUE='\033[0;34m'
-CYAN='\033[0;36m'
-NC='\033[0m'
 
 # 获取脚本所在目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-
-echo -e "${BLUE}=== Research Dashboard 快速回滚 ===${NC}"
-echo ""
-
-# 切换到项目根目录
 cd "$PROJECT_ROOT"
 
-# 检查是否是Git仓库
+# 颜色定义
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+echo -e "${YELLOW}=== Research Dashboard 快速回滚 ===${NC}"
+
+# 1. 检查是否是Git仓库
 if [ ! -d ".git" ]; then
-    echo -e "${RED}错误：当前目录不是Git仓库${NC}"
+    echo -e "${RED}错误: 不是Git仓库${NC}"
     exit 1
 fi
 
-# 获取当前提交信息
-CURRENT_COMMIT=$(git rev-parse HEAD)
-CURRENT_MESSAGE=$(git log -1 --pretty=%s)
+# 2. 获取当前和上一个提交信息
+CURRENT_COMMIT=$(git rev-parse --short HEAD)
+CURRENT_MSG=$(git log -1 --pretty=%s)
+PREVIOUS_COMMIT=$(git rev-parse --short HEAD~1)
+PREVIOUS_MSG=$(git log -1 --pretty=%s HEAD~1)
 
-echo -e "${CYAN}当前提交：${NC}"
-echo "  Hash: $CURRENT_COMMIT"
-echo "  信息: $CURRENT_MESSAGE"
+echo -e "${CYAN}当前版本:${NC} $CURRENT_COMMIT - $CURRENT_MSG"
+echo -e "${CYAN}回滚目标:${NC} $PREVIOUS_COMMIT - $PREVIOUS_MSG"
 echo ""
 
-# 获取上一个提交信息
-PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
-PREVIOUS_MESSAGE=$(git log -1 --pretty=%s HEAD~1)
-
-echo -e "${CYAN}回滚目标：${NC}"
-echo "  Hash: $PREVIOUS_COMMIT"
-echo "  信息: $PREVIOUS_MESSAGE"
-echo ""
-
-# 用户确认
-echo -e "${YELLOW}⚠️ 确认回滚到上一个版本？ (y/N)${NC}"
-read -r confirmation
-
-if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
-    echo -e "${YELLOW}回滚已取消${NC}"
+# 3. 确认回滚
+read -p "确认回滚到上一个版本? (y/n) " -n 1 -r
+echo
+if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "已取消回滚"
     exit 0
 fi
 
+# 4. 执行回滚
+echo -e "${CYAN}执行回滚...${NC}"
+git reset --hard HEAD~1 || {
+    echo -e "${RED}回滚失败${NC}"
+    exit 1
+}
+
+# 5. 强制推送
+echo -e "${CYAN}推送到远程仓库...${NC}"
+git push --force || {
+    echo -e "${RED}推送失败${NC}"
+    exit 1
+}
+
+# 6. 显示结果
 echo ""
-echo -e "${YELLOW}🔄 开始回滚...${NC}"
-
-# 备份当前状态（以防需要再次回滚）
-echo -e "${CYAN}1. 创建回滚点标签...${NC}"
-git tag -f "rollback-point-$(date +%Y%m%d-%H%M%S)" HEAD
-
-# 回滚到上一个提交
-echo -e "${CYAN}2. 回滚Git提交...${NC}"
-git reset --hard HEAD~1
-
-# 如果在VPS上，重启服务
-if [ -f "/etc/systemd/system/research-backend.service" ]; then
-    echo -e "${CYAN}3. 检测到VPS环境，重启后端服务...${NC}"
-    
-    # 重启后端服务
-    sudo systemctl restart research-backend
-    
-    # 等待服务启动
-    sleep 5
-    
-    # 检查服务状态
-    if systemctl is-active --quiet research-backend; then
-        echo -e "${GREEN}✅ 后端服务重启成功${NC}"
-    else
-        echo -e "${RED}❌ 后端服务重启失败${NC}"
-        echo -e "${YELLOW}请手动检查服务状态：sudo journalctl -u research-backend -n 20${NC}"
-    fi
-    
-    # 检查API是否可访问
-    echo -e "${CYAN}4. 检查API健康状态...${NC}"
-    sleep 3
-    
-    if curl -f -s "http://localhost:8080" > /dev/null; then
-        echo -e "${GREEN}✅ API访问正常${NC}"
-    else
-        echo -e "${YELLOW}⚠️ API访问检查失败，可能需要等待更长时间${NC}"
-    fi
-    
-else
-    echo -e "${CYAN}3. 本地环境，跳过服务重启${NC}"
-fi
-
+echo -e "${GREEN}✅ 回滚成功！${NC}"
+echo -e "当前版本: $(git rev-parse --short HEAD) - $(git log -1 --pretty=%s)"
 echo ""
-echo -e "${GREEN}🎉 回滚完成！${NC}"
-echo ""
-
-# 显示回滚后的状态
-NEW_COMMIT=$(git rev-parse HEAD)
-NEW_MESSAGE=$(git log -1 --pretty=%s)
-
-echo -e "${CYAN}=== 回滚后状态 ===${NC}"
-echo "  当前提交: $NEW_COMMIT"
-echo "  提交信息: $NEW_MESSAGE"
-echo "  访问地址: http://45.149.156.216:3001"
-echo ""
-
-echo -e "${YELLOW}💡 提示：${NC}"
-echo "  - 如需撤销回滚，运行：git reset --hard rollback-point-*"
-echo "  - 查看可用标签：git tag --list 'rollback-point-*'"
-echo "  - 清理回滚标签：git tag -d rollback-point-*"
+echo -e "${YELLOW}注意: GitHub Actions将自动部署回滚后的版本${NC}"
+echo -e "查看部署状态: ${CYAN}https://github.com/zylen97/research-dashboard/actions${NC}"
