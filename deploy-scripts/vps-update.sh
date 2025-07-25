@@ -687,3 +687,14 @@ fi
 
 echo ""
 log_message "INFO" "Research Dashboard 部署完成"
+
+# 执行Web诊断脚本
+log_message "INFO" "🔍 执行系统诊断并生成Web报告..."
+if [ -f "web-diagnostic.sh" ]; then
+    bash web-diagnostic.sh 2>&1 | while IFS= read -r line; do
+        log_message "DIAGNOSTIC" "$line"
+    done
+    log_message "INFO" "✅ 诊断报告已生成，访问地址: http://45.149.156.216:3001/diagnostic/"
+else
+    log_message "WARN" "⚠️ 未找到web-diagnostic.sh脚本"
+fi
