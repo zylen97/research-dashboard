@@ -89,8 +89,7 @@ async def process_excel_file(
                 detail="AI连接未测试，请先在系统设置中测试AI连接"
             )
         
-        # 获取AI提供商名称用于文件列名
-        ai_provider_name = main_config.get('provider', 'AI')
+        # 获取AI模型名称用于文件列名
         ai_model_name = main_config.get('model', 'default')
         
         # 6. 为每行数据生成AI建议
@@ -148,8 +147,8 @@ async def process_excel_file(
                 suggestions.append(f"处理出错: {str(e)}")
         
         # 7. 添加AI建议列到DataFrame
-        # 使用更详细的列名，包含AI提供商和模型信息
-        column_name = f"迁移意见by{ai_provider_name}({ai_model_name})"
+        # 使用模型名称作为列名
+        column_name = f"迁移意见by{ai_model_name}"
         df[column_name] = suggestions
         
         # 8. 生成增强的Excel文件
@@ -160,7 +159,7 @@ async def process_excel_file(
         # 9. 计算处理时间
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI: {ai_provider_name}({ai_model_name}), 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
+        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
         
         # 10. 返回增强的Excel文件
         return StreamingResponse(
@@ -170,7 +169,7 @@ async def process_excel_file(
                 "Content-Disposition": f"attachment; filename=enhanced_{file.filename}",
                 "X-Processing-Time": str(processing_time),
                 "X-Rows-Processed": str(processed_count),
-                "X-AI-Provider": f"{ai_provider_name}({ai_model_name})",
+                "X-AI-Model": ai_model_name,
                 "X-System-Config": "auto"
             }
         )

@@ -48,35 +48,6 @@ class AIService:
             logger.error(f"Failed to parse main AI config: {e}")
             return None
 
-    async def get_provider_config(self, provider_name: str) -> Optional[Dict[str, Any]]:
-        """获取AI提供商配置"""
-        # 检查缓存
-        if provider_name in self.providers_cache:
-            return self.providers_cache[provider_name]
-            
-        # 从数据库获取配置
-        config_key = f"ai_provider_{provider_name}"
-        config = self.db.query(SystemConfig).filter(
-            SystemConfig.key == config_key,
-            SystemConfig.is_active == True
-        ).first()
-        
-        if not config:
-            logger.warning(f"AI provider config not found: {provider_name}")
-            return None
-            
-        try:
-            # 解密配置
-            decrypted_value = encryption_util.decrypt(config.value) if config.is_encrypted else config.value
-            provider_config = json.loads(decrypted_value)
-            
-            # 缓存配置（注意：生产环境应该考虑缓存过期）
-            self.providers_cache[provider_name] = provider_config
-            return provider_config
-            
-        except (json.JSONDecodeError, Exception) as e:
-            logger.error(f"Failed to parse AI provider config for {provider_name}: {e}")
-            return None
     
     async def call_openai_api(self, config: Dict[str, Any], prompt: str, data_context: str = None) -> Dict[str, Any]:
         """调用OpenAI API"""
@@ -247,69 +218,10 @@ class AIService:
 """
         
         prompt = custom_prompt or default_prompt
-        provider_name = main_config.get('provider', 'openai')
         
-        # 根据提供商调用相应的API
-        if provider_name == 'openai':
-            return await self.call_openai_api(main_config, prompt, data_content)
-        elif provider_name == 'anthropic':
-            return await self.call_anthropic_api(main_config, prompt, data_content)
-        else:
-            # 默认使用OpenAI兼容接口
-            return await self.call_openai_api(main_config, prompt, data_content)
+        # 统一使用OpenAI兼容接口
+        return await self.call_openai_api(main_config, prompt, data_content)
 
-    async def generate_research_suggestions(self, 
-                                          provider_name: str, 
-                                          data_content: str,
-                                          custom_prompt: str = None) -> Dict[str, Any]:
-        """
-        生成研究建议
-        
-        Args:
-            provider_name: AI提供商名称 (openai, anthropic等)
-            data_content: 数据内容
-            custom_prompt: 自定义提示词
-        
-        Returns:
-            包含建议的字典
-        """
-        # 获取提供商配置
-        config = await self.get_provider_config(provider_name)
-        if not config:
-            return {
-                "success": False,
-                "error": f"AI provider '{provider_name}' not configured",
-                "response": None
-            }
-        
-        # 构建默认提示词
-        default_prompt = """
-请作为一位资深研究专家，分析以下数据内容，并为每行数据提供：
-
-1. **研究建议** - 基于数据内容的具体研究方向或想法
-2. **相关性评分** - 对研究价值的评分(0.0-1.0)
-3. **推荐理由** - 为什么推荐这个研究方向
-
-请确保建议具体、可行，并具有学术价值。每个建议应该简洁明了，大约50-100字。
-
-请以JSON格式返回结果，格式如下：
-{
-    "suggestions": ["建议1", "建议2", ...],
-    "relevance_scores": [0.85, 0.72, ...],
-    "reasons": ["理由1", "理由2", ...]
-}
-"""
-        
-        prompt = custom_prompt or default_prompt
-        
-        # 根据提供商调用相应的API
-        if provider_name == 'openai':
-            return await self.call_openai_api(config, prompt, data_content)
-        elif provider_name == 'anthropic':
-            return await self.call_anthropic_api(config, prompt, data_content)
-        else:
-            # 默认使用OpenAI兼容接口
-            return await self.call_openai_api(config, prompt, data_content)
     
     def parse_ai_response(self, ai_response: str, row_count: int) -> Dict[str, List[str]]:
         """

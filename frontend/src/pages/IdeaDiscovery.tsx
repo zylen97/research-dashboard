@@ -262,7 +262,7 @@ const IdeaDiscovery: React.FC = () => {
           <Col xs={24} md={12} lg={12}>
             <div style={{ lineHeight: '2' }}>
               <Text>
-                <strong>1. AI配置：</strong>在左侧配置AI提供商，填写API密钥并测试连接<br />
+                <strong>1. AI配置：</strong>在左侧填写API密钥和地址并测试连接<br />
                 <strong>2. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
                 <strong>3. 处理流程：</strong>系统将使用已配置的AI读取每行数据，生成研究迁移建议<br />
               </Text>
