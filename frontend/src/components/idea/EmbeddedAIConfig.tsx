@@ -351,7 +351,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             >
               <Select placeholder="选择模型">
                 {models.map(model => (
-                  <Option key={model.id} value={model.id}>{model.name}</Option>
+                  <Option key={model.id} value={model.id}>{model.id}</Option>
                 ))}
               </Select>
             </Form.Item>
