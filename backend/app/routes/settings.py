@@ -12,6 +12,7 @@ import httpx
 import json
 
 from ..models import get_db
+from ..services.ai_service import create_ai_service
 
 router = APIRouter()
 
@@ -103,7 +104,9 @@ async def update_api_settings(
     """更新API设置"""
     user_id = request.state.current_user.id
     
-    # 更新或插入设置
+    print(f"更新API设置: user_id={user_id}, api_key={'***已设置***' if settings.api_key else '未设置'}, api_base={settings.api_base}, model={settings.model}")
+    
+    # 更新或插入用户设置
     db.execute(
         text("""
             INSERT INTO user_api_settings (user_id, api_key, api_base, model, updated_at)
@@ -121,16 +124,52 @@ async def update_api_settings(
             "model": settings.model
         }
     )
+    
+    # 同时更新系统级配置 (main_ai_config)，供AI服务使用
+    main_config = {
+        "api_key": settings.api_key,
+        "api_url": settings.api_base,
+        "model": settings.model,
+        "is_connected": False  # 保存时设为false，需要测试连接后才设为true
+    }
+    
+    # 将配置转为JSON字符串
+    config_json = json.dumps(main_config)
+    
+    print(f"同步更新系统配置: {main_config}")
+    
+    # 更新或插入系统配置
+    db.execute(
+        text("""
+            INSERT INTO system_configs (key, value, category, description, is_encrypted, is_active, created_at, updated_at)
+            VALUES ('main_ai_config', :value, 'ai', 'Main AI Configuration', 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            ON CONFLICT(key) DO UPDATE SET
+                value = :value,
+                updated_at = CURRENT_TIMESTAMP,
+                is_active = 1
+        """),
+        {"value": config_json}
+    )
+    
     db.commit()
+    print("API设置和系统配置更新完成")
+    
+    # 清理AI服务缓存，确保新配置能被立即加载
+    ai_service = create_ai_service(db)
+    ai_service.clear_cache()
+    print("AI服务缓存已清理")
     
     return settings
 
 @router.post("/test", response_model=APITestResponse)
 async def test_api_connection(
-    test_request: APITestRequest
+    test_request: APITestRequest,
+    db: Session = Depends(get_db)
 ):
     """测试API连接"""
     try:
+        print(f"开始测试API连接: api_base={test_request.api_base}, model={test_request.model}")
+        
         # 构建完整的API URL
         api_url = test_request.api_base
         if not api_url.endswith('/'):
@@ -139,6 +178,8 @@ async def test_api_connection(
             api_url += 'chat/completions'
         else:
             api_url += 'chat/completions'
+        
+        print(f"最终API URL: {api_url}")
         
         # 准备测试请求
         headers = {
@@ -156,9 +197,40 @@ async def test_api_connection(
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(api_url, json=data, headers=headers)
         
+        print(f"API响应状态: {response.status_code}")
+        
         if response.status_code == 200:
             result = response.json()
             ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            
+            print("API连接测试成功，更新系统配置中的连接状态...")
+            
+            # 更新系统配置中的连接状态
+            # 先获取当前配置
+            current_config_result = db.execute(
+                text("SELECT value FROM system_configs WHERE key = 'main_ai_config' AND is_active = 1")
+            ).fetchone()
+            
+            if current_config_result:
+                try:
+                    current_config = json.loads(current_config_result.value)
+                    current_config["is_connected"] = True
+                    updated_config_json = json.dumps(current_config)
+                    
+                    # 更新配置
+                    db.execute(
+                        text("UPDATE system_configs SET value = :value, updated_at = CURRENT_TIMESTAMP WHERE key = 'main_ai_config'"),
+                        {"value": updated_config_json}
+                    )
+                    db.commit()
+                    print("系统配置中的连接状态已更新为true")
+                    
+                    # 清理AI服务缓存，确保下次调用时重新加载配置
+                    ai_service = create_ai_service(db)
+                    ai_service.clear_cache()
+                    print("AI服务缓存已清理")
+                except Exception as e:
+                    print(f"更新系统配置失败: {e}")
             
             return APITestResponse(
                 success=True,
@@ -170,6 +242,7 @@ async def test_api_connection(
                 }
             )
         else:
+            print(f"API测试失败: {response.status_code}, 响应: {response.text[:200]}")
             return APITestResponse(
                 success=False,
                 message=f"API测试失败: HTTP {response.status_code}",
@@ -180,6 +253,7 @@ async def test_api_connection(
             )
             
     except Exception as e:
+        print(f"连接测试异常: {e}")
         return APITestResponse(
             success=False,
             message=f"连接测试失败: {str(e)}",

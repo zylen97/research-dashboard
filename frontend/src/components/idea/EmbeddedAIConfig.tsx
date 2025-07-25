@@ -60,12 +60,15 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const fetchConfig = async () => {
     setLoading(true);
     try {
+      console.log('获取AI配置...');
       const apiSettings = await settingsApi.getSettings();
+      console.log('获取到的配置:', { api_key: apiSettings.api_key ? '***已设置***' : '未设置', api_base: apiSettings.api_base, model: apiSettings.model });
       
       const configData: AIConfig = {
         api_key: apiSettings.api_key,
         api_url: apiSettings.api_base,
-        model: apiSettings.model
+        model: apiSettings.model,
+        is_connected: false // 初始化时设为false，需要测试连接
       };
       
       setConfig(configData);
@@ -75,20 +78,25 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         model: apiSettings.model
       });
       
-      // 如果有API密钥，显示为已连接
+      // 不要自动设置连接状态为成功，而是保持未知状态
+      // 用户需要手动测试连接或者在保存配置时自动测试
       if (apiSettings.api_key) {
-        setConnectionStatus('success');
+        setConnectionStatus(null); // 设为null表示未测试
+      } else {
+        setConnectionStatus('error');
       }
     } catch (error) {
       console.error('获取API配置失败:', error);
-      // 设置默认值
-      const defaultConfig = {
-        api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
+      // 设置默认值但不自动填充API密钥
+      const defaultConfig: AIConfig = {
+        api_key: '',
         api_url: 'https://api.chatanywhere.tech/v1',
-        model: 'claude-3-7-sonnet-20250219'
+        model: 'claude-3-7-sonnet-20250219',
+        is_connected: false
       };
       setConfig(defaultConfig);
       form.setFieldsValue(defaultConfig);
+      setConnectionStatus('error');
     } finally {
       setLoading(false);
     }
@@ -114,6 +122,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
+      console.log('开始保存AI配置...', { api_key: '***', api_url: values.api_url, model: values.model });
       
       const apiSettings: APISettings = {
         api_key: values.api_key,
@@ -122,22 +131,27 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       };
       
       const updatedSettings = await settingsApi.updateApiSettings(apiSettings);
+      console.log('配置保存成功:', { api_key: '***', api_base: updatedSettings.api_base, model: updatedSettings.model });
       
+      // 创建新配置对象，但暂时不设置is_connected
       const newConfig: AIConfig = {
         api_key: updatedSettings.api_key,
         api_url: updatedSettings.api_base,
         model: updatedSettings.model,
-        is_connected: true
+        is_connected: false // 先设为false，等待连接测试
       };
       
       setConfig(newConfig);
-      message.success('AI配置保存成功');
+      setConnectionStatus(null); // 重置连接状态
+      message.success('AI配置保存成功，正在测试连接...');
       
       // 自动测试连接
       await testConnection(newConfig);
     } catch (error: any) {
       console.error('保存配置失败:', error);
-      message.error('保存配置失败：' + (error.response?.data?.detail || error.message));
+      const errorMessage = error.response?.data?.detail || error.message || '保存配置失败';
+      message.error('保存配置失败：' + errorMessage);
+      setConnectionStatus('error');
     } finally {
       setLoading(false);
     }
@@ -147,10 +161,17 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     const testConfig = configToTest || config;
     if (!testConfig?.api_key) {
       message.error('请先填写API密钥');
+      setConnectionStatus('error');
       return;
     }
     
     setTesting(true);
+    console.log('开始测试AI连接...', { 
+      api_key: '***', 
+      api_base: testConfig.api_url || 'https://api.chatanywhere.tech/v1', 
+      model: testConfig.model || 'claude-3-7-sonnet-20250219' 
+    });
+    
     try {
       const response = await settingsApi.testConnection({
         api_key: testConfig.api_key,
@@ -158,21 +179,47 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         model: testConfig.model || 'claude-3-7-sonnet-20250219'
       });
       
+      console.log('连接测试响应:', response);
+      
       if (response.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
         
-        if (config) {
-          setConfig({ ...config, is_connected: true });
+        // 更新配置状态，设置为已连接
+        const updatedConfig = { ...testConfig, is_connected: true };
+        setConfig(updatedConfig);
+        console.log('配置状态更新为已连接:', updatedConfig);
+        
+        // 通知父组件配置变化
+        if (onConfigChange) {
+          onConfigChange(updatedConfig);
         }
       } else {
-        message.error(`连接测试失败：${response.message}`);
+        const errorMsg = response.message || '连接测试失败';
+        message.error(`连接测试失败：${errorMsg}`);
         setConnectionStatus('error');
+        
+        // 确保配置状态设为未连接
+        const updatedConfig = { ...testConfig, is_connected: false };
+        setConfig(updatedConfig);
+        if (onConfigChange) {
+          onConfigChange(updatedConfig);
+        }
       }
     } catch (error: any) {
       console.error('AI连接测试错误:', error);
-      message.error('连接测试失败：' + (error.response?.data?.detail || error.message));
+      const errorMsg = error.response?.data?.detail || error.message || '连接测试失败';
+      message.error('连接测试失败：' + errorMsg);
       setConnectionStatus('error');
+      
+      // 确保配置状态设为未连接
+      if (testConfig) {
+        const updatedConfig = { ...testConfig, is_connected: false };
+        setConfig(updatedConfig);
+        if (onConfigChange) {
+          onConfigChange(updatedConfig);
+        }
+      }
     } finally {
       setTesting(false);
     }

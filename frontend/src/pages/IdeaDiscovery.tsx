@@ -79,10 +79,24 @@ const IdeaDiscovery: React.FC = () => {
       message.success('处理完成！');
     } catch (error: any) {
       console.error('处理失败:', error);
-      const errorMsg = error.response?.data?.detail || error.message || '处理失败，请重试';
+      let errorMsg = '处理失败，请重试';
+      
+      if (error.response?.data?.detail) {
+        errorMsg = error.response.data.detail;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      console.log('错误详情:', { 
+        status: error.response?.status,
+        detail: error.response?.data?.detail,
+        message: error.message,
+        fullError: error
+      });
+      
       setErrorMessage(errorMsg);
       setState(ProcessingState.ERROR);
-      message.error('处理失败');
+      message.error('AI文本生成失败：' + errorMsg);
     }
   };
 

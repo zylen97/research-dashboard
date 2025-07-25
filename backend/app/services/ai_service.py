@@ -19,40 +19,68 @@ class AIService:
         self.db = db
         self.providers_cache = {}
         
+    def clear_cache(self):
+        """清除配置缓存，强制重新从数据库加载"""
+        logger.debug("清除AI配置缓存")
+        self.providers_cache.clear()
+        
     async def get_main_ai_config(self) -> Optional[Dict[str, Any]]:
         """获取主AI配置（统一系统配置）"""
+        logger.debug("开始获取主AI配置...")
+        
         # 检查缓存
         if 'main_ai_config' in self.providers_cache:
-            return self.providers_cache['main_ai_config']
+            logger.debug("从缓存中获取AI配置")
+            cached_config = self.providers_cache['main_ai_config']
+            logger.debug(f"缓存配置内容: api_key={'***已设置***' if cached_config.get('api_key') else '未设置'}, api_url={cached_config.get('api_url', '未设置')}, model={cached_config.get('model', '未设置')}, is_connected={cached_config.get('is_connected', False)}")
+            return cached_config
             
         # 从数据库获取主AI配置
+        logger.debug("从数据库查询AI配置...")
         config = self.db.query(SystemConfig).filter(
             SystemConfig.key == 'main_ai_config',
             SystemConfig.is_active == True
         ).first()
         
         if not config:
-            logger.warning("Main AI config not found, please configure AI provider first")
+            logger.warning("数据库中未找到main_ai_config配置记录，请先在系统设置中配置AI提供商")
+            # 查询所有相关配置帮助调试
+            all_configs = self.db.query(SystemConfig).filter(
+                SystemConfig.key.like('%ai%')
+            ).all()
+            logger.debug(f"数据库中的AI相关配置记录: {[c.key for c in all_configs]}")
             return None
             
         try:
+            logger.debug(f"找到配置记录: key={config.key}, is_encrypted={config.is_encrypted}, is_active={config.is_active}")
+            
             # 解密配置
             decrypted_value = encryption_util.decrypt(config.value) if config.is_encrypted else config.value
             main_config = json.loads(decrypted_value)
             
+            logger.debug(f"解析后的配置: api_key={'***已设置***' if main_config.get('api_key') else '未设置'}, api_url={main_config.get('api_url', '未设置')}, model={main_config.get('model', '未设置')}, is_connected={main_config.get('is_connected', False)}")
+            
             # 缓存配置
             self.providers_cache['main_ai_config'] = main_config
+            logger.debug("AI配置已缓存")
             return main_config
             
-        except (json.JSONDecodeError, Exception) as e:
-            logger.error(f"Failed to parse main AI config: {e}")
+        except json.JSONDecodeError as e:
+            logger.error(f"AI配置JSON解析失败: {e}, 原始值: {config.value[:100]}...")
+            return None
+        except Exception as e:
+            logger.error(f"获取AI配置时发生错误: {e}")
             return None
 
     
     async def call_openai_api(self, config: Dict[str, Any], prompt: str, data_context: str = None) -> Dict[str, Any]:
         """调用OpenAI API"""
+        logger.debug("开始调用OpenAI API...")
+        
         # 处理API URL
         base_url = config.get('api_url', 'https://api.openai.com/v1')
+        logger.debug(f"原始API URL: {base_url}")
+        
         # 确保URL正确拼接
         if not base_url.endswith('/'):
             base_url += '/'
@@ -66,11 +94,15 @@ class AIService:
         else:
             # 其他情况，假设需要添加/chat/completions
             api_url = base_url.rstrip('/') + '/chat/completions'
+        
+        logger.debug(f"最终API URL: {api_url}")
             
         api_key = config.get('api_key')
         model = config.get('model', 'gpt-3.5-turbo')
         max_tokens = config.get('max_tokens', 1500)
         temperature = config.get('temperature', 0.7)
+        
+        logger.debug(f"API参数: model={model}, max_tokens={max_tokens}, temperature={temperature}, api_key={'***已设置***' if api_key else '未设置'}")
         
         headers = {
             "Authorization": f"Bearer {api_key}",
@@ -97,30 +129,59 @@ class AIService:
         }
         
         try:
+            logger.debug("发送HTTP请求到AI服务...")
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(api_url, json=data, headers=headers)
+                
+            logger.debug(f"收到响应: status_code={response.status_code}")
                 
             if response.status_code == 200:
                 result = response.json()
                 ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                logger.debug(f"AI响应成功，内容长度: {len(ai_response) if ai_response else 0}")
                 return {
                     "success": True,
                     "response": ai_response,
                     "usage": result.get("usage", {})
                 }
             else:
-                logger.error(f"OpenAI API error: {response.status_code} - {response.text}")
+                error_text = response.text
+                logger.error(f"AI API错误: status={response.status_code}, 响应内容: {error_text[:500]}...")
+                
+                # 尝试解析错误信息
+                try:
+                    error_detail = response.json().get('error', {}).get('message', error_text)
+                except:
+                    error_detail = error_text
+                    
                 return {
                     "success": False,
-                    "error": f"API error: {response.status_code}",
+                    "error": f"API错误 {response.status_code}: {error_detail}",
                     "response": None
                 }
                 
-        except Exception as e:
-            logger.error(f"OpenAI API call failed: {e}")
+        except httpx.TimeoutException as e:
+            error_msg = "AI服务请求超时，请稍后重试"
+            logger.error(f"请求超时: {e}")
             return {
                 "success": False,
-                "error": str(e),
+                "error": error_msg,
+                "response": None
+            }
+        except httpx.ConnectError as e:
+            error_msg = "无法连接到AI服务，请检查网络连接和API地址"
+            logger.error(f"连接错误: {e}")
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+        except Exception as e:
+            error_msg = f"AI服务调用失败: {str(e)}"
+            logger.error(f"AI API调用异常: {e}")
+            return {
+                "success": False,
+                "error": error_msg,
                 "response": None
             }
     
@@ -194,30 +255,35 @@ class AIService:
         Returns:
             包含建议的字典
         """
+        logger.debug(f"开始自动生成研究建议，数据内容长度: {len(data_content) if data_content else 0}")
+        
         # 获取主AI配置
         main_config = await self.get_main_ai_config()
         if not main_config:
+            error_msg = "未找到主AI配置，请先在系统设置中配置AI提供商"
+            logger.error(error_msg)
             return {
                 "success": False,
-                "error": "No main AI configuration found. Please configure AI provider in system settings first.",
+                "error": error_msg,
                 "response": None
             }
         
         # 检查配置是否完整
         if not main_config.get('api_key'):
+            error_msg = "AI配置不完整，API密钥未设置"
+            logger.error(error_msg)
             return {
                 "success": False,
-                "error": "AI configuration incomplete. Please set API key in system settings.",
+                "error": error_msg,
                 "response": None
             }
         
         # 检查连接状态
         if not main_config.get('is_connected'):
-            return {
-                "success": False,
-                "error": "AI provider not connected. Please test the connection in system settings.",
-                "response": None
-            }
+            error_msg = "AI提供商未连接，请在系统设置中测试连接"
+            logger.warning(error_msg)
+            logger.debug("尝试忽略连接状态检查，直接调用API...")
+            # 不立即返回错误，而是继续尝试调用API
         
         # 构建默认提示词
         default_prompt = """
@@ -234,8 +300,22 @@ class AIService:
         
         prompt = custom_prompt or default_prompt
         
+        logger.debug(f"使用AI模型: {main_config.get('model', 'unknown')}")
+        logger.debug(f"API地址: {main_config.get('api_url', 'unknown')}")
+        
         # 统一使用OpenAI兼容接口
-        return await self.call_openai_api(main_config, prompt, data_content)
+        try:
+            result = await self.call_openai_api(main_config, prompt, data_content)
+            logger.debug(f"AI调用结果: success={result.get('success')}, error={result.get('error', 'none')}")
+            return result
+        except Exception as e:
+            error_msg = f"调用AI服务时发生异常: {str(e)}"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
 
     
     def parse_ai_response(self, ai_response: str, row_count: int) -> Dict[str, List[str]]:

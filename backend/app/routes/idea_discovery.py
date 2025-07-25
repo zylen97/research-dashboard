@@ -73,36 +73,47 @@ async def process_excel_file(
             )
         
         # 4. 创建AI服务实例
+        logger.info(f"开始处理Excel文件: {file.filename}, 文件大小: {len(file_content)} bytes")
         ai_service = create_ai_service(db)
         
         # 5. 检查AI配置状态
+        logger.info("检查AI配置状态...")
         main_config = await ai_service.get_main_ai_config()
         if not main_config:
+            error_msg = "AI未配置，请先在页面左侧的AI配置中填写API密钥并测试连接"
+            logger.error(error_msg)
             raise HTTPException(
                 status_code=400,
-                detail="AI未配置，请先在系统设置中配置AI提供商"
+                detail=error_msg
             )
         
+        logger.info(f"找到AI配置: model={main_config.get('model')}, api_url={main_config.get('api_url')}, is_connected={main_config.get('is_connected')}")
+        
         if not main_config.get('is_connected'):
-            raise HTTPException(
-                status_code=400,
-                detail="AI连接未测试，请先在系统设置中测试AI连接"
-            )
+            error_msg = f"AI连接未测试通过，请在页面左侧点击'测试连接'按钮确保API可用 (当前状态: is_connected={main_config.get('is_connected')})"
+            logger.warning(error_msg)
+            # 不立即抛出异常，而是尝试继续处理，让AI服务自己决定是否能调用
+            logger.info("忽略连接状态检查，尝试直接调用AI服务...")
         
         # 获取AI模型名称用于文件列名
         ai_model_name = main_config.get('model', 'default')
         
         # 6. 为每行数据生成AI建议
+        logger.info(f"开始为 {len(df)} 行数据生成AI建议...")
         suggestions = []
         processed_count = 0
+        error_count = 0
         
         for index, row in df.iterrows():
             try:
+                logger.debug(f"处理第 {index+1}/{len(df)} 行数据...")
+                
                 # 构建AI提示内容
                 title = str(row['标题']) if pd.notna(row['标题']) else ""
                 abstract = str(row['摘要']) if pd.notna(row['摘要']) else ""
                 
                 if not title and not abstract:
+                    logger.warning(f"第{index+1}行数据不完整，跳过")
                     suggestions.append("数据不完整，无法生成建议")
                     continue
                 
@@ -123,6 +134,7 @@ async def process_excel_file(
 """
                 
                 # 调用AI服务（自动模式）
+                logger.debug(f"调用AI服务处理第{index+1}行...")
                 ai_result = await ai_service.generate_research_suggestions_auto(
                     data_content=data_content,
                     custom_prompt=custom_prompt
@@ -134,8 +146,12 @@ async def process_excel_file(
                     if len(suggestion) > 150:
                         suggestion = suggestion[:147] + "..."
                     suggestions.append(suggestion)
+                    logger.debug(f"第{index+1}行处理成功，建议长度: {len(suggestion)}")
                 else:
-                    suggestions.append(f"AI处理失败: {ai_result.get('error', '未知错误')}")
+                    error_msg = ai_result.get('error', '未知错误')
+                    logger.error(f"第{index+1}行AI处理失败: {error_msg}")
+                    suggestions.append(f"AI处理失败: {error_msg}")
+                    error_count += 1
                 
                 processed_count += 1
                 
@@ -143,8 +159,12 @@ async def process_excel_file(
                 await asyncio.sleep(0.1)
                 
             except Exception as e:
-                logger.error(f"处理第{index+1}行时出错: {str(e)}")
+                error_msg = f"处理第{index+1}行时发生异常: {str(e)}"
+                logger.error(error_msg)
                 suggestions.append(f"处理出错: {str(e)}")
+                error_count += 1
+        
+        logger.info(f"数据处理完成: 总共{len(df)}行，成功{processed_count - error_count}行，失败{error_count}行")
         
         # 7. 添加AI建议列到DataFrame
         # 使用模型名称作为列名
