@@ -102,20 +102,20 @@ chown -R www-data:www-data uploads/ 2>/dev/null || true
 echo -e "${YELLOW}8. 重新加载systemd配置...${NC}"
 systemctl daemon-reload
 
-# 多次尝试启动服务 - Ultra Think加强版
+# 多次尝试启动服务 - Ultra Think加强版（3次）
 echo -e "${YELLOW}9. 多次尝试启动服务...${NC}"
-for attempt in 1 2 3 4 5; do
-    echo -e "${BLUE}尝试 $attempt/5: 启动research-backend服务...${NC}"
+for attempt in 1 2 3; do
+    echo -e "${BLUE}尝试 $attempt/3: 启动research-backend服务...${NC}"
     
     systemctl start research-backend
     sleep 15  # 增加等待时间到15秒
     
     if systemctl is-active --quiet research-backend; then
-        echo -e "${GREEN}✅ 服务启动成功（尝试 $attempt/5）${NC}"
+        echo -e "${GREEN}✅ 服务启动成功（尝试 $attempt/3）${NC}"
         break
     else
-        echo -e "${RED}❌ 尝试 $attempt/5 失败${NC}"
-        if [ $attempt -lt 5 ]; then
+        echo -e "${RED}❌ 尝试 $attempt/3 失败${NC}"
+        if [ $attempt -lt 3 ]; then
             systemctl stop research-backend 2>/dev/null || true
             sleep 3
         fi
