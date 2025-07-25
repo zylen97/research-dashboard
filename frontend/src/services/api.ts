@@ -319,7 +319,8 @@ export const configApi = {
 
   // 测试AI提供商连接
   testAIProvider: (data: {
-    provider: string;
+    api_key: string;
+    api_url?: string;
     test_prompt?: string;
   }): Promise<AITestResponse> =>
     api.post('/config/ai/test', data),

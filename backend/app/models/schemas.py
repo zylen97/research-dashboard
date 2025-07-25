@@ -224,7 +224,7 @@ class SystemConfig(SystemConfigBase):
 
 # AI Provider configuration
 class AIProviderConfig(BaseModel):
-    provider: str = Field(..., description="AI提供商名称，如openai, anthropic等")
+    provider: Optional[str] = Field(default="custom", description="Legacy field for backward compatibility")
     api_key: str = Field(..., description="API密钥")
     api_url: Optional[str] = Field(None, description="API地址，默认使用官方地址")
     model: Optional[str] = Field(None, description="默认模型")
@@ -232,10 +232,10 @@ class AIProviderConfig(BaseModel):
     temperature: Optional[float] = Field(None, description="温度参数")
 
 class AITestRequest(BaseModel):
-    provider: str
     api_key: str
     api_url: Optional[str] = None
     test_prompt: str = Field(default="Hello, please respond with 'API connection successful'")
+    provider: Optional[str] = Field(default="custom", description="Legacy field for backward compatibility")
 
 class AITestResponse(BaseModel):
     success: bool

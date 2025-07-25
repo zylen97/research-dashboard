@@ -30,55 +30,27 @@ const { Text } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
-// Provider和模型配置
-const PROVIDERS = {
-  openai: {
-    name: 'OpenAI',
-    url: 'https://api.openai.com/v1',
-    models: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo', 'gpt-4o', 'gpt-4o-mini']
-  },
-  anthropic: {
-    name: 'Anthropic',
-    url: 'https://api.anthropic.com/v1',
-    models: [
-      'claude-3-7-sonnet-20250219',
-      'claude-sonnet-4-20250514', 
-      'claude-opus-4-20250514-thinking',
-      'claude-opus-4-20250514'
-    ]
-  },
-  deepseek: {
-    name: 'DeepSeek',
-    url: 'https://api.deepseek.com/v1',
-    models: ['deepseek-v3', 'deepseek-r1']
-  },
-  custom: {
-    name: '自定义',
-    url: 'https://api.chatanywhere.tech/v1',
-    models: [
-      'claude-3-7-sonnet-20250219',
-      'claude-sonnet-4-20250514',
-      'claude-opus-4-20250514-thinking', 
-      'claude-opus-4-20250514',
-      'deepseek-v3',
-      'deepseek-r1',
-      'gpt-4.1',
-      'gpt-4o',
-      'gpt-4o-mini'
-    ]
-  }
-};
+// 可用模型列表
+const AVAILABLE_MODELS = [
+  'claude-3-7-sonnet-20250219',
+  'claude-sonnet-4-20250514',
+  'claude-opus-4-20250514-thinking', 
+  'claude-opus-4-20250514',
+  'deepseek-v3',
+  'deepseek-r1',
+  'gpt-4.1',
+  'gpt-4o',
+  'gpt-4o-mini'
+];
 
 // 默认配置
 const DEFAULT_CONFIG = {
-  provider: 'custom',
   api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
   api_url: 'https://api.chatanywhere.tech/v1',
   model: 'claude-3-7-sonnet-20250219'
 };
 
 interface AIConfig {
-  provider: string;
   api_key: string;
   api_url?: string;
   model?: string;
@@ -111,7 +83,6 @@ const AIConfigPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
-  const [selectedProvider, setSelectedProvider] = useState<string>(DEFAULT_CONFIG.provider);
   
   // 聊天功能状态
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -133,12 +104,10 @@ const AIConfigPanel: React.FC = () => {
         const parsedConfig = JSON.parse(configData.value);
         setConfig(parsedConfig);
         form.setFieldsValue(parsedConfig);
-        setSelectedProvider(parsedConfig.provider || DEFAULT_CONFIG.provider);
         setConnectionStatus(parsedConfig.is_connected ? 'success' : null);
       } else {
         // 设置默认值
         form.setFieldsValue(DEFAULT_CONFIG);
-        setSelectedProvider(DEFAULT_CONFIG.provider);
       }
     } catch (error) {
       console.error('获取AI配置失败:', error);
@@ -179,7 +148,6 @@ const AIConfigPanel: React.FC = () => {
     setTesting(true);
     try {
       const response = await api.post('/config/ai/test', {
-        provider: testConfig.provider || 'custom',
         api_key: testConfig.api_key,
         api_url: testConfig.api_url,
         test_prompt: '你好，请回复"API连接成功"'
@@ -236,7 +204,6 @@ const AIConfigPanel: React.FC = () => {
 
     try {
       const response = await api.post('/config/ai/test', {
-        provider: config.provider || 'custom',
         api_key: config.api_key,
         api_url: config.api_url,
         test_prompt: chatInput
@@ -360,29 +327,6 @@ const AIConfigPanel: React.FC = () => {
               onFinish={handleSubmit}
               initialValues={DEFAULT_CONFIG}
             >
-              <Form.Item
-                name="provider"
-                label="AI提供商"
-                rules={[{ required: true, message: '请选择AI提供商' }]}
-              >
-                <Select 
-                  placeholder="选择AI提供商"
-                  onChange={(value) => {
-                    setSelectedProvider(value);
-                    const provider = PROVIDERS[value as keyof typeof PROVIDERS];
-                    if (provider) {
-                      form.setFieldsValue({
-                        api_url: provider.url,
-                        model: provider.models[0]
-                      });
-                    }
-                  }}
-                >
-                  {Object.entries(PROVIDERS).map(([key, provider]) => (
-                    <Option key={key} value={key}>{provider.name}</Option>
-                  ))}
-                </Select>
-              </Form.Item>
 
               <Form.Item
                 name="api_key"
@@ -411,7 +355,7 @@ const AIConfigPanel: React.FC = () => {
                 rules={[{ required: true, message: '请选择默认模型' }]}
               >
                 <Select placeholder="选择模型">
-                  {selectedProvider && PROVIDERS[selectedProvider as keyof typeof PROVIDERS]?.models.map(model => (
+                  {AVAILABLE_MODELS.map(model => (
                     <Option key={model} value={model}>{model}</Option>
                   ))}
                 </Select>

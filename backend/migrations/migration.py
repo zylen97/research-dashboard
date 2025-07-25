@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - Idea表字段重构：添加source_journal，修改字段约束，替换importance为maturity
-MIGRATION_VERSION = "v1.24_idea_field_restructure"
+# 迁移版本号 - 删除AI提供商选项，简化AI配置
+MIGRATION_VERSION = "v1.25_remove_ai_provider_option"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,161 +85,83 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.24迁移任务：Idea表字段重构
-        # 用户需求：修改研究表单字段结构 - 2025-07-24
+        # 🔧 v1.25迁移任务：删除AI提供商选项
+        # 用户需求：简化AI配置，删除provider字段 - 2025-07-25
         # ===========================================
         
-        logger.info("🔧 开始v1.24迁移：Idea表字段重构...")
-        logger.info("🎯 目标：根据用户需求重构Ideas表单字段")
+        logger.info("🔧 开始v1.25迁移：删除AI提供商选项...")
+        logger.info("🎯 目标：简化AI配置，删除provider字段")
         
-        # 第一步：检查ideas表是否存在
-        logger.info("🔍 检查ideas表结构...")
+        # 第一步：检查system_config表是否存在
+        logger.info("🔍 检查system_config表...")
         
-        if not table_exists(cursor, 'ideas'):
-            logger.error("❌ ideas表不存在，创建表...")
-            cursor.execute("""
-                CREATE TABLE ideas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    research_question TEXT NOT NULL,
-                    research_method TEXT NOT NULL,
-                    source_journal TEXT NOT NULL,
-                    source_literature TEXT NOT NULL,
-                    maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
-                    description TEXT,
-                    collaborator_id INTEGER,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (collaborator_id) REFERENCES collaborators (id)
-                )
-            """)
-            logger.info("✅ ideas表创建成功")
+        if not table_exists(cursor, 'system_config'):
+            logger.warning("⚠️ system_config表不存在，跳过AI配置迁移")
         else:
-            logger.info("✅ ideas表已存在，开始字段重构...")
+            logger.info("✅ system_config表已存在，开始处理AI配置...")
             
-            # 获取当前表结构
-            cursor.execute("PRAGMA table_info(ideas)")
-            columns_info = cursor.fetchall()
-            existing_columns = {col[1]: col for col in columns_info}
-            
-            logger.info(f"📋 当前表结构: {list(existing_columns.keys())}")
-            
-            # 第二步：添加source_journal字段（如果不存在）
-            if 'source_journal' not in existing_columns:
-                logger.info("➕ 添加source_journal字段...")
-                cursor.execute("ALTER TABLE ideas ADD COLUMN source_journal TEXT NOT NULL DEFAULT ''")
-                logger.info("✅ source_journal字段添加成功")
-            else:
-                logger.info("⏭️ source_journal字段已存在")
-            
-            # 第三步：添加maturity字段（如果不存在）
-            if 'maturity' not in existing_columns:
-                logger.info("➕ 添加maturity字段...")
-                cursor.execute("ALTER TABLE ideas ADD COLUMN maturity VARCHAR(20) NOT NULL DEFAULT 'immature'")
-                logger.info("✅ maturity字段添加成功")
-                
-                # 如果有importance字段，进行数据迁移
-                if 'importance' in existing_columns:
-                    logger.info("🔄 从importance迁移数据到maturity...")
-                    # importance >= 4 认为是成熟的，< 4 认为是不成熟的
-                    cursor.execute("""
-                        UPDATE ideas 
-                        SET maturity = CASE 
-                            WHEN importance >= 4 THEN 'mature'
-                            ELSE 'immature'
-                        END
-                    """)
-                    updated_count = cursor.rowcount
-                    logger.info(f"✅ 数据迁移完成，更新了 {updated_count} 条记录")
-            else:
-                logger.info("⏭️ maturity字段已存在")
-            
-            # 第四步：SQLite不支持直接修改列约束，需要重建表
-            logger.info("🔧 重建表以修改字段约束...")
-            
-            # 检查当前数据
-            cursor.execute("SELECT COUNT(*) FROM ideas")
-            record_count = cursor.fetchone()[0]
-            logger.info(f"📊 当前ideas表有 {record_count} 条记录")
-            
-            if record_count > 0:
-                # 备份现有数据
-                logger.info("💾 备份现有数据...")
-                cursor.execute("""
-                    CREATE TEMPORARY TABLE ideas_backup AS 
-                    SELECT 
-                        id, research_question, 
-                        COALESCE(research_method, '') as research_method,
-                        COALESCE(source_journal, '') as source_journal,
-                        COALESCE(source_literature, '') as source_literature,
-                        COALESCE(maturity, 'immature') as maturity,
-                        description, collaborator_id, created_at, updated_at
-                    FROM ideas
-                """)
-                logger.info("✅ 数据备份完成")
-            
-            # 删除旧表
-            cursor.execute("DROP TABLE ideas")
-            logger.info("🗑️ 旧表已删除")
-            
-            # 创建新表结构
+            # 查找AI配置
             cursor.execute("""
-                CREATE TABLE ideas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    research_question TEXT NOT NULL,
-                    research_method TEXT NOT NULL,
-                    source_journal TEXT NOT NULL,
-                    source_literature TEXT NOT NULL,
-                    maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
-                    description TEXT,
-                    collaborator_id INTEGER,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    FOREIGN KEY (collaborator_id) REFERENCES collaborators (id)
-                )
+                SELECT id, value 
+                FROM system_config 
+                WHERE key = 'main_ai_config' AND category = 'ai_config'
             """)
-            logger.info("✅ 新表结构创建成功")
+            ai_config_row = cursor.fetchone()
             
-            # 恢复数据（如果有）
-            if record_count > 0:
-                logger.info("🔄 恢复数据...")
-                cursor.execute("""
-                    INSERT INTO ideas (
-                        id, research_question, research_method, source_journal, 
-                        source_literature, maturity, description, collaborator_id, 
-                        created_at, updated_at
-                    )
-                    SELECT 
-                        id, research_question, research_method, source_journal,
-                        source_literature, maturity, description, collaborator_id,
-                        created_at, updated_at
-                    FROM ideas_backup
-                """)
-                restored_count = cursor.rowcount
-                logger.info(f"✅ 数据恢复完成，恢复了 {restored_count} 条记录")
+            if ai_config_row:
+                config_id, config_value = ai_config_row
+                logger.info(f"📋 找到AI配置，ID: {config_id}")
                 
-                # 删除临时表
-                cursor.execute("DROP TABLE ideas_backup")
-                logger.info("🧹 临时表已清理")
+                try:
+                    # 解析JSON配置
+                    import json
+                    config = json.loads(config_value)
+                    logger.info(f"🔍 当前配置: {list(config.keys())}")
+                    
+                    # 删除provider字段
+                    if 'provider' in config:
+                        logger.info(f"🗑️ 删除provider字段: {config['provider']}")
+                        del config['provider']
+                        
+                        # 更新配置
+                        new_config_value = json.dumps(config)
+                        cursor.execute("""
+                            UPDATE system_config 
+                            SET value = ?, updated_at = CURRENT_TIMESTAMP
+                            WHERE id = ?
+                        """, (new_config_value, config_id))
+                        
+                        logger.info("✅ AI配置已更新，删除了provider字段")
+                    else:
+                        logger.info("⏭️ AI配置中没有provider字段，无需更新")
+                    
+                    logger.info(f"📋 更新后配置: {list(config.keys())}")
+                    
+                except json.JSONDecodeError as e:
+                    logger.error(f"❌ 解析AI配置失败: {e}")
+                except Exception as e:
+                    logger.error(f"❌ 处理AI配置失败: {e}")
+            else:
+                logger.info("ℹ️ 没有找到AI配置，无需更新")
         
-        # 第五步：验证表结构
-        logger.info("🔍 验证新表结构...")
-        cursor.execute("PRAGMA table_info(ideas)")
-        new_columns_info = cursor.fetchall()
-        
-        logger.info("📋 新表结构:")
-        for col in new_columns_info:
-            logger.info(f"  - {col[1]} ({col[2]}, NOT NULL: {bool(col[3])}, DEFAULT: {col[4]})")
-        
-        # 验证数据完整性
-        cursor.execute("SELECT COUNT(*) FROM ideas")
-        final_count = cursor.fetchone()[0]
-        logger.info(f"📊 最终记录数: {final_count}")
-        
-        # 检查maturity字段值分布
-        if final_count > 0:
-            cursor.execute("SELECT maturity, COUNT(*) FROM ideas GROUP BY maturity")
-            maturity_dist = cursor.fetchall()
-            logger.info(f"📈 maturity分布: {maturity_dist}")
+        # 验证迁移结果
+        logger.info("🔍 验证迁移结果...")
+        cursor.execute("""
+            SELECT value 
+            FROM system_config 
+            WHERE key = 'main_ai_config' AND category = 'ai_config'
+        """)
+        final_config = cursor.fetchone()
+        if final_config:
+            try:
+                import json
+                config = json.loads(final_config[0])
+                if 'provider' not in config:
+                    logger.info("✅ 验证成功：provider字段已删除")
+                else:
+                    logger.warning("⚠️ 验证失败：provider字段仍然存在")
+            except:
+                logger.warning("⚠️ 无法验证配置")
         
         # 第六步：提交更改并标记完成
         conn.commit()
@@ -248,14 +170,12 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 70)
-        logger.info("🎉 v1.24 Idea表字段重构完成！")
-        logger.info("✅ research_method字段改为必填")
-        logger.info("✅ 添加了source_journal字段作为必填")
-        logger.info("✅ source_literature字段改为必填")
-        logger.info("✅ 将importance字段替换为maturity字段")
-        logger.info("✅ 保留了所有现有数据")
-        logger.info("✅ 表结构验证通过")
-        logger.info("🚀 Ideas表单现在支持新的字段结构")
+        logger.info("🎉 v1.25 AI配置简化完成！")
+        logger.info("✅ 删除了AI提供商选项")
+        logger.info("✅ 简化了AI配置界面")
+        logger.info("✅ 保留了API密钥、地址和模型设置")
+        logger.info("✅ 所有现有配置保持不变")
+        logger.info("🚀 AI配置现在更加简洁和直观")
         logger.info("=" * 70)
         
         conn.close()

@@ -283,7 +283,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         onChange={(keys) => setIsExpanded(keys.includes('config'))}
       >
         <Panel 
-          header="配置AI提供商" 
+          header="AI配置" 
           key="config"
           extra={<SettingOutlined />}
         >

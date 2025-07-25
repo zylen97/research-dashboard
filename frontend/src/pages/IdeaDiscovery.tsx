@@ -32,7 +32,6 @@ enum ProcessingState {
 }
 
 interface AIConfig {
-  provider: string;
   api_key: string;
   api_url?: string;
   model?: string;

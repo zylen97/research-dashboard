@@ -253,42 +253,16 @@ async def test_ai_connection(
     current_user = require_admin(request)
     
     try:
-        # 根据不同的provider测试连接
-        if test_request.provider == "openai":
-            api_url = test_request.api_url or "https://api.openai.com/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {test_request.api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": "gpt-3.5-turbo",
-                "messages": [{"role": "user", "content": test_request.test_prompt}],
-                "max_tokens": 50
-            }
-        elif test_request.provider == "anthropic":
-            api_url = test_request.api_url or "https://api.anthropic.com/v1/messages"
-            headers = {
-                "x-api-key": test_request.api_key,
-                "anthropic-version": "2023-06-01",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": "claude-3-haiku-20240307",
-                "messages": [{"role": "user", "content": test_request.test_prompt}],
-                "max_tokens": 50
-            }
-        else:
-            # 通用OpenAI兼容接口
-            api_url = test_request.api_url or "https://api.openai.com/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {test_request.api_key}",
-                "Content-Type": "application/json"
-            }
-            data = {
-                "model": "gpt-3.5-turbo",
-                "messages": [{"role": "user", "content": test_request.test_prompt}],
-                "max_tokens": 50
-            }
+        # 统一使用OpenAI兼容接口
+        api_url = test_request.api_url or "https://api.chatanywhere.tech/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {test_request.api_key}",
+            "Content-Type": "application/json"
+        }
+        data = {
+            "model": "gpt-3.5-turbo",
+            "messages": [{"role": "user", "content": test_request.test_prompt}],
+            "max_tokens": 50
         
         # 发送测试请求
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -296,10 +270,8 @@ async def test_ai_connection(
             
         if response.status_code == 200:
             result = response.json()
-            if test_request.provider == "anthropic":
-                ai_response = result.get("content", [{}])[0].get("text", "")
-            else:
-                ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            # 统一处理OpenAI兼容格式
+            ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
             
             return AITestResponse(
                 success=True,
