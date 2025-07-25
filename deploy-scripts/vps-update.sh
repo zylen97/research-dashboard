@@ -42,6 +42,9 @@ if [ -f "frontend/build.tar.gz" ]; then
     log "发现前端构建文件，开始部署前端..."
     cd frontend
     
+    # 清理旧的build目录
+    rm -rf build/*
+    
     # 解压构建文件
     tar -xzf build.tar.gz || error_exit "前端构建文件解压失败"
     
