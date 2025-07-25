@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 删除AI提供商选项，简化AI配置
-MIGRATION_VERSION = "v1.25_remove_ai_provider_option"
+# 迁移版本号 - 创建用户API设置表
+MIGRATION_VERSION = "v1.26_create_user_api_settings"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,97 +85,91 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.25迁移任务：删除AI提供商选项
-        # 用户需求：简化AI配置，删除provider字段 - 2025-07-25
+        # 🔧 v1.26迁移任务：创建用户API设置表
+        # 用户需求：简化API设置管理，每个用户独立设置 - 2025-07-25
         # ===========================================
         
-        logger.info("🔧 开始v1.25迁移：删除AI提供商选项...")
-        logger.info("🎯 目标：简化AI配置，删除provider字段")
+        logger.info("🔧 开始v1.26迁移：创建用户API设置表...")
+        logger.info("🎯 目标：为每个用户创建独立的API设置存储")
         
-        # 第一步：检查system_config表是否存在
-        logger.info("🔍 检查system_config表...")
+        # 第一步：创建user_api_settings表
+        logger.info("📋 创建user_api_settings表...")
         
-        if not table_exists(cursor, 'system_config'):
-            logger.warning("⚠️ system_config表不存在，跳过AI配置迁移")
-        else:
-            logger.info("✅ system_config表已存在，开始处理AI配置...")
-            
-            # 查找AI配置
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_api_settings (
+                user_id INTEGER PRIMARY KEY,
+                api_key TEXT,
+                api_base TEXT DEFAULT 'https://api.chatanywhere.tech/v1',
+                model TEXT DEFAULT 'claude-3-7-sonnet-20250219',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id)
+            )
+        """)
+        
+        logger.info("✅ user_api_settings表创建成功")
+        
+        # 第二步：从system_config迁移现有的AI配置
+        logger.info("🔍 检查是否需要迁移现有配置...")
+        
+        if table_exists(cursor, 'system_config'):
             cursor.execute("""
-                SELECT id, value 
+                SELECT value 
                 FROM system_config 
                 WHERE key = 'main_ai_config' AND category = 'ai_config'
             """)
             ai_config_row = cursor.fetchone()
             
             if ai_config_row:
-                config_id, config_value = ai_config_row
-                logger.info(f"📋 找到AI配置，ID: {config_id}")
-                
                 try:
-                    # 解析JSON配置
                     import json
-                    config = json.loads(config_value)
-                    logger.info(f"🔍 当前配置: {list(config.keys())}")
+                    config = json.loads(ai_config_row[0])
                     
-                    # 删除provider字段
-                    if 'provider' in config:
-                        logger.info(f"🗑️ 删除provider字段: {config['provider']}")
-                        del config['provider']
+                    # 获取所有用户
+                    cursor.execute("SELECT id FROM users")
+                    users = cursor.fetchall()
+                    
+                    for user in users:
+                        user_id = user[0]
+                        logger.info(f"📝 为用户 {user_id} 迁移配置...")
                         
-                        # 更新配置
-                        new_config_value = json.dumps(config)
+                        # 插入配置（如果不存在）
                         cursor.execute("""
-                            UPDATE system_config 
-                            SET value = ?, updated_at = CURRENT_TIMESTAMP
-                            WHERE id = ?
-                        """, (new_config_value, config_id))
-                        
-                        logger.info("✅ AI配置已更新，删除了provider字段")
-                    else:
-                        logger.info("⏭️ AI配置中没有provider字段，无需更新")
+                            INSERT OR IGNORE INTO user_api_settings 
+                            (user_id, api_key, api_base, model)
+                            VALUES (?, ?, ?, ?)
+                        """, (
+                            user_id,
+                            config.get('api_key', ''),
+                            config.get('api_url', 'https://api.chatanywhere.tech/v1'),
+                            config.get('model', 'claude-3-7-sonnet-20250219')
+                        ))
                     
-                    logger.info(f"📋 更新后配置: {list(config.keys())}")
+                    logger.info(f"✅ 成功为 {len(users)} 个用户迁移配置")
                     
-                except json.JSONDecodeError as e:
-                    logger.error(f"❌ 解析AI配置失败: {e}")
                 except Exception as e:
-                    logger.error(f"❌ 处理AI配置失败: {e}")
+                    logger.warning(f"⚠️ 迁移现有配置时出错: {e}")
             else:
-                logger.info("ℹ️ 没有找到AI配置，无需更新")
+                logger.info("ℹ️ 没有找到现有AI配置，跳过迁移")
         
-        # 验证迁移结果
+        # 第三步：验证迁移结果
         logger.info("🔍 验证迁移结果...")
-        cursor.execute("""
-            SELECT value 
-            FROM system_config 
-            WHERE key = 'main_ai_config' AND category = 'ai_config'
-        """)
-        final_config = cursor.fetchone()
-        if final_config:
-            try:
-                import json
-                config = json.loads(final_config[0])
-                if 'provider' not in config:
-                    logger.info("✅ 验证成功：provider字段已删除")
-                else:
-                    logger.warning("⚠️ 验证失败：provider字段仍然存在")
-            except:
-                logger.warning("⚠️ 无法验证配置")
+        cursor.execute("SELECT COUNT(*) FROM user_api_settings")
+        count = cursor.fetchone()[0]
+        logger.info(f"✅ user_api_settings表中有 {count} 条记录")
         
-        # 第六步：提交更改并标记完成
+        # 提交更改并标记完成
         conn.commit()
         mark_migration_completed(db_path)
         
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 70)
-        logger.info("🎉 v1.25 AI配置简化完成！")
-        logger.info("✅ 删除了AI提供商选项")
-        logger.info("✅ 简化了AI配置界面")
-        logger.info("✅ 保留了API密钥、地址和模型设置")
-        logger.info("✅ 所有现有配置保持不变")
-        logger.info("🚀 AI配置现在更加简洁和直观")
+        logger.info("🎉 v1.26 用户API设置表创建完成！")
+        logger.info("✅ 创建了user_api_settings表")
+        logger.info("✅ 每个用户可以独立管理API设置")
+        logger.info("✅ 从system_config迁移了现有配置")
+        logger.info("🚀 API设置管理更加灵活和安全")
         logger.info("=" * 70)
         
         conn.close()

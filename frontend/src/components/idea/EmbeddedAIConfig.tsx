@@ -20,30 +20,11 @@ import {
   SettingOutlined,
   RobotOutlined
 } from '@ant-design/icons';
-import api from '../../services/api';
+import { settingsApi, APISettings, Model } from '../../services/settingsApi';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
 const { Option } = Select;
-
-// 可用模型列表
-const AVAILABLE_MODELS = [
-  'claude-3-7-sonnet-20250219',
-  'claude-sonnet-4-20250514',
-  'claude-opus-4-20250514-thinking', 
-  'claude-opus-4-20250514',
-  'deepseek-v3',
-  'deepseek-r1',
-  'gpt-4.1',
-  'gpt-4o'
-];
-
-// 默认配置
-const DEFAULT_CONFIG = {
-  api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
-  api_url: 'https://api.chatanywhere.tech/v1',
-  model: 'claude-3-7-sonnet-20250219'
-};
 
 interface AIConfig {
   api_key: string;
@@ -63,9 +44,11 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [models, setModels] = useState<Model[]>([]);
 
   useEffect(() => {
     fetchConfig();
+    fetchModels();
   }, []);
 
   useEffect(() => {
@@ -77,114 +60,72 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const fetchConfig = async () => {
     setLoading(true);
     try {
-      const response = await api.get('/config/', {
-        params: { category: 'ai_config' }
+      const response = await settingsApi.getSettings();
+      const apiSettings = response.data;
+      
+      const configData: AIConfig = {
+        api_key: apiSettings.api_key,
+        api_url: apiSettings.api_base,
+        model: apiSettings.model
+      };
+      
+      setConfig(configData);
+      form.setFieldsValue({
+        api_key: apiSettings.api_key,
+        api_url: apiSettings.api_base,
+        model: apiSettings.model
       });
-      const configData = response.data?.find((c: any) => c.key === 'main_ai_config');
-      if (configData) {
-        const parsedConfig = JSON.parse(configData.value);
-        setConfig(parsedConfig);
-        form.setFieldsValue(parsedConfig);
-        setConnectionStatus(parsedConfig.is_connected ? 'success' : null);
-      } else {
-        // 设置默认值
-        form.setFieldsValue(DEFAULT_CONFIG);
-        setConfig(DEFAULT_CONFIG);
+      
+      // 如果有API密钥，显示为已连接
+      if (apiSettings.api_key) {
+        setConnectionStatus('success');
       }
     } catch (error) {
-      console.error('获取AI配置失败:', error);
-      // 如果获取失败，使用默认配置
-      form.setFieldsValue(DEFAULT_CONFIG);
-      setConfig(DEFAULT_CONFIG);
+      console.error('获取API配置失败:', error);
+      message.error('获取配置失败');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSubmit = async (values: AIConfig) => {
+  const fetchModels = async () => {
     try {
-      // 先尝试获取现有配置
-      let existingConfig = null;
-      try {
-        const existingConfigs = await api.get('/config/', {
-          params: { category: 'ai_config' }
-        });
-        existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
-      } catch (getError) {
-        console.log('获取配置失败（可能是权限问题），将尝试其他方式');
-      }
+      const response = await settingsApi.getModels();
+      setModels(response.data.models);
+    } catch (error) {
+      console.error('获取模型列表失败:', error);
+    }
+  };
+
+  const handleSubmit = async (values: any) => {
+    try {
+      setLoading(true);
       
-      let success = false;
+      const apiSettings: APISettings = {
+        api_key: values.api_key,
+        api_base: values.api_url,
+        model: values.model
+      };
       
-      // 方法1：如果找到了配置ID，直接更新
-      if (existingConfig?.id) {
-        try {
-          await api.put(`/config/${existingConfig.id}`, {
-            value: JSON.stringify(values),
-            is_active: true
-          });
-          success = true;
-        } catch (error) {
-          console.log('使用已知ID更新失败');
-        }
-      }
+      await settingsApi.updateApiSettings(apiSettings);
       
-      // 方法2：如果方法1失败，尝试盲目查找ID（1-20）
-      if (!success) {
-        for (let id = 1; id <= 20; id++) {
-          try {
-            const configData = await api.get(`/config/${id}`);
-            if (configData.data?.key === 'main_ai_config') {
-              await api.put(`/config/${id}`, {
-                value: JSON.stringify(values),
-                is_active: true
-              });
-              success = true;
-              break;
-            }
-          } catch (error) {
-            // 继续尝试下一个ID
-          }
-        }
-      }
+      const newConfig: AIConfig = {
+        api_key: values.api_key,
+        api_url: values.api_url,
+        model: values.model,
+        is_connected: true
+      };
       
-      // 方法3：如果前两种方法都失败，尝试创建新配置
-      if (!success) {
-        try {
-          await api.post('/config/', {
-            key: 'main_ai_config',
-            value: JSON.stringify(values),
-            category: 'ai_config',
-            description: 'Main AI Configuration',
-            is_active: true,
-            is_encrypted: true
-          });
-          success = true;
-        } catch (postError: any) {
-          // 如果创建失败且错误是"already exists"，说明配置存在但我们找不到ID
-          if (postError.response?.data?.detail?.includes('already exists')) {
-            throw new Error('配置已存在但无法更新，请联系管理员或等待权限修复部署完成');
-          }
-          throw postError;
-        }
-      }
+      setConfig(newConfig);
+      message.success('AI配置保存成功');
       
-      if (success) {
-        setConfig(values);
-        message.success('AI配置保存成功');
-        // 自动测试连接
-        await testConnection(values);
-      }
-      
+      // 自动测试连接
+      await testConnection(newConfig);
     } catch (error: any) {
       console.error('保存配置失败:', error);
-      let errorMessage = '未知错误';
-      if (error.response && error.response.data && error.response.data.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      message.error('保存配置失败：' + errorMessage);
+      message.error('保存配置失败：' + (error.response?.data?.detail || error.message));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -197,48 +138,26 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     
     setTesting(true);
     try {
-      const response = await api.post('/config/ai/test', {
+      const response = await settingsApi.testConnection({
         api_key: testConfig.api_key,
-        api_url: testConfig.api_url,
-        model: testConfig.model,
-        test_prompt: '你好，请回复"API连接成功"'
+        api_base: testConfig.api_url || 'https://api.chatanywhere.tech/v1',
+        model: testConfig.model || 'claude-3-7-sonnet-20250219'
       });
       
-      if (response && response.data && response.data.success) {
+      if (response.data.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
         
-        // 更新配置状态
-        const updatedConfig = { ...testConfig, is_connected: true };
-        // 获取现有配置以确定是否需要更新
-        const existingConfigs = await api.get('/config/', {
-          params: { category: 'ai_config' }
-        });
-        const existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
-        
-        if (existingConfig) {
-          await api.put(`/config/${existingConfig.id}`, {
-            value: JSON.stringify(updatedConfig)
-          });
+        if (config) {
+          setConfig({ ...config, is_connected: true });
         }
-        setConfig(updatedConfig);
       } else {
-        const errorMsg = response?.data?.message || '未知错误';
-        message.error(`连接测试失败：${errorMsg}`);
+        message.error(`连接测试失败：${response.data.message}`);
         setConnectionStatus('error');
       }
     } catch (error: any) {
       console.error('AI连接测试错误:', error);
-      // 尝试从error.response获取详细信息
-      let errorMessage = '未知错误';
-      if (error.response && error.response.data && error.response.data.message) {
-        errorMessage = error.response.data.message;
-      } else if (error.response && error.response.data && error.response.data.detail) {
-        errorMessage = error.response.data.detail;
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      message.error('连接测试失败：' + errorMessage);
+      message.error('连接测试失败：' + (error.response?.data?.detail || error.message));
       setConnectionStatus('error');
     } finally {
       setTesting(false);
@@ -339,7 +258,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             form={form}
             layout="vertical"
             onFinish={handleSubmit}
-            initialValues={DEFAULT_CONFIG}
             size="small"
           >
             <Form.Item
@@ -359,6 +277,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
               label="API地址"
               rules={[{ required: true, message: '请输入API地址' }]}
               tooltip="API请求地址"
+              initialValue="https://api.chatanywhere.tech/v1"
             >
               <Input placeholder="https://api.chatanywhere.tech/v1" />
             </Form.Item>
@@ -367,10 +286,11 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
               name="model"
               label="默认模型"
               rules={[{ required: true, message: '请选择默认模型' }]}
+              initialValue="claude-3-7-sonnet-20250219"
             >
               <Select placeholder="选择模型">
-                {AVAILABLE_MODELS.map(model => (
-                  <Option key={model} value={model}>{model}</Option>
+                {models.map(model => (
+                  <Option key={model.id} value={model.id}>{model.name}</Option>
                 ))}
               </Select>
             </Form.Item>
