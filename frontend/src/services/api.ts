@@ -61,7 +61,9 @@ api.interceptors.response.use(
     // 如果响应是统一格式（包含success字段），返回数据部分
     if (data && typeof data === 'object' && 'success' in data) {
       if (!data.success) {
-        throw new Error(data.message || 'API call failed');
+        const error: any = new Error(data.message || 'API call failed');
+        error.response = data; // 保留完整响应数据
+        throw error;
       }
       return data.data || data;
     }

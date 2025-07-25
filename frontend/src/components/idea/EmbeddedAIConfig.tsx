@@ -154,8 +154,15 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         message.error(`连接测试失败：${errorMsg}`);
         setConnectionStatus('error');
       }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
+    } catch (error: any) {
+      console.error('AI连接测试错误:', error);
+      // 尝试从error.response获取详细信息
+      let errorMessage = '未知错误';
+      if (error.response && error.response.message) {
+        errorMessage = error.response.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       message.error('连接测试失败：' + errorMessage);
       setConnectionStatus('error');
     } finally {
