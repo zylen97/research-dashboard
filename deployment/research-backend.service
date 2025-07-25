@@ -10,8 +10,8 @@ Environment="PATH=/usr/bin:/usr/local/bin"
 Environment="PYTHONPATH=/var/www/research-dashboard/backend"
 Environment="ENVIRONMENT=production"
 
-# Start command - 4 workers for better performance
-ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8080 --workers 4
+# Start command - single worker for stability
+ExecStart=/usr/bin/python3 -m uvicorn main:app --host 0.0.0.0 --port 8080 --log-level info
 
 # Restart policy
 Restart=always
