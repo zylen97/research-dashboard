@@ -108,37 +108,27 @@ check_service_health() {
     return 1
 }
 
-# API健康检查函数 - 修复版：不再直接退出
+# API健康检查函数 - 简化版：直接检查用户访问的端口
 check_api_health() {
-    local max_attempts=15  # 增加尝试次数
+    local max_attempts=8  # 减少尝试次数，避免过度重试
     local attempt=1
     
-    log_message "INFO" "检查API健康状态..."
+    log_message "INFO" "检查API健康状态(用户端口:3001)..."
     
     while [ $attempt -le $max_attempts ]; do
-        if curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
-            log_message "INFO" "✅ API健康检查通过"
+        # 同时检查后端直接端口和用户访问端口
+        if curl -f -s "http://localhost:8080/health" > /dev/null 2>&1 && \
+           curl -f -s "http://localhost:3001/api/" > /dev/null 2>&1; then
+            log_message "INFO" "✅ API健康检查通过(后端:8080 + 用户:3001)"
             return 0
         fi
         
         log_message "WARN" "⚠️ API检查失败，尝试 $attempt/$max_attempts"
-        
-        # 中途尝试重启服务
-        if [ $attempt -eq 5 ] || [ $attempt -eq 10 ]; then
-            log_message "INFO" "🔄 尝试重启后端服务以修复API..."
-            systemctl stop research-backend 2>/dev/null || true
-            sleep 3
-            systemctl start research-backend 2>/dev/null || true
-            sleep 8  # 给服务更多启动时间
-        else
-            sleep 5
-        fi
-        
+        sleep 8  # 统一等待时间，不再中途重启
         ((attempt++))
     done
     
-    # API检查失败时不再直接退出，记录错误并返回失败状态
-    log_message "ERROR" "❌ API健康检查失败，但继续执行恢复逻辑"
+    log_message "ERROR" "❌ API健康检查失败，但不阻塞部署"
     return 1
 }
 
@@ -474,56 +464,69 @@ else
     log_message "ERROR" "❌ 未找到nginx配置文件 deployment/nginx-3001.conf"
 fi
 
-# 5. 强制服务重启 (修复502问题)
-# Ultra Think 优化：每次部署都重启后端服务，确保服务状态正确
-log_message "INFO" "🔄 执行后端服务重启（确保服务状态正确）..."
+# 5. 智能服务重启 (修复502问题)
+# 只在后端代码真正变更时才重启服务，避免无意义的重启导致502
+log_message "INFO" "🔍 检测是否需要重启后端服务..."
 
-# 检测变更类型用于日志记录
+# 检测变更类型(含部署脚本)
 BACKEND_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "backend/" || echo "0")
 CONFIG_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -E "\.(env|py)$" | wc -l || echo "0")
 NGINX_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "nginx" || echo "0")
+DEPLOY_SCRIPT_CHANGED=$(git diff "$PREVIOUS_COMMIT" --name-only | grep -c "deploy-scripts/" || echo "0")
 
-log_message "INFO" "变更统计: 后端文件 $BACKEND_CHANGED 个, 配置文件 $CONFIG_CHANGED 个, nginx配置 $NGINX_CHANGED 个"
+log_message "INFO" "变更统计: 后端 $BACKEND_CHANGED个, 配置 $CONFIG_CHANGED个, nginx $NGINX_CHANGED个, 部署脚本 $DEPLOY_SCRIPT_CHANGED个"
+
+# 智能重启判断：后端/配置/部署脚本变更时才重启
+NEED_RESTART=false
+if [ "$BACKEND_CHANGED" -gt 0 ] || [ "$CONFIG_CHANGED" -gt 0 ] || [ "$DEPLOY_SCRIPT_CHANGED" -gt 0 ]; then
+    NEED_RESTART=true
+    log_message "INFO" "🔄 检测到后端/配置/部署脚本变更，需要重启服务"
+else
+    log_message "INFO" "✅ 无后端相关变更，跳过服务重启（避免502错误）"
+fi
 
 # 重新加载systemd配置
 systemctl daemon-reload || error_exit "重载systemd配置失败"
 
-# 优雅停止服务
-if systemctl is-active --quiet research-backend; then
-    log_message "INFO" "优雅停止后端服务..."
-    systemctl stop research-backend || error_exit "停止后端服务失败"
-    sleep 3
-fi
-
-# 启动服务 - 修复版：更健壮的启动流程
-log_message "INFO" "启动后端服务..."
-systemctl start research-backend
-
-# 增加启动等待时间，确保服务完全启动
-log_message "INFO" "等待服务完全启动（15秒）..."
-sleep 15
-
-# 验证服务启动 - 不再因健康检查失败而退出
-log_message "INFO" "验证服务启动状态..."
-if check_service_health "research-backend"; then
-    log_message "INFO" "✅ 服务健康检查通过"
-else
-    log_message "WARN" "⚠️ 服务健康检查失败，执行额外恢复尝试..."
+# 只在需要时重启服务
+if [ "$NEED_RESTART" = true ]; then
+    log_message "INFO" "🔄 执行必要的服务重启..."
     
-    # 额外的恢复尝试
-    systemctl stop research-backend 2>/dev/null || true
-    sleep 5
-    systemctl start research-backend 2>/dev/null || true
-    sleep 10
-    
+    # 优雅停止服务
     if systemctl is-active --quiet research-backend; then
-        log_message "INFO" "✅ 额外恢复尝试成功"
-    else
-        log_message "ERROR" "❌ 服务启动失败，将在后续步骤中继续尝试恢复"
+        log_message "INFO" "优雅停止后端服务..."
+        systemctl stop research-backend || error_exit "停止后端服务失败"
+        sleep 5  # 增加停止等待时间
+    fi
+    
+    # 启动服务
+    log_message "INFO" "启动后端服务..."
+    systemctl start research-backend
+    
+    # 大幅增加启动等待时间，确保服务完全启动
+    log_message "INFO" "等待服务完全启动（45秒）..."
+    sleep 45
+else
+    log_message "INFO" "✅ 服务无需重启，检查当前运行状态..."
+    if ! systemctl is-active --quiet research-backend; then
+        log_message "WARN" "⚠️ 服务未运行，执行启动..."
+        systemctl start research-backend
+        sleep 30
     fi
 fi
 
-log_message "INFO" "✅ 后端服务重启流程完成"
+# 简化服务状态检查 - 移除复杂的重试逻辑
+log_message "INFO" "验证服务最终状态..."
+if systemctl is-active --quiet research-backend; then
+    log_message "INFO" "✅ 后端服务运行正常"
+else
+    log_message "WARN" "⚠️ 后端服务未运行，记录错误信息"
+    journalctl -u research-backend -n 3 --no-pager | while read line; do
+        log_message "ERROR" "  $line"
+    done
+fi
+
+log_message "INFO" "✅ 服务状态检查完成"
 
 # 6. 系统健康检查 - 修复版：不因检查失败而中断
 log_message "INFO" "执行系统健康检查..."
@@ -597,104 +600,44 @@ echo "  systemctl status research-backend  # 查看后端状态"
 echo "  journalctl -u research-backend -f  # 查看实时日志"
 echo "  ./deploy-scripts/verify-deployment.sh  # 运行系统检查"
 echo "  ./deploy-scripts/rollback.sh       # 快速回滚"
-# 最终服务状态诊断和修复
-log_message "INFO" "🩺 执行最终服务状态诊断..."
+# 最终部署状态检查 - 简化版：不做多余的紧急修复
+log_message "INFO" "🔍 执行最终部署状态检查..."
 
-# 等待5秒确保服务完全启动
-sleep 5
+# 等待10秒确保所有服务稳定
+sleep 10
 
-# 检查后端服务是否真正运行 - 修复版：确保服务最终启动
-if ! systemctl is-active --quiet research-backend; then
-    log_message "ERROR" "❌ 后端服务未运行，执行紧急修复..."
+# 检查后端服务状态
+if systemctl is-active --quiet research-backend; then
+    log_message "INFO" "✅ 后端服务运行正常"
     
-    # 紧急修复：多次尝试重启
-    for attempt in 1 2 3; do
-        log_message "INFO" "🔄 紧急修复尝试 $attempt/3..."
-        systemctl stop research-backend 2>/dev/null || true
-        sleep 3
-        systemctl start research-backend 2>/dev/null || true
-        sleep 8
-        
-        if systemctl is-active --quiet research-backend; then
-            log_message "INFO" "✅ 紧急修复成功，后端服务已启动（尝试 $attempt/3）"
-            break
-        else
-            log_message "WARN" "⚠️ 尝试 $attempt/3 失败，继续..."
-        fi
-    done
-    
-    # 最终检查
-    if ! systemctl is-active --quiet research-backend; then
-        log_message "ERROR" "❌ 所有紧急修复尝试失败，查看服务日志："
-        journalctl -u research-backend -n 10 --no-pager | while read line; do
-            log_message "ERROR" "  $line"
-        done
-        log_message "ERROR" "🚨 服务无法启动，但脚本继续执行以完成部署"
+    # 检查API访问性(同时检查两个端口)
+    if curl -f -s "http://localhost:8080/health" > /dev/null 2>&1; then
+        log_message "INFO" "✅ 后端直接访问正常(8080)"
+    else
+        log_message "WARN" "⚠️ 后端直接访问异常(8080)"
     fi
-fi
-
-# 测试API是否可访问
-log_message "INFO" "测试API可访问性..."
-if curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
-    log_message "INFO" "✅ API测试成功，部署完成"
+    
+    if curl -f -s "http://localhost:3001/" > /dev/null 2>&1; then
+        log_message "INFO" "✅ 用户访问端口正常(3001)"
+    else
+        log_message "WARN" "⚠️ 用户访问端口异常(3001) - 可能是502问题"
+    fi
 else
-    log_message "ERROR" "❌ API测试失败，可能出现502错误"
-    
-    # 显示诊断信息
-    log_message "INFO" "诊断信息："
-    log_message "INFO" "  - 后端服务状态: $(systemctl is-active research-backend)"
-    log_message "INFO" "  - 端口8080占用: $(netstat -tulpn | grep :8080 | head -1 || echo '未占用')"
-    log_message "INFO" "  - 最近错误日志:"
-    journalctl -u research-backend -n 5 --no-pager | while read line; do
-        log_message "INFO" "    $line"
+    log_message "ERROR" "❌ 后端服务未运行"
+    log_message "INFO" "服务状态: $(systemctl is-active research-backend)"
+    log_message "INFO" "最近错误日志:"
+    journalctl -u research-backend -n 3 --no-pager | while read line; do
+        log_message "ERROR" "  $line"
     done
 fi
 
-# 如果API测试失败，执行最终紧急修复 - 修复版：绝不因修复失败而退出
-if ! curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
-    log_message "ERROR" "🚨 检测到502错误，执行最终紧急修复..."
-    
-    if [ -f "$PROJECT_ROOT/emergency-fix-502.sh" ]; then
-        log_message "INFO" "执行紧急修复脚本..."
-        bash "$PROJECT_ROOT/emergency-fix-502.sh" 2>&1 | while read line; do
-            log_message "FIX" "$line"
-        done || log_message "WARN" "紧急修复脚本执行失败，继续简单修复"
-    fi
-    
-    # 不管emergency-fix-502.sh是否存在或成功，都执行简单修复
-    log_message "INFO" "执行简单修复作为最后手段..."
-    
-    # 最终修复尝试：多轮重启
-    for final_attempt in 1 2; do
-        log_message "INFO" "🔄 最终修复尝试 $final_attempt/2..."
-        systemctl stop research-backend 2>/dev/null || true
-        sleep 5
-        systemctl start research-backend 2>/dev/null || true
-        sleep 12
-        
-        if curl -f -s "http://localhost:8080/docs" > /dev/null 2>&1; then
-            log_message "INFO" "✅ 最终修复成功（尝试 $final_attempt/2）"
-            break
-        elif [ $final_attempt -eq 2 ]; then
-            log_message "ERROR" "❌ 所有修复尝试失败"
-            log_message "ERROR" "📋 请手动检查以下内容："
-            log_message "ERROR" "   - journalctl -u research-backend -n 20"
-            log_message "ERROR" "   - systemctl status research-backend"
-            log_message "ERROR" "   - curl -v http://localhost:8080/docs"
-        fi
-    done
-fi
+# 显示系统诊断信息
+log_message "INFO" "📊 系统诊断信息:"
+log_message "INFO" "  - 后端服务: $(systemctl is-active research-backend)"
+log_message "INFO" "  - Nginx服务: $(systemctl is-active nginx)"
+log_message "INFO" "  - 端口占用: $(netstat -tulpn | grep -E ':8080|:3001' | wc -l)个"
+log_message "INFO" "  - 部署时间: $(date '+%Y-%m-%d %H:%M:%S')"
 
 echo ""
-log_message "INFO" "Research Dashboard 部署完成"
-
-# 执行Web诊断脚本
-log_message "INFO" "🔍 执行系统诊断并生成Web报告..."
-if [ -f "web-diagnostic.sh" ]; then
-    bash web-diagnostic.sh 2>&1 | while IFS= read -r line; do
-        log_message "DIAGNOSTIC" "$line"
-    done
-    log_message "INFO" "✅ 诊断报告已生成，访问地址: http://45.149.156.216:3001/diagnostic/"
-else
-    log_message "WARN" "⚠️ 未找到web-diagnostic.sh脚本"
-fi
+log_message "INFO" "✅ Research Dashboard 部署完成 - 简化版无过度修复"
+log_message "INFO" "🎉 访问地址: http://45.149.156.216:3001"
