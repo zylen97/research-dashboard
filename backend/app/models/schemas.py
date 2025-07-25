@@ -234,6 +234,7 @@ class AIProviderConfig(BaseModel):
 class AITestRequest(BaseModel):
     api_key: str
     api_url: Optional[str] = None
+    model: Optional[str] = None
     test_prompt: str = Field(default="Hello, please respond with 'API connection successful'")
     provider: Optional[str] = Field(default="custom", description="Legacy field for backward compatibility")
 

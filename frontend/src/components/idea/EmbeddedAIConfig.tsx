@@ -156,6 +156,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       const response = await api.post('/config/ai/test', {
         api_key: testConfig.api_key,
         api_url: testConfig.api_url,
+        model: testConfig.model,
         test_prompt: '你好，请回复"API连接成功"'
       });
       

@@ -8,6 +8,7 @@ deploy-scripts，这个文件夹里的东西不要修改！！！
 ```bash
 ./deploy-scripts/deploy.sh          # 全部部署
 ./deploy-scripts/deploy.sh --backend # 仅后端
+
 ```
 
 ## 📦 数据库修改

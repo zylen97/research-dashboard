@@ -35,7 +35,8 @@ async def get_configs(
     db: Session = Depends(get_db)
 ):
     """获取系统配置列表"""
-    current_user = require_admin(request)
+    # 允许所有登录用户访问配置列表
+    current_user = request.state.current_user
     
     query = db.query(SystemConfig)
     if category:
@@ -200,8 +201,10 @@ async def test_ai_connection(
             "Authorization": f"Bearer {test_request.api_key}",
             "Content-Type": "application/json"
         }
+        # 使用用户提供的模型，如果没有则默认使用gpt-3.5-turbo
+        model = test_request.model or "gpt-3.5-turbo"
         data = {
-            "model": "gpt-3.5-turbo",
+            "model": model,
             "messages": [{"role": "user", "content": test_request.test_prompt}],
             "max_tokens": 50
         }
