@@ -91,6 +91,7 @@ async def global_health_check():
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
         "environment": settings.ENVIRONMENT,
+        "deployment_test": "2025-07-25 10:30 - 测试部署功能",
         "endpoints": {
             "ideas_management": "/ideas-management/health",
             "auth": "/auth/login"
