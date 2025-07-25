@@ -3,11 +3,11 @@ node_modules/
 */node_modules/
 
 # Production builds
-build/
+frontend/build/
+backend/build/
 dist/
-*/build/
 */dist/
-frontend/build.tar.gz
+# frontend/build.tar.gz  # 已删除：允许构建文件推送到VPS
 
 # Environment variables
 .env
@@ -164,14 +164,16 @@ yarn.lock
 *-backup.sh  
 *-debug.sh
 *-temp.sh
-vps-*.sh
-debug-*.sh
-check-*.sh
+vps-temp-*.sh
+vps-debug-*.sh
+debug-temp-*.sh
+check-temp-*.sh
 temp-*.sh
 
 # 部署过程中的临时文件
 .deploy*
-deployment*
+deployment_temp*
+deployment_backup*
 *.deploy.tmp
 *_check.sh
 *_backup.sh
