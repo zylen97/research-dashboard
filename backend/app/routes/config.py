@@ -263,6 +263,7 @@ async def test_ai_connection(
             "model": "gpt-3.5-turbo",
             "messages": [{"role": "user", "content": test_request.test_prompt}],
             "max_tokens": 50
+        }
         
         # 发送测试请求
         async with httpx.AsyncClient(timeout=30.0) as client:
