@@ -147,19 +147,29 @@ class BackupManager:
             cursor.execute("SELECT COUNT(*) FROM communication_logs")
             logs_count = cursor.fetchone()[0]
             
+            # 统计Ideas数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM simple_ideas")
+                ideas_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                # 如果simple_ideas表不存在（旧备份），设为0
+                ideas_count = 0
+            
             conn.close()
             
             return {
                 "collaborators_count": collaborators_count,
                 "projects_count": projects_count,
-                "logs_count": logs_count
+                "logs_count": logs_count,
+                "ideas_count": ideas_count
             }
         except Exception as e:
             logger.warning(f"无法读取备份数据统计: {e}")
             return {
                 "collaborators_count": 0,
                 "projects_count": 0,
-                "logs_count": 0
+                "logs_count": 0,
+                "ideas_count": 0
             }
     
     def _cleanup_old_backups(self):

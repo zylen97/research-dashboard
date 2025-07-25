@@ -49,7 +49,8 @@ async def list_backups(current_user: User = Depends(get_current_user)) -> Dict[s
                 "details": backup.get("details", ""),
                 "collaborators_count": backup.get("collaborators_count", 0),
                 "projects_count": backup.get("projects_count", 0),
-                "logs_count": backup.get("logs_count", 0)
+                "logs_count": backup.get("logs_count", 0),
+                "ideas_count": backup.get("ideas_count", 0)
             })
         
         return {

@@ -30,6 +30,7 @@ import {
   ProjectOutlined,
   MessageOutlined,
   ExclamationCircleOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import api from '../services/api';
@@ -255,6 +256,20 @@ const DatabaseBackup: React.FC = () => {
         </Space>
       ),
       sorter: (a: BackupItem, b: BackupItem) => (a.logs_count || 0) - (b.logs_count || 0),
+    },
+    {
+      title: 'Ideas',
+      dataIndex: 'ideas_count',
+      key: 'ideas',
+      render: (count: number) => (
+        <Space>
+          <BulbOutlined />
+          <Tag color={count === 0 ? 'warning' : 'success'}>
+            {count || 0}
+          </Tag>
+        </Space>
+      ),
+      sorter: (a: BackupItem, b: BackupItem) => (a.ideas_count || 0) - (b.ideas_count || 0),
     },
     {
       title: '操作',

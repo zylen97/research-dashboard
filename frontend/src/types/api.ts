@@ -28,6 +28,7 @@ export interface BackupItem {
   collaborators_count?: number;  // 合作者数量
   projects_count?: number;       // 项目数量  
   logs_count?: number;           // 交流日志数量
+  ideas_count?: number;          // Ideas数量
 }
 
 export interface BackupListResponse {
