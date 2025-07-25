@@ -147,7 +147,7 @@ const SimpleIdeasPage: React.FC = () => {
       title: '研究问题',
       dataIndex: 'research_question',
       key: 'research_question',
-      width: '20%',
+      width: '18%',
       render: (text: string) => (
         <Text style={{ wordBreak: 'break-word' }}>
           {text}
@@ -158,34 +158,34 @@ const SimpleIdeasPage: React.FC = () => {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
-      width: '15%',
+      width: '13%',
       ellipsis: true,
     },
     {
       title: '来源期刊',
       dataIndex: 'source_journal',
       key: 'source_journal',
-      width: '15%',
+      width: '13%',
       ellipsis: true,
     },
     {
       title: '来源文献',
       dataIndex: 'source_literature',
       key: 'source_literature',
-      width: '15%',
+      width: '13%',
       ellipsis: true,
     },
     {
       title: '负责人',
       dataIndex: 'responsible_person',
       key: 'responsible_person',
-      width: '10%',
+      width: '8%',
     },
     {
       title: '成熟度',
       dataIndex: 'maturity',
       key: 'maturity',
-      width: '10%',
+      width: '8%',
       render: renderMaturity,
       filters: [
         { text: '成熟', value: 'mature' },
@@ -197,14 +197,14 @@ const SimpleIdeasPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: '10%',
+      width: '9%',
       render: (date: string) => new Date(date).toLocaleDateString(),
       sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     },
     {
       title: '操作',
       key: 'action',
-      width: '10%',
+      width: '18%',
       render: (_, record) => (
         <Space size="middle">
           <Button
