@@ -126,7 +126,7 @@ const IdeaDiscovery: React.FC = () => {
           研究Idea发掘与AI配置中心
         </Title>
         <Paragraph type="secondary">
-          配置AI提供商，上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
+          配置AI，上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 

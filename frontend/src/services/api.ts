@@ -309,15 +309,15 @@ export const configApi = {
   deleteConfig: (id: number): Promise<{ message: string }> =>
     api.delete(`/config/${id}`),
 
-  // 获取AI提供商列表
+  // 获取AI配置列表
   getAIProviders: (): Promise<AIProvider[]> =>
     api.get('/config/ai/providers'),
 
-  // 创建AI提供商配置
+  // 创建AI配置
   createAIProvider: (data: AIProviderCreate): Promise<SystemConfig> =>
     api.post('/config/ai/providers', data),
 
-  // 测试AI提供商连接
+  // 测试AI连接
   testAIProvider: (data: {
     api_key: string;
     api_url?: string;

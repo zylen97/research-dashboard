@@ -415,7 +415,7 @@ const AIConfigPanel: React.FC = () => {
                     fontSize: '14px'
                   }}>
                     <RobotOutlined style={{ fontSize: '24px', marginBottom: '8px' }} />
-                    <div>选择AI提供商开始对话测试</div>
+                    <div>配置AI开始对话测试</div>
                   </div>
                 ) : (
                   <List
