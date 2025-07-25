@@ -42,15 +42,21 @@ if [ -f "frontend/build.tar.gz" ]; then
     log "发现前端构建文件，开始部署前端..."
     cd frontend
     
-    # 清理旧的build目录
-    rm -rf build/*
+    # 创建临时目录用于解压
+    rm -rf build_temp
+    mkdir build_temp
+    cd build_temp
     
-    # 解压构建文件
-    tar -xzf build.tar.gz || error_exit "前端构建文件解压失败"
+    # 解压构建文件到临时目录
+    tar -xzf ../build.tar.gz || error_exit "前端构建文件解压失败"
     
     # 清理并部署到Web目录
     rm -rf /var/www/html/*
-    cp -r build/* /var/www/html/ || error_exit "前端文件复制失败"
+    cp -r * /var/www/html/ || error_exit "前端文件复制失败"
+    
+    # 返回上级目录并清理临时目录
+    cd ..
+    rm -rf build_temp
     chown -R www-data:www-data /var/www/html
     
     log "前端部署完成"
