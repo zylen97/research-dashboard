@@ -620,15 +620,41 @@ if systemctl is-active --quiet research-backend; then
     if curl -f -s "http://localhost:3001/" > /dev/null 2>&1; then
         log_message "INFO" "✅ 用户访问端口正常(3001)"
     else
-        log_message "WARN" "⚠️ 用户访问端口异常(3001) - 可能是502问题"
+        log_message "WARN" "⚠️ 用户访问端口异常(3001) - 检测到502问题，调用紧急修复"
+        
+        # API测试失败时也调用紧急修复
+        if [ -f "$PROJECT_ROOT/emergency-fix-502.sh" ]; then
+            log_message "INFO" "🚨 API异常，执行紧急修复..."
+            bash "$PROJECT_ROOT/emergency-fix-502.sh" 2>&1 | while IFS= read -r line; do
+                log_message "EMERGENCY" "$line"
+            done
+        fi
     fi
 else
-    log_message "ERROR" "❌ 后端服务未运行"
+    log_message "ERROR" "❌ 后端服务未运行，立即执行紧急修复！"
     log_message "INFO" "服务状态: $(systemctl is-active research-backend)"
     log_message "INFO" "最近错误日志:"
     journalctl -u research-backend -n 3 --no-pager | while read line; do
         log_message "ERROR" "  $line"
     done
+    
+    # 立即调用紧急修复脚本
+    if [ -f "$PROJECT_ROOT/emergency-fix-502.sh" ]; then
+        log_message "INFO" "🚨 执行紧急修复脚本..."
+        bash "$PROJECT_ROOT/emergency-fix-502.sh" 2>&1 | while IFS= read -r line; do
+            log_message "EMERGENCY" "$line"
+        done
+        
+        # 检查紧急修复是否成功
+        sleep 5
+        if systemctl is-active --quiet research-backend; then
+            log_message "INFO" "✅ 紧急修复成功！服务已恢复"
+        else
+            log_message "ERROR" "❌ 紧急修复失败，需要手动干预"
+        fi
+    else
+        log_message "ERROR" "❌ 紧急修复脚本不存在: $PROJECT_ROOT/emergency-fix-502.sh"
+    fi
 fi
 
 # 显示系统诊断信息
