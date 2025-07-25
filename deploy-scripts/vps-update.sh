@@ -97,11 +97,32 @@ log "重启后端服务..."
 systemctl daemon-reload
 systemctl restart research-backend || error_exit "服务重启失败"
 
-# 6. 等待服务启动
+# 6. 更新nginx配置（如果有更新）
+if [ -f "../deployment/nginx-3001.conf" ]; then
+    log "检测到nginx配置文件，更新nginx配置..."
+    
+    # 备份当前配置
+    if [ -f "/etc/nginx/sites-available/research-dashboard-3001" ]; then
+        cp /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-available/research-dashboard-3001.backup.$(date +%Y%m%d_%H%M%S)
+    fi
+    
+    # 复制新配置
+    cp ../deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
+    
+    # 测试nginx配置
+    if nginx -t; then
+        systemctl reload nginx
+        log "✅ Nginx配置已更新"
+    else
+        log "⚠️  Nginx配置测试失败，保持原配置"
+    fi
+fi
+
+# 7. 等待服务启动
 log "等待服务启动..."
 sleep 10
 
-# 7. 检查服务状态
+# 8. 检查服务状态
 if systemctl is-active --quiet research-backend; then
     log "✅ 服务启动成功"
     
@@ -115,7 +136,7 @@ else
     error_exit "服务启动失败，查看日志: journalctl -u research-backend -n 50"
 fi
 
-# 8. 显示部署结果
+# 9. 显示部署结果
 echo ""
 echo -e "${GREEN}=== 部署完成 ===${NC}"
 echo -e "访问地址: ${GREEN}http://45.149.156.216:3001${NC}"
