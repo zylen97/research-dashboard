@@ -183,7 +183,18 @@ async def test_ai_connection(
     
     try:
         # 统一使用OpenAI兼容接口
-        api_url = test_request.api_url or "https://api.chatanywhere.tech/v1/chat/completions"
+        base_url = test_request.api_url or "https://api.chatanywhere.tech/v1"
+        # 确保URL以/v1结尾，并拼接完整的端点路径
+        if not base_url.endswith('/'):
+            base_url += '/'
+        if base_url.endswith('/v1/'):
+            api_url = base_url + 'chat/completions'
+        elif base_url.endswith('/v1'):
+            api_url = base_url + '/chat/completions'
+        else:
+            # 如果不是标准的/v1格式，假设用户提供了完整URL
+            api_url = base_url
+        
         headers = {
             "Authorization": f"Bearer {test_request.api_key}",
             "Content-Type": "application/json"

@@ -1,5 +1,5 @@
 不要直接git！部署到vps用deploy！！！
-deploy-scripts，这个文件夹里的东西不要修改
+deploy-scripts，这个文件夹里的东西不要修改！！！
 以后所有迁移都必须写在 migration.py 里！
 
 # Research Dashboard 项目规范

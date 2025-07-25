@@ -51,7 +51,22 @@ class AIService:
     
     async def call_openai_api(self, config: Dict[str, Any], prompt: str, data_context: str = None) -> Dict[str, Any]:
         """调用OpenAI API"""
-        api_url = config.get('api_url', 'https://api.openai.com/v1/chat/completions')
+        # 处理API URL
+        base_url = config.get('api_url', 'https://api.openai.com/v1')
+        # 确保URL正确拼接
+        if not base_url.endswith('/'):
+            base_url += '/'
+        if base_url.endswith('/v1/'):
+            api_url = base_url + 'chat/completions'
+        elif base_url.endswith('/v1'):
+            api_url = base_url + '/chat/completions'
+        elif '/chat/completions' in base_url:
+            # 如果已经包含完整路径，直接使用
+            api_url = base_url
+        else:
+            # 其他情况，假设需要添加/chat/completions
+            api_url = base_url.rstrip('/') + '/chat/completions'
+            
         api_key = config.get('api_key')
         model = config.get('model', 'gpt-3.5-turbo')
         max_tokens = config.get('max_tokens', 1500)
