@@ -103,22 +103,43 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
 
   const handleSubmit = async (values: AIConfig) => {
     try {
-      // 保存配置
-      await api.post('/config/', {
-        key: 'main_ai_config',
-        value: JSON.stringify(values),
-        category: 'ai_config',
-        description: 'Main AI Configuration',
-        is_active: true
+      // 先检查配置是否存在
+      const existingConfigs = await api.get('/config/', {
+        params: { category: 'ai_config' }
       });
+      const existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
+      
+      if (existingConfig) {
+        // 如果配置已存在，使用PUT更新
+        await api.put(`/config/${existingConfig.id}`, {
+          value: JSON.stringify(values),
+          is_active: true
+        });
+      } else {
+        // 如果配置不存在，使用POST创建
+        await api.post('/config/', {
+          key: 'main_ai_config',
+          value: JSON.stringify(values),
+          category: 'ai_config',
+          description: 'Main AI Configuration',
+          is_active: true,
+          is_encrypted: true
+        });
+      }
       
       setConfig(values);
       message.success('AI配置保存成功');
       
       // 自动测试连接
       await testConnection(values);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
+    } catch (error: any) {
+      console.error('保存配置失败:', error);
+      let errorMessage = '未知错误';
+      if (error.response && error.response.detail) {
+        errorMessage = error.response.detail;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
       message.error('保存配置失败：' + errorMessage);
     }
   };
@@ -144,10 +165,17 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         
         // 更新配置状态
         const updatedConfig = { ...testConfig, is_connected: true };
-        await api.put('/config/', {
-          key: 'main_ai_config',
-          value: JSON.stringify(updatedConfig)
+        // 获取现有配置以确定是否需要更新
+        const existingConfigs = await api.get('/config/', {
+          params: { category: 'ai_config' }
         });
+        const existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
+        
+        if (existingConfig) {
+          await api.put(`/config/${existingConfig.id}`, {
+            value: JSON.stringify(updatedConfig)
+          });
+        }
         setConfig(updatedConfig);
       } else {
         const errorMsg = response?.data?.message || '未知错误';
