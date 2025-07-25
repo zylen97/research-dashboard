@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 创建用户API设置表
-MIGRATION_VERSION = "v1.26_create_user_api_settings"
+# 迁移版本号 - 创建简化版ideas表
+MIGRATION_VERSION = "v1.27_create_simple_ideas"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,78 +85,90 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.26迁移任务：创建用户API设置表
-        # 用户需求：简化API设置管理，每个用户独立设置 - 2025-07-25
+        # 🔧 v1.27迁移任务：创建简化版ideas管理表
+        # 用户需求：简化ideas管理，负责人改为文本输入 - 2025-07-25
         # ===========================================
         
-        logger.info("🔧 开始v1.26迁移：创建用户API设置表...")
-        logger.info("🎯 目标：为每个用户创建独立的API设置存储")
+        logger.info("🔧 开始v1.27迁移：创建简化版ideas管理表...")
+        logger.info("🎯 目标：创建独立的simple_ideas表，不与其他表关联")
         
-        # 第一步：创建user_api_settings表
-        logger.info("📋 创建user_api_settings表...")
+        # 第一步：创建simple_ideas表
+        logger.info("📋 创建simple_ideas表...")
         
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS user_api_settings (
-                user_id INTEGER PRIMARY KEY,
-                api_key TEXT,
-                api_base TEXT DEFAULT 'https://api.chatanywhere.tech/v1',
-                model TEXT DEFAULT 'claude-3-7-sonnet-20250219',
+            CREATE TABLE IF NOT EXISTS simple_ideas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                research_question TEXT NOT NULL,
+                research_method TEXT NOT NULL,
+                source_journal TEXT NOT NULL,
+                source_literature TEXT NOT NULL,
+                responsible_person TEXT NOT NULL,
+                maturity TEXT DEFAULT 'immature' CHECK(maturity IN ('mature', 'immature')),
+                description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
         
-        logger.info("✅ user_api_settings表创建成功")
+        logger.info("✅ simple_ideas表创建成功")
         
-        # 第二步：从system_config迁移现有的AI配置
-        logger.info("🔍 检查是否需要迁移现有配置...")
+        # 第二步：创建更新时间触发器
+        logger.info("📋 创建更新时间触发器...")
         
-        if table_exists(cursor, 'system_config'):
+        cursor.execute("""
+            CREATE TRIGGER IF NOT EXISTS update_simple_ideas_timestamp 
+            AFTER UPDATE ON simple_ideas
+            FOR EACH ROW
+            BEGIN
+                UPDATE simple_ideas SET updated_at = CURRENT_TIMESTAMP 
+                WHERE id = NEW.id;
+            END
+        """)
+        
+        logger.info("✅ 触发器创建成功")
+        
+        # 第三步：从旧的ideas表迁移数据（如果存在）
+        logger.info("🔍 检查是否需要迁移旧数据...")
+        
+        if table_exists(cursor, 'ideas'):
             cursor.execute("""
-                SELECT value 
-                FROM system_config 
-                WHERE key = 'main_ai_config' AND category = 'ai_config'
+                SELECT COUNT(*) FROM ideas
             """)
-            ai_config_row = cursor.fetchone()
+            old_count = cursor.fetchone()[0]
             
-            if ai_config_row:
-                try:
-                    import json
-                    config = json.loads(ai_config_row[0])
-                    
-                    # 获取所有用户
-                    cursor.execute("SELECT id FROM users")
-                    users = cursor.fetchall()
-                    
-                    for user in users:
-                        user_id = user[0]
-                        logger.info(f"📝 为用户 {user_id} 迁移配置...")
-                        
-                        # 插入配置（如果不存在）
-                        cursor.execute("""
-                            INSERT OR IGNORE INTO user_api_settings 
-                            (user_id, api_key, api_base, model)
-                            VALUES (?, ?, ?, ?)
-                        """, (
-                            user_id,
-                            config.get('api_key', 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY'),
-                            config.get('api_url', 'https://api.chatanywhere.tech/v1'),
-                            config.get('model', 'claude-3-7-sonnet-20250219')
-                        ))
-                    
-                    logger.info(f"✅ 成功为 {len(users)} 个用户迁移配置")
-                    
-                except Exception as e:
-                    logger.warning(f"⚠️ 迁移现有配置时出错: {e}")
+            if old_count > 0:
+                logger.info(f"📝 发现 {old_count} 条旧数据，开始迁移...")
+                
+                cursor.execute("""
+                    INSERT INTO simple_ideas 
+                    (research_question, research_method, source_journal, 
+                     source_literature, responsible_person, maturity, 
+                     description, created_at, updated_at)
+                    SELECT 
+                        i.research_question,
+                        i.research_method,
+                        i.source_journal,
+                        i.source_literature,
+                        COALESCE(c.name, '未分配') as responsible_person,
+                        i.maturity,
+                        i.description,
+                        i.created_at,
+                        i.updated_at
+                    FROM ideas i
+                    LEFT JOIN collaborators c ON i.collaborator_id = c.id
+                """)
+                
+                logger.info(f"✅ 成功迁移 {old_count} 条数据")
             else:
-                logger.info("ℹ️ 没有找到现有AI配置，跳过迁移")
+                logger.info("ℹ️ 旧表没有数据，跳过迁移")
+        else:
+            logger.info("ℹ️ 没有找到旧的ideas表，跳过迁移")
         
-        # 第三步：验证迁移结果
+        # 第四步：验证迁移结果
         logger.info("🔍 验证迁移结果...")
-        cursor.execute("SELECT COUNT(*) FROM user_api_settings")
+        cursor.execute("SELECT COUNT(*) FROM simple_ideas")
         count = cursor.fetchone()[0]
-        logger.info(f"✅ user_api_settings表中有 {count} 条记录")
+        logger.info(f"✅ simple_ideas表中有 {count} 条记录")
         
         # 提交更改并标记完成
         conn.commit()
@@ -165,11 +177,12 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("=" * 70)
-        logger.info("🎉 v1.26 用户API设置表创建完成！")
-        logger.info("✅ 创建了user_api_settings表")
-        logger.info("✅ 每个用户可以独立管理API设置")
-        logger.info("✅ 从system_config迁移了现有配置")
-        logger.info("🚀 API设置管理更加灵活和安全")
+        logger.info("🎉 v1.27 简化版ideas管理表创建完成！")
+        logger.info("✅ 创建了simple_ideas表")
+        logger.info("✅ 负责人改为文本字段")
+        logger.info("✅ 成熟度只有成熟/不成熟两个选项")
+        logger.info("✅ 完全独立，不依赖其他表")
+        logger.info("🚀 Ideas管理更加简单直观")
         logger.info("=" * 70)
         
         conn.close()

@@ -1,9 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, validation, audit, auth, backup, config, ideas
+from app.routes import research, collaborators, validation, audit, auth, backup, config
 from app.routes import idea_discovery
 from app.routes import settings as settings_routes
+from app.routes import simple_ideas
 from app.utils.db_init import init_database, init_users, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
 from app.middleware.error_handler import setup_exception_handlers
@@ -72,12 +73,12 @@ app.include_router(auth.router, prefix="/auth", tags=["authentication"])
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/collaborators", tags=["collaborators"])
 app.include_router(idea_discovery.router, prefix="/ideas", tags=["idea-discovery"])
-app.include_router(ideas.router, prefix="/ideas-management", tags=["ideas-management"])
 app.include_router(validation.router, prefix="/validation", tags=["validation"])
 app.include_router(audit.router, prefix="/audit", tags=["audit"])
 app.include_router(backup.router, prefix="/backup", tags=["backup"])
 app.include_router(config.router, prefix="/config", tags=["configuration"])
 app.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
+app.include_router(simple_ideas.router, prefix="/simple-ideas", tags=["simple-ideas"])
 
 @app.get("/")
 async def root():
