@@ -33,18 +33,18 @@ export interface Model {
 // Settings API 服务
 export const settingsApi = {
   // 获取当前用户的API设置
-  getSettings: () => 
-    api.get<APISettings>('/settings/'),
+  getSettings: (): Promise<APISettings> => 
+    api.get('/settings/'),
 
   // 更新API设置
-  updateApiSettings: (data: APISettings) =>
-    api.put<APISettings>('/settings/api', data),
+  updateApiSettings: (data: APISettings): Promise<APISettings> =>
+    api.put('/settings/api', data),
 
   // 测试API连接
-  testConnection: (data: APITestRequest) =>
-    api.post<APITestResponse>('/settings/test', data),
+  testConnection: (data: APITestRequest): Promise<APITestResponse> =>
+    api.post('/settings/test', data),
 
   // 获取可用模型列表
-  getModels: () =>
-    api.get<{ models: Model[] }>('/settings/models'),
+  getModels: (): Promise<{ models: Model[] }> =>
+    api.get('/settings/models'),
 };

@@ -60,8 +60,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const fetchConfig = async () => {
     setLoading(true);
     try {
-      const response = await settingsApi.getSettings();
-      const apiSettings = response.data;
+      const apiSettings = await settingsApi.getSettings();
       
       const configData: AIConfig = {
         api_key: apiSettings.api_key,
@@ -98,9 +97,17 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const fetchModels = async () => {
     try {
       const response = await settingsApi.getModels();
-      setModels(response.data.models);
+      setModels(response.models || []);
     } catch (error) {
       console.error('获取模型列表失败:', error);
+      // 设置默认模型列表
+      setModels([
+        {
+          id: "claude-3-7-sonnet-20250219",
+          name: "Claude 3.7 Sonnet",
+          description: "高性能多模态模型"
+        }
+      ]);
     }
   };
 
@@ -114,12 +121,12 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         model: values.model
       };
       
-      await settingsApi.updateApiSettings(apiSettings);
+      const updatedSettings = await settingsApi.updateApiSettings(apiSettings);
       
       const newConfig: AIConfig = {
-        api_key: values.api_key,
-        api_url: values.api_url,
-        model: values.model,
+        api_key: updatedSettings.api_key,
+        api_url: updatedSettings.api_base,
+        model: updatedSettings.model,
         is_connected: true
       };
       
@@ -151,7 +158,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         model: testConfig.model || 'claude-3-7-sonnet-20250219'
       });
       
-      if (response.data.success) {
+      if (response.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
         
@@ -159,7 +166,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
           setConfig({ ...config, is_connected: true });
         }
       } else {
-        message.error(`连接测试失败：${response.data.message}`);
+        message.error(`连接测试失败：${response.message}`);
         setConnectionStatus('error');
       }
     } catch (error: any) {
