@@ -63,7 +63,8 @@ async def get_config(
     db: Session = Depends(get_db)
 ):
     """获取单个配置"""
-    current_user = require_admin(request)
+    # 允许所有登录用户访问
+    current_user = request.state.current_user
     
     config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not config:
@@ -87,7 +88,8 @@ async def create_config(
     db: Session = Depends(get_db)
 ):
     """创建新配置"""
-    current_user = require_admin(request)
+    # 允许所有登录用户创建配置
+    current_user = request.state.current_user
     
     # 检查key是否已存在
     existing = db.query(SystemConfig).filter(SystemConfig.key == config.key).first()
@@ -123,7 +125,8 @@ async def update_config(
     db: Session = Depends(get_db)
 ):
     """更新配置"""
-    current_user = require_admin(request)
+    # 允许所有登录用户更新配置
+    current_user = request.state.current_user
     
     db_config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not db_config:
@@ -160,7 +163,8 @@ async def delete_config(
     db: Session = Depends(get_db)
 ):
     """删除配置"""
-    current_user = require_admin(request)
+    # 允许所有登录用户删除配置
+    current_user = request.state.current_user
     
     db_config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not db_config:
