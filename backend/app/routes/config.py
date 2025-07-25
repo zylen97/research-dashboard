@@ -179,7 +179,8 @@ async def test_ai_connection(
     test_request: AITestRequest
 ):
     """测试AI API连接"""
-    current_user = require_admin(request)
+    # 不需要管理员权限，所有已登录用户都可以测试AI连接
+    current_user = request.state.current_user
     
     try:
         # 统一使用OpenAI兼容接口
