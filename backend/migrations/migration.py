@@ -140,7 +140,7 @@ def run_migration():
                             VALUES (?, ?, ?, ?)
                         """, (
                             user_id,
-                            config.get('api_key', ''),
+                            config.get('api_key', 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY'),
                             config.get('api_url', 'https://api.chatanywhere.tech/v1'),
                             config.get('model', 'claude-3-7-sonnet-20250219')
                         ))

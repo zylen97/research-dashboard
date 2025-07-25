@@ -89,7 +89,7 @@ async def get_settings(
     else:
         # 返回默认设置
         return APISettings(
-            api_key="",
+            api_key="sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY",
             api_base="https://api.chatanywhere.tech/v1",
             model="claude-3-7-sonnet-20250219"
         )

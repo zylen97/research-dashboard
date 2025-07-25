@@ -82,7 +82,14 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       }
     } catch (error) {
       console.error('获取API配置失败:', error);
-      message.error('获取配置失败');
+      // 设置默认值
+      const defaultConfig = {
+        api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
+        api_url: 'https://api.chatanywhere.tech/v1',
+        model: 'claude-3-7-sonnet-20250219'
+      };
+      setConfig(defaultConfig);
+      form.setFieldsValue(defaultConfig);
     } finally {
       setLoading(false);
     }
