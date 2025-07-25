@@ -8,6 +8,7 @@ import {
   message,
   Typography,
   Alert,
+  Select,
   Spin,
   Collapse,
   Tag
@@ -23,6 +24,19 @@ import api from '../../services/api';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
+const { Option } = Select;
+
+// 可用模型列表
+const AVAILABLE_MODELS = [
+  'claude-3-7-sonnet-20250219',
+  'claude-sonnet-4-20250514',
+  'claude-opus-4-20250514-thinking', 
+  'claude-opus-4-20250514',
+  'deepseek-v3',
+  'deepseek-r1',
+  'gpt-4.1',
+  'gpt-4o'
+];
 
 // 默认配置
 const DEFAULT_CONFIG = {
@@ -124,7 +138,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         test_prompt: '你好，请回复"API连接成功"'
       });
       
-      if (response.data.success) {
+      if (response && response.data && response.data.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
         
@@ -136,7 +150,8 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         });
         setConfig(updatedConfig);
       } else {
-        message.error(`连接测试失败：${response.data.message}`);
+        const errorMsg = response?.data?.message || '未知错误';
+        message.error(`连接测试失败：${errorMsg}`);
         setConnectionStatus('error');
       }
     } catch (error) {
@@ -269,9 +284,13 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             <Form.Item
               name="model"
               label="默认模型"
-              rules={[{ required: true, message: '请输入默认模型' }]}
+              rules={[{ required: true, message: '请选择默认模型' }]}
             >
-              <Input placeholder="输入模型名称，如 claude-3-7-sonnet-20250219" />
+              <Select placeholder="选择模型">
+                {AVAILABLE_MODELS.map(model => (
+                  <Option key={model} value={model}>{model}</Option>
+                ))}
+              </Select>
             </Form.Item>
 
             <Form.Item>
