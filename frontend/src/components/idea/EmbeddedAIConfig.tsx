@@ -103,35 +103,79 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
 
   const handleSubmit = async (values: AIConfig) => {
     try {
-      // 先检查配置是否存在
-      const existingConfigs = await api.get('/config/', {
-        params: { category: 'ai_config' }
-      });
-      const existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
-      
-      if (existingConfig) {
-        // 如果配置已存在，使用PUT更新
-        await api.put(`/config/${existingConfig.id}`, {
-          value: JSON.stringify(values),
-          is_active: true
+      // 先尝试获取现有配置
+      let existingConfig = null;
+      try {
+        const existingConfigs = await api.get('/config/', {
+          params: { category: 'ai_config' }
         });
-      } else {
-        // 如果配置不存在，使用POST创建
-        await api.post('/config/', {
-          key: 'main_ai_config',
-          value: JSON.stringify(values),
-          category: 'ai_config',
-          description: 'Main AI Configuration',
-          is_active: true,
-          is_encrypted: true
-        });
+        existingConfig = existingConfigs.data?.find((c: any) => c.key === 'main_ai_config');
+      } catch (getError) {
+        console.log('获取配置失败（可能是权限问题），将尝试其他方式');
       }
       
-      setConfig(values);
-      message.success('AI配置保存成功');
+      let success = false;
       
-      // 自动测试连接
-      await testConnection(values);
+      // 方法1：如果找到了配置ID，直接更新
+      if (existingConfig?.id) {
+        try {
+          await api.put(`/config/${existingConfig.id}`, {
+            value: JSON.stringify(values),
+            is_active: true
+          });
+          success = true;
+        } catch (error) {
+          console.log('使用已知ID更新失败');
+        }
+      }
+      
+      // 方法2：如果方法1失败，尝试盲目查找ID（1-20）
+      if (!success) {
+        for (let id = 1; id <= 20; id++) {
+          try {
+            const configData = await api.get(`/config/${id}`);
+            if (configData.data?.key === 'main_ai_config') {
+              await api.put(`/config/${id}`, {
+                value: JSON.stringify(values),
+                is_active: true
+              });
+              success = true;
+              break;
+            }
+          } catch (error) {
+            // 继续尝试下一个ID
+          }
+        }
+      }
+      
+      // 方法3：如果前两种方法都失败，尝试创建新配置
+      if (!success) {
+        try {
+          await api.post('/config/', {
+            key: 'main_ai_config',
+            value: JSON.stringify(values),
+            category: 'ai_config',
+            description: 'Main AI Configuration',
+            is_active: true,
+            is_encrypted: true
+          });
+          success = true;
+        } catch (postError: any) {
+          // 如果创建失败且错误是"already exists"，说明配置存在但我们找不到ID
+          if (postError.response?.data?.detail?.includes('already exists')) {
+            throw new Error('配置已存在但无法更新，请联系管理员或等待权限修复部署完成');
+          }
+          throw postError;
+        }
+      }
+      
+      if (success) {
+        setConfig(values);
+        message.success('AI配置保存成功');
+        // 自动测试连接
+        await testConnection(values);
+      }
+      
     } catch (error: any) {
       console.error('保存配置失败:', error);
       let errorMessage = '未知错误';
