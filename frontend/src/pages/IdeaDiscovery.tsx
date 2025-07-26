@@ -21,8 +21,6 @@ import {
 import { ideaDiscoveryApi, promptsApi } from '../services/api';
 import EmbeddedAIConfig from '../components/idea/EmbeddedAIConfig';
 import PromptManagement from '../components/idea/PromptManagement';
-import ChatPanel from '../components/idea/ChatPanel';
-import { settingsApi } from '../services/settingsApi';
 import { Prompt } from '../types';
 
 const { Title, Text, Paragraph } = Typography;
@@ -49,7 +47,6 @@ const IdeaDiscovery: React.FC = () => {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<number>(0);
-  const [testResult, setTestResult] = useState<string | null>(null);
   
   // Prompts相关状态
   const [prompts, setPrompts] = useState<Prompt[]>([]);
@@ -78,27 +75,6 @@ const IdeaDiscovery: React.FC = () => {
   React.useEffect(() => {
     loadPrompts();
   }, []);
-
-  // 处理聊天消息发送
-  const handleSendChatMessage = async (message: string): Promise<string> => {
-    try {
-      const response = await settingsApi.sendChatMessage(message);
-      if (response.success) {
-        return response.response;
-      } else {
-        throw new Error(response.message || 'AI回复失败');
-      }
-    } catch (error: any) {
-      console.error('聊天请求失败:', error);
-      const errorMessage = error.response?.data?.message || error.message || '聊天服务不可用';
-      throw new Error(errorMessage);
-    }
-  };
-
-  // 处理测试连接成功
-  const handleTestSuccess = (result: string) => {
-    setTestResult(result);
-  };
 
   // 处理文件选择
   const handleFileSelect = (file: File) => {
@@ -200,29 +176,28 @@ const IdeaDiscovery: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
           <FileExcelOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
-          研究Idea发掘与Prompt管理中心 
+          研究Idea发掘与配置面板
         </Title>
         <Paragraph type="secondary">
-          管理Prompt模板，配置AI，选择模板处理Excel文件，AI将为每行数据生成研究迁移建议
+          管理Prompt模板，配置AI，处理Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 
       <Row gutter={[16, 32]} style={{ width: '100%' }}>
         {/* 第1栏：Prompt管理面板 */}
-        <Col xs={24} md={12} lg={6} xl={6}>
+        <Col xs={24} md={12} lg={8} xl={8}>
           <PromptManagement height="500px" />
         </Col>
 
         {/* 第2栏：AI配置面板 */}
-        <Col xs={24} md={12} lg={6} xl={6}>
+        <Col xs={24} md={12} lg={8} xl={8}>
           <EmbeddedAIConfig 
             onConfigChange={setAiConfig}
-            onTestSuccess={handleTestSuccess}
           />
         </Col>
 
         {/* 第3栏：文件处理面板 */}
-        <Col xs={24} md={12} lg={6} xl={6}>
+        <Col xs={24} md={12} lg={8} xl={8}>
           <Card title="Excel文件处理">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
@@ -376,17 +351,6 @@ const IdeaDiscovery: React.FC = () => {
             </Space>
           </Card>
         </Col>
-
-        {/* 第4栏：聊天测试面板 */}
-        <Col xs={24} md={24} lg={6} xl={6}>
-          <ChatPanel
-            onSendMessage={handleSendChatMessage}
-            disabled={!aiConfig || !aiConfig.is_connected}
-            placeholder={!aiConfig || !aiConfig.is_connected ? '请先配置并测试AI连接...' : '输入消息测试AI对话...'}
-            testResult={testResult}
-            onTestResultShown={() => setTestResult(null)}
-          />
-        </Col>
       </Row>
 
       {/* 使用说明 */}
@@ -404,9 +368,9 @@ const IdeaDiscovery: React.FC = () => {
           <Col xs={24} md={12} lg={12}>
             <div style={{ lineHeight: '2' }}>
               <Text>
-                <strong>4. 聊天测试：</strong>在第4栏测试AI对话功能<br />
-                <strong>5. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-                <strong>6. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列
+                <strong>4. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+                <strong>5. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
+                <strong>6. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
               </Text>
             </div>
           </Col>

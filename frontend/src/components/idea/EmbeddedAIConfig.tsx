@@ -35,10 +35,9 @@ interface AIConfig {
 
 interface EmbeddedAIConfigProps {
   onConfigChange?: (config: AIConfig | null) => void;
-  onTestSuccess?: (testResult: string) => void;
 }
 
-const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onTestSuccess }) => {
+const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) => {
   const [form] = Form.useForm();
   const [config, setConfig] = useState<AIConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -192,10 +191,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onT
           onConfigChange(updatedConfig);
         }
         
-        // 通知父组件测试成功，传递AI的实际回复
-        if (onTestSuccess && response.details?.response) {
-          onTestSuccess(response.details.response);
-        }
+        // 测试成功，配置已更新
       } else {
         const errorMsg = response.message || '连接测试失败';
         message.error(`连接测试失败：${errorMsg}`);
