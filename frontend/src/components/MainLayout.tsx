@@ -68,7 +68,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {
         key: '/ideas-management',
         icon: <UnorderedListOutlined />,
-        label: 'Ideas管理',
+        label: 'Idea面板',
         onClick: () => navigate('/ideas-management'),
       },
       {

@@ -249,6 +249,13 @@ const IdeasManagementPage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<Idea> = [
     {
+      title: '序号',
+      key: 'index',
+      width: 60,
+      align: 'center',
+      render: (_, __, index) => index + 1,
+    },
+    {
       title: '项目名称',
       dataIndex: 'project_name',
       key: 'project_name',
@@ -395,7 +402,7 @@ const IdeasManagementPage: React.FC = () => {
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
             <BulbOutlined style={{ marginRight: '8px', color: '#faad14' }} />
-            Ideas管理
+            Idea面板
           </Title>
           <Space>
             <Button
