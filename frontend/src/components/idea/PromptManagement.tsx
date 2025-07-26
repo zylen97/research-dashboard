@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Button,
@@ -22,7 +22,8 @@ import {
   FileTextOutlined,
   HistoryOutlined
 } from '@ant-design/icons';
-import { promptsApi } from '../../services/api';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { promptsApi } from '../../services/apiOptimized';
 import { Prompt, PromptCreate, PromptUpdate } from '../../types';
 
 const { TextArea } = Input;
@@ -34,30 +35,62 @@ interface PromptManagementProps {
 }
 
 const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" }) => {
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [viewModalVisible, setViewModalVisible] = useState(false);
   const [editingPrompt, setEditingPrompt] = useState<Prompt | null>(null);
   const [viewingPrompt, setViewingPrompt] = useState<Prompt | null>(null);
   const [form] = Form.useForm();
+  const queryClient = useQueryClient();
 
-  // 加载prompts列表
-  const loadPrompts = async () => {
-    setLoading(true);
-    try {
-      const data = await promptsApi.getPrompts();
-      setPrompts(data);
-    } catch (error: any) {
-      message.error(`加载Prompt列表失败: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 使用React Query获取prompts列表，与IdeaDiscovery保持一致
+  const { data: prompts = [], isLoading: loading, error } = useQuery({
+    queryKey: ['prompts'],
+    queryFn: () => promptsApi.getList(),
+    retry: (failureCount, error) => {
+      // 认证错误不重试，其他错误最多重试2次
+      if ((error as any)?.response?.status === 401) return false;
+      return failureCount < 2;
+    },
+  });
 
-  useEffect(() => {
-    loadPrompts();
-  }, []);
+  // 创建Prompt
+  const createMutation = useMutation({
+    mutationFn: promptsApi.create,
+    onSuccess: () => {
+      message.success('Prompt创建成功');
+      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      closeModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '创建失败');
+    },
+  });
+
+  // 更新Prompt
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: PromptUpdate }) =>
+      promptsApi.update(id, data),
+    onSuccess: () => {
+      message.success('Prompt更新成功');
+      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+      closeModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '更新失败');
+    },
+  });
+
+  // 删除Prompt
+  const deleteMutation = useMutation({
+    mutationFn: promptsApi.delete,
+    onSuccess: () => {
+      message.success('Prompt删除成功');
+      queryClient.invalidateQueries({ queryKey: ['prompts'] });
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '删除失败');
+    },
+  });
 
   // 打开创建/编辑模态框
   const openModal = (prompt?: Prompt) => {
@@ -103,34 +136,20 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
 
       if (editingPrompt) {
         // 编辑模式
-        await promptsApi.updatePrompt(editingPrompt.id, data);
-        message.success('Prompt更新成功');
+        updateMutation.mutate({ id: editingPrompt.id, data });
       } else {
         // 创建模式
-        await promptsApi.createPrompt(data as PromptCreate);
-        message.success('Prompt创建成功');
+        createMutation.mutate(data as PromptCreate);
       }
-
-      closeModal();
-      loadPrompts();
-    } catch (error: any) {
-      if (error.message) {
-        message.error(error.message);
-      } else {
-        message.error('保存失败，请检查输入内容');
-      }
+    } catch (error) {
+      // 表单验证失败
+      console.error('Form validation failed:', error);
     }
   };
 
   // 删除prompt
-  const handleDelete = async (prompt: Prompt) => {
-    try {
-      await promptsApi.deletePrompt(prompt.id);
-      message.success(`Prompt "${prompt.name}" 删除成功`);
-      loadPrompts();
-    } catch (error: any) {
-      message.error(`删除失败: ${error.message}`);
-    }
+  const handleDelete = (prompt: Prompt) => {
+    deleteMutation.mutate(prompt.id);
   };
 
   // 格式化时间
@@ -174,12 +193,14 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
           rowKey="id"
           scroll={{ y: 'calc(100vh - 320px)' }}
           locale={{
-            emptyText: (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="暂无Prompt模板"
-              />
-            )
+            emptyText: error 
+              ? `数据加载失败: ${error.message || '请检查网络连接'}` 
+              : (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="暂无Prompt模板"
+                  />
+                )
           }}
         >
           <Column
@@ -244,6 +265,7 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
                       size="small"
                       danger
                       icon={<DeleteOutlined />}
+                      loading={deleteMutation.isPending}
                     />
                   </Tooltip>
                 </Popconfirm>
@@ -262,6 +284,7 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
         width={700}
         okText="保存"
         cancelText="取消"
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
         destroyOnClose
       >
         <Form
