@@ -11,6 +11,7 @@ from ..models import (
 from ..utils.auth import get_current_user
 from ..utils import DataValidator
 from ..utils.security_validators import SecurityValidator
+from ..utils.response import success_response
 
 router = APIRouter()
 
@@ -298,7 +299,7 @@ async def delete_communication_log(
     
     db.delete(db_log)
     db.commit()
-    return {"message": "Communication log deleted successfully"}
+    return success_response(message="Communication log deleted successfully")
 
 @router.put("/{project_id}/progress")
 async def update_project_progress(

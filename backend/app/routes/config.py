@@ -11,6 +11,7 @@ from ..models import (
     AIProviderConfig, AITestRequest, AITestResponse
 )
 from ..utils.encryption import encryption_util
+from ..utils.response import success_response
 import httpx
 
 router = APIRouter()
@@ -176,7 +177,7 @@ async def delete_config(
     db.delete(db_config)
     db.commit()
     
-    return {"message": "Configuration deleted successfully"}
+    return success_response(message="Configuration deleted successfully")
 
 @router.post("/ai/test", response_model=AITestResponse)
 async def test_ai_connection(

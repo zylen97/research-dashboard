@@ -13,6 +13,7 @@ from ..models import get_db, Idea, ResearchProject
 from ..models.database import Collaborator
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
+from ..utils.response import success_response
 
 router = APIRouter()
 
@@ -192,7 +193,7 @@ async def delete_idea(
         user_id=getattr(request.state, "user_id", None)
     )
     
-    return {"message": "Idea deleted successfully"}
+    return success_response(message="Idea deleted successfully")
 
 @router.post("/{idea_id}/convert-to-project")
 async def convert_to_project(
