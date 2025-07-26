@@ -38,6 +38,8 @@ class Collaborator(CollaboratorBase):
 class ResearchProjectBase(BaseModel):
     title: str = Field(..., max_length=200)
     idea_description: str
+    research_method: Optional[str] = Field(None, description="研究方法")
+    source: Optional[str] = Field(None, description="来源")
     status: str = Field(default="active", max_length=50)
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
@@ -50,6 +52,8 @@ class ResearchProjectCreate(ResearchProjectBase):
 class ResearchProjectUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
     idea_description: Optional[str] = None
+    research_method: Optional[str] = None
+    source: Optional[str] = None
     status: Optional[str] = Field(None, max_length=50)
     progress: Optional[float] = Field(None, ge=0, le=100)
     expected_completion: Optional[datetime] = None

@@ -220,6 +220,25 @@ const ResearchDashboard: React.FC = () => {
           </Form.Item>
 
           <Form.Item
+            name="research_method"
+            label="研究方法"
+          >
+            <TextArea 
+              rows={2} 
+              placeholder="请输入研究方法（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="source"
+            label="来源"
+          >
+            <Input 
+              placeholder="请输入来源信息（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="status"
             label="项目状态"
             initialValue="active"

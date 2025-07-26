@@ -18,6 +18,7 @@ import {
   EditOutlined,
   DeleteOutlined,
   BulbOutlined,
+  SwapOutlined,
 } from '@ant-design/icons';
 import api from '../services/api';
 import type { ColumnsType } from 'antd/es/table';
@@ -28,13 +29,13 @@ const { Option } = Select;
 
 interface SimpleIdea {
   id: number;
-  research_question: string;
+  research_question: string;  // 将显示为"项目名称"
   research_method: string;
   source_journal: string;
   source_literature: string;
   responsible_person: string;
   maturity: 'mature' | 'immature';
-  description?: string;
+  description?: string;  // 将显示为"项目描述"
   created_at: string;
   updated_at: string;
 }
@@ -131,6 +132,18 @@ const SimpleIdeasPage: React.FC = () => {
     }
   };
 
+  // 转化Idea到项目
+  const handleConvert = async (id: number) => {
+    try {
+      await api.post(`/simple-ideas/${id}/convert-to-project`);
+      message.success('成功转化为研究项目！');
+      loadIdeas(); // 刷新列表
+    } catch (error) {
+      message.error('转化失败');
+      console.error('转化失败:', error);
+    }
+  };
+
   // 成熟度显示
   const renderMaturity = (maturity: 'mature' | 'immature') => {
     const color = maturity === 'mature' ? '#52c41a' : '#ffa940';
@@ -144,10 +157,16 @@ const SimpleIdeasPage: React.FC = () => {
   // 表格列定义
   const columns: ColumnsType<SimpleIdea> = [
     {
-      title: '研究问题',
+      title: '序号',
+      key: 'index',
+      width: '6%',
+      render: (_, __, index) => index + 1,
+    },
+    {
+      title: '项目名称',
       dataIndex: 'research_question',
       key: 'research_question',
-      width: '18%',
+      width: '16%',
       render: (text: string) => (
         <Text style={{ wordBreak: 'break-word' }}>
           {text}
@@ -155,25 +174,34 @@ const SimpleIdeasPage: React.FC = () => {
       ),
     },
     {
+      title: '项目描述',
+      dataIndex: 'description',
+      key: 'description',
+      width: '16%',
+      ellipsis: true,
+      render: (text: string) => text || '-',
+    },
+    {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
-      width: '13%',
+      width: '12%',
       ellipsis: true,
     },
     {
-      title: '来源期刊',
-      dataIndex: 'source_journal',
-      key: 'source_journal',
-      width: '13%',
-      ellipsis: true,
-    },
-    {
-      title: '来源文献',
-      dataIndex: 'source_literature',
-      key: 'source_literature',
-      width: '13%',
-      ellipsis: true,
+      title: '来源',
+      key: 'source',
+      width: '14%',
+      render: (_, record) => {
+        const sources = [];
+        if (record.source_journal) sources.push(`期刊: ${record.source_journal}`);
+        if (record.source_literature) sources.push(`文献: ${record.source_literature}`);
+        return (
+          <Text style={{ fontSize: '12px' }}>
+            {sources.join(' | ') || '-'}
+          </Text>
+        );
+      },
     },
     {
       title: '负责人',
@@ -194,25 +222,27 @@ const SimpleIdeasPage: React.FC = () => {
       onFilter: (value, record) => record.maturity === value,
     },
     {
-      title: '创建时间',
-      dataIndex: 'created_at',
-      key: 'created_at',
-      width: '9%',
-      render: (date: string) => new Date(date).toLocaleDateString(),
-      sorter: (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-    },
-    {
       title: '操作',
       key: 'action',
-      width: '18%',
+      width: '20%',
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="small">
           <Button
             type="link"
             icon={<EditOutlined />}
             onClick={() => openModal(record)}
+            size="small"
           >
             编辑
+          </Button>
+          <Button
+            type="link"
+            icon={<SwapOutlined />}
+            onClick={() => handleConvert(record.id)}
+            style={{ color: '#52c41a' }}
+            size="small"
+          >
+            转化
           </Button>
           <Popconfirm
             title="确定要删除这个Idea吗？"
@@ -220,7 +250,7 @@ const SimpleIdeasPage: React.FC = () => {
             okText="确定"
             cancelText="取消"
           >
-            <Button type="link" danger icon={<DeleteOutlined />}>
+            <Button type="link" danger icon={<DeleteOutlined />} size="small">
               删除
             </Button>
           </Popconfirm>
@@ -287,10 +317,17 @@ const SimpleIdeasPage: React.FC = () => {
         >
           <Form.Item
             name="research_question"
-            label="研究问题"
-            rules={[{ required: true, message: '请输入研究问题' }]}
+            label="项目名称"
+            rules={[{ required: true, message: '请输入项目名称' }]}
           >
-            <TextArea rows={2} placeholder="请输入研究问题" />
+            <TextArea rows={2} placeholder="请输入项目名称" />
+          </Form.Item>
+
+          <Form.Item
+            name="description"
+            label="项目描述"
+          >
+            <TextArea rows={3} placeholder="请输入项目描述（可选）" />
           </Form.Item>
 
           <Form.Item
@@ -336,12 +373,6 @@ const SimpleIdeasPage: React.FC = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="description"
-            label="额外描述"
-          >
-            <TextArea rows={3} placeholder="可选的额外描述信息" />
-          </Form.Item>
         </Form>
       </Modal>
     </div>

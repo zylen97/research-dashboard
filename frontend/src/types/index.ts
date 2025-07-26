@@ -67,6 +67,8 @@ export interface ResearchProject {
   id: number;
   title: string;
   idea_description: string;
+  research_method?: string; // 研究方法（从Ideas转化而来）
+  source?: string; // 来源（从Ideas转化而来）
   status: string;
   progress: number;
   start_date: string;
@@ -84,6 +86,8 @@ export interface ResearchProject {
 export interface ResearchProjectCreate {
   title: string;
   idea_description: string;
+  research_method?: string;
+  source?: string;
   status?: string;
   progress?: number;
   expected_completion?: string;
@@ -94,6 +98,8 @@ export interface ResearchProjectCreate {
 export interface ResearchProjectUpdate {
   title?: string;
   idea_description?: string;
+  research_method?: string;
+  source?: string;
   status?: string;
   progress?: number;
   expected_completion?: string;

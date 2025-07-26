@@ -47,6 +47,8 @@ class ResearchProject(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(200), nullable=False, index=True)
     idea_description = Column(Text, nullable=False)  # idea描述
+    research_method = Column(Text, nullable=True)  # 研究方法（从Ideas转化而来）
+    source = Column(Text, nullable=True)  # 来源（从Ideas转化而来）
     status = Column(String(50), default="active")  # active, completed, paused
     progress = Column(Float, default=0.0)  # 进展百分比
     start_date = Column(DateTime, default=datetime.utcnow)

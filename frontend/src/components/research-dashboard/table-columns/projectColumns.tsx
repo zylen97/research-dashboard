@@ -121,6 +121,36 @@ export const createProjectColumns = ({
       </Text>
     ),
   }]),
+  ...(isMobile ? [] : [{
+    title: '研究方法',
+    dataIndex: 'research_method',
+    key: 'research_method',
+    width: 150,
+    ellipsis: { showTitle: false },
+    render: (method: string) => (
+      <Text
+        ellipsis={{ tooltip: method }}
+        style={{ color: '#666' }}
+      >
+        {method || '-'}
+      </Text>
+    ),
+  }]),
+  ...(isMobile ? [] : [{
+    title: '来源',
+    dataIndex: 'source',
+    key: 'source',
+    width: 150,
+    ellipsis: { showTitle: false },
+    render: (source: string) => (
+      <Text
+        ellipsis={{ tooltip: source }}
+        style={{ color: '#666', fontSize: '12px' }}
+      >
+        {source || '-'}
+      </Text>
+    ),
+  }]),
   {
     title: '状态',
     dataIndex: 'status',
