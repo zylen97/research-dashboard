@@ -457,6 +457,55 @@ class AIService:
                 "response": None
             }
 
+    async def process_with_prompt(self, content: str, prompt: str) -> Dict[str, Any]:
+        """
+        使用指定的prompt处理内容
+        
+        Args:
+            content: 要处理的内容
+            prompt: 使用的prompt模板
+            
+        Returns:
+            处理结果字典，包含success, response, error等字段
+        """
+        try:
+            # 获取主AI配置
+            config = await self.get_main_ai_config()
+            if not config:
+                return {
+                    "success": False,
+                    "error": "AI配置未找到，请先配置AI提供商",
+                    "response": None
+                }
+            
+            # 构建完整的提示词
+            full_prompt = f"{prompt}\n\n{content}"
+            
+            # 调用AI API处理
+            result = await self.call_openai_api(config, full_prompt)
+            
+            if result.get("success"):
+                return {
+                    "success": True,
+                    "response": result.get("response", ""),
+                    "error": None
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": result.get("error", "AI处理失败"),
+                    "response": None
+                }
+                
+        except Exception as e:
+            error_msg = f"处理内容时发生异常: {str(e)}"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+
     
     def parse_ai_response(self, ai_response: str, row_count: int) -> Dict[str, List[str]]:
         """

@@ -138,13 +138,6 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
     return new Date(dateStr).toLocaleString('zh-CN');
   };
 
-  // 截取内容预览
-  const getContentPreview = (content: string, maxLength: number = 80) => {
-    if (content.length <= maxLength) {
-      return content;
-    }
-    return content.substring(0, maxLength) + '...';
-  };
 
   return (
     <Card 
@@ -193,7 +186,7 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
             title="名称"
             dataIndex="name"
             key="name"
-            width={120}
+            width={200}
             render={(name: string) => (
               <Text strong style={{ color: '#1890ff' }}>
                 {name}
@@ -202,24 +195,10 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
           />
           
           <Column
-            title="内容预览"
-            dataIndex="content"
-            key="content"
-            ellipsis={{ showTitle: false }}
-            render={(content: string) => (
-              <Tooltip title={content} placement="topLeft">
-                <Text style={{ fontSize: '12px', color: '#666' }}>
-                  {getContentPreview(content)}
-                </Text>
-              </Tooltip>
-            )}
-          />
-          
-          <Column
             title="创建时间"
             dataIndex="created_at"
             key="created_at"
-            width={120}
+            width={140}
             render={(date: string) => (
               <Text style={{ fontSize: '12px' }}>
                 {formatTime(date)}
