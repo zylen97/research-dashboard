@@ -83,18 +83,50 @@ async def process_excel_file(
             )
         
         # 4. 创建AI服务实例
-        logger.info(f"开始处理Excel文件: {file.filename}, 文件大小: {len(file_content)} bytes")
-        ai_service = create_ai_service(db)
+        logger.info(f"🚀 开始处理Excel文件: {file.filename}, 文件大小: {len(file_content)} bytes")
+        
+        try:
+            logger.info("📦 创建AI服务实例...")
+            ai_service = create_ai_service(db)
+            logger.info("✅ AI服务实例创建成功")
+        except Exception as e:
+            error_msg = f"创建AI服务实例失败: {str(e)}"
+            logger.error(f"❌ {error_msg}", exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail=f"系统配置错误: {error_msg}"
+            )
         
         # 5. 检查AI配置状态
-        logger.info("🔍 检查AI配置状态...")
-        ai_config = await ai_service.get_ai_config()
-        if not ai_config or not ai_config.get('api_key'):
-            error_msg = "AI未配置，请先在页面左侧的AI配置中填写API密钥"
-            logger.error(error_msg)
+        try:
+            logger.info("🔍 检查AI配置状态...")
+            ai_config = await ai_service.get_ai_config()
+            logger.info(f"📋 获取到的配置: {ai_config}")
+            
+            if not ai_config:
+                error_msg = "AI配置为空，配置加载失败"
+                logger.error(f"❌ {error_msg}")
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"配置加载错误: {error_msg}"
+                )
+            
+            if not ai_config.get('api_key'):
+                error_msg = "API密钥未设置，请先在页面左侧的AI配置中填写API密钥"
+                logger.error(f"❌ {error_msg}")
+                raise HTTPException(
+                    status_code=400,
+                    detail=error_msg
+                )
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            error_msg = f"获取AI配置失败: {str(e)}"
+            logger.error(f"❌ {error_msg}", exc_info=True)
             raise HTTPException(
-                status_code=400,
-                detail=error_msg
+                status_code=500,
+                detail=f"配置读取错误: {error_msg}"
             )
         
         # 明确显示当前使用的模型
@@ -102,7 +134,7 @@ async def process_excel_file(
         logger.info(f"🎯 Excel处理将使用的AI模型: {current_model}")
         logger.info(f"📋 AI配置详情: model={current_model}, api_base={ai_config.get('api_base')}")
         
-        logger.info("AI配置检查完成")
+        logger.info("✅ AI配置检查完成")
         
         # 6. 确定使用哪个prompt
         default_prompt = """请将给定的研究内容优化和精炼，使其更加清晰、专业，并强调其创新性和研究价值。
@@ -182,12 +214,13 @@ async def process_excel_file(
         total_rows = len(rows_data)
         logger.info(f"准备处理 {total_rows} 行数据")
         
-        # 并发处理函数 - 修复变量作用域问题
+        # 并发处理函数 - 增强错误处理
         async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore, ai_service_inst, prompt_text: str) -> dict:
             async with semaphore:
                 try:
                     # 如果是空行，直接返回跳过状态
                     if row_data['content'] is None:
+                        logger.info(f"⏭️ 跳过第 {row_data['row_number']} 行（空内容）")
                         return {
                             '序号': row_data['row_number'],
                             '标题': row_data['title'],
@@ -197,37 +230,51 @@ async def process_excel_file(
                         }
                     
                     # 调用AI处理
-                    logger.debug(f"开始处理第 {row_data['row_number']} 行...")
-                    result = await ai_service_inst.process_with_prompt(row_data['content'], prompt_text)
+                    logger.info(f"🔄 开始处理第 {row_data['row_number']} 行...")
+                    logger.debug(f"内容: {row_data['content'][:100]}...")
                     
-                    if result['success']:
-                        logger.debug(f"第 {row_data['row_number']} 行处理成功")
-                        return {
-                            '序号': row_data['row_number'],
-                            '标题': row_data['title'],
-                            '原始摘要': row_data['abstract'],
-                            '优化后的研究内容': result['response'],
-                            '处理状态': '成功'
-                        }
-                    else:
-                        logger.error(f"第 {row_data['row_number']} 行AI处理失败: {result.get('error')}")
+                    try:
+                        result = await ai_service_inst.process_with_prompt(row_data['content'], prompt_text)
+                        logger.info(f"📤 第 {row_data['row_number']} 行AI调用完成: {result.get('success', False)}")
+                    except Exception as ai_error:
+                        logger.error(f"❌ 第 {row_data['row_number']} 行AI调用异常: {str(ai_error)}", exc_info=True)
                         return {
                             '序号': row_data['row_number'],
                             '标题': row_data['title'],
                             '原始摘要': row_data['abstract'],
                             '优化后的研究内容': '',
-                            '处理状态': f"失败-{result.get('error', '未知错误')}"
+                            '处理状态': f"AI调用异常-{str(ai_error)[:50]}"
+                        }
+                    
+                    if result and result.get('success'):
+                        logger.info(f"✅ 第 {row_data['row_number']} 行处理成功")
+                        return {
+                            '序号': row_data['row_number'],
+                            '标题': row_data['title'],
+                            '原始摘要': row_data['abstract'],
+                            '优化后的研究内容': result.get('response', ''),
+                            '处理状态': '成功'
+                        }
+                    else:
+                        error_detail = result.get('error', '未知错误') if result else 'AI调用返回空结果'
+                        logger.error(f"❌ 第 {row_data['row_number']} 行AI处理失败: {error_detail}")
+                        return {
+                            '序号': row_data['row_number'],
+                            '标题': row_data['title'],
+                            '原始摘要': row_data['abstract'],
+                            '优化后的研究内容': '',
+                            '处理状态': f"失败-{error_detail}"
                         }
                         
                 except Exception as e:
                     error_msg = str(e)
-                    logger.error(f"处理第 {row_data['row_number']} 行时发生异常: {error_msg}")
+                    logger.error(f"❌ 处理第 {row_data['row_number']} 行时发生异常: {error_msg}", exc_info=True)
                     return {
                         '序号': row_data['row_number'],
                         '标题': row_data['title'],
                         '原始摘要': row_data['abstract'],
                         '优化后的研究内容': '',
-                        '处理状态': f"错误-{error_msg}"
+                        '处理状态': f"异常-{error_msg}"
                     }
         
         # 创建信号量控制并发数
@@ -333,3 +380,78 @@ async def health_check():
         "service": "idea_discovery",
         "timestamp": datetime.now().isoformat()
     })
+
+@router.get("/test-ai-config-simple")
+async def test_ai_config_simple(db: Session = Depends(get_db)):
+    """测试AI配置端点 - 用于调试"""
+    logger.info("🧪 开始测试AI配置...")
+    
+    try:
+        # 1. 创建AI服务实例
+        logger.info("📦 创建AI服务实例...")
+        ai_service = create_ai_service(db)
+        logger.info("✅ AI服务实例创建成功")
+        
+        # 2. 获取AI配置
+        logger.info("🔍 获取AI配置...")
+        ai_config = await ai_service.get_ai_config()
+        logger.info(f"📋 获取到的配置: {ai_config}")
+        
+        if not ai_config:
+            return {
+                "success": False,
+                "error": "AI配置为空",
+                "config": None
+            }
+        
+        if not ai_config.get('api_key'):
+            return {
+                "success": False,
+                "error": "API密钥未设置",
+                "config": {
+                    "api_base": ai_config.get('api_base'),
+                    "model": ai_config.get('model'),
+                    "api_key_set": False
+                }
+            }
+        
+        # 3. 测试简单的AI调用
+        logger.info("🤖 测试AI调用...")
+        test_prompt = "请回复'AI配置测试成功'"
+        test_content = "这是一个配置测试"
+        
+        try:
+            result = await ai_service.call_ai_api(test_prompt, test_content)
+            logger.info(f"📤 AI调用结果: {result}")
+            
+            return {
+                "success": True,
+                "message": "AI配置测试成功",
+                "config": {
+                    "api_base": ai_config.get('api_base'),
+                    "model": ai_config.get('model'),
+                    "api_key_set": True
+                },
+                "ai_response": result.get('response', '') if result.get('success') else None,
+                "ai_error": result.get('error') if not result.get('success') else None
+            }
+            
+        except Exception as ai_error:
+            logger.error(f"❌ AI调用异常: {str(ai_error)}", exc_info=True)
+            return {
+                "success": False,
+                "error": f"AI调用异常: {str(ai_error)}",
+                "config": {
+                    "api_base": ai_config.get('api_base'),
+                    "model": ai_config.get('model'),
+                    "api_key_set": True
+                }
+            }
+            
+    except Exception as e:
+        logger.error(f"❌ AI配置测试失败: {str(e)}", exc_info=True)
+        return {
+            "success": False,
+            "error": f"测试失败: {str(e)}",
+            "config": None
+        }
