@@ -184,59 +184,47 @@ async def process_excel_file(
         # 8. 处理Excel数据 - 使用并发处理
         logger.info(f"开始并发处理Excel数据，共 {len(df)} 行，并发数: {max_concurrent}")
         
-        # 准备数据行
-        rows_data = []
-        for index, row in df.iterrows():
-            abstract = str(row.get('摘要', '')).strip()
-            title = str(row.get('标题', '')).strip()
-            
-            # 跳过空行但记录
-            if not abstract or abstract == 'nan':
-                rows_data.append({
-                    'index': index,
-                    'title': title,
-                    'abstract': abstract,
-                    'content': None,  # 标记为跳过
-                    'row_number': index + 1
-                })
-                continue
-            
-            # 构建完整内容
-            content = f"标题：{title}\n摘要：{abstract}" if title and title != 'nan' else abstract
-            rows_data.append({
-                'index': index,
-                'title': title,
-                'abstract': abstract,
-                'content': content,
-                'row_number': index + 1
-            })
+        # 直接在原DataFrame基础上工作，不重新组织数据
+        # 首先创建AI结果列，初始化为空
+        ai_column_name = f"迁移结果by{current_model}"
+        df[ai_column_name] = ""
         
-        total_rows = len(rows_data)
-        logger.info(f"准备处理 {total_rows} 行数据")
+        logger.info(f"✅ 新增AI结果列: {ai_column_name}")
+        logger.info(f"📊 DataFrame形状: {df.shape}, 列数: {len(df.columns)}")
         
-        # 并发处理函数 - 增强错误处理和性能监控
-        async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore, ai_service_inst, prompt_text: str) -> dict:
+        total_rows = len(df)
+        
+        # 并发处理函数 - 直接在DataFrame上工作
+        async def process_single_row(row_index: int, dataframe: pd.DataFrame, ai_column: str, semaphore: asyncio.Semaphore, ai_service_inst, prompt_text: str) -> dict:
             task_start_time = datetime.now()
-            row_number = row_data['row_number']
+            row_number = row_index + 1  # 显示用的行号(从1开始)
             
             async with semaphore:
                 try:
-                    # 如果是空行，直接返回跳过状态
-                    if row_data['content'] is None:
+                    # 从DataFrame直接提取摘要和标题
+                    row = dataframe.loc[row_index]
+                    abstract = str(row.get('摘要', '')).strip()
+                    title = str(row.get('标题', '')).strip()
+                    
+                    # 检查是否为空行
+                    if not abstract or abstract == 'nan':
                         logger.info(f"⏭️ 第{row_number}行: 跳过空内容")
+                        dataframe.loc[row_index, ai_column] = '跳过处理-空内容'
                         return {
-                            'row_index': row_data['index'],
-                            'ai_result': '跳过处理-空内容',
+                            'row_index': row_index,
                             'status': '跳过'
                         }
                     
+                    # 构建完整内容
+                    content = f"标题：{title}\n摘要：{abstract}" if title and title != 'nan' else abstract
+                    
                     # 调用AI处理 - 添加详细时间追踪
                     logger.info(f"🚀 第{row_number}行: 开始处理 [{task_start_time.strftime('%H:%M:%S.%f')[:-3]}]")
-                    logger.debug(f"第{row_number}行内容: {row_data['content'][:100]}...")
+                    logger.debug(f"第{row_number}行内容: {content[:100]}...")
                     
                     try:
                         ai_start_time = datetime.now()
-                        result = await ai_service_inst.process_with_prompt(row_data['content'], prompt_text)
+                        result = await ai_service_inst.process_with_prompt(content, prompt_text)
                         ai_end_time = datetime.now()
                         ai_duration = (ai_end_time - ai_start_time).total_seconds()
                         
@@ -245,9 +233,9 @@ async def process_excel_file(
                         ai_end_time = datetime.now()
                         ai_duration = (ai_end_time - task_start_time).total_seconds()
                         logger.error(f"❌ 第{row_number}行: AI调用异常 [{ai_end_time.strftime('%H:%M:%S.%f')[:-3]}] 耗时{ai_duration:.2f}s: {str(ai_error)}", exc_info=True)
+                        dataframe.loc[row_index, ai_column] = f"AI调用异常: {str(ai_error)[:50]}"
                         return {
-                            'row_index': row_data['index'],
-                            'ai_result': f"AI调用异常: {str(ai_error)[:50]}",
+                            'row_index': row_index,
                             'status': '异常'
                         }
                     
@@ -255,9 +243,10 @@ async def process_excel_file(
                         task_end_time = datetime.now()
                         total_duration = (task_end_time - task_start_time).total_seconds()
                         logger.info(f"🎉 第{row_number}行: 处理成功 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s")
+                        # 直接更新DataFrame中的AI结果列
+                        dataframe.loc[row_index, ai_column] = result.get('response', '')
                         return {
-                            'row_index': row_data['index'],
-                            'ai_result': result.get('response', ''),
+                            'row_index': row_index,
                             'status': '成功'
                         }
                     else:
@@ -265,9 +254,9 @@ async def process_excel_file(
                         total_duration = (task_end_time - task_start_time).total_seconds()
                         error_detail = result.get('error', '未知错误') if result else 'AI调用返回空结果'
                         logger.error(f"❌ 第{row_number}行: AI处理失败 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s: {error_detail}")
+                        dataframe.loc[row_index, ai_column] = f"处理失败: {error_detail}"
                         return {
-                            'row_index': row_data['index'],
-                            'ai_result': f"处理失败: {error_detail}",
+                            'row_index': row_index,
                             'status': '失败'
                         }
                         
@@ -276,17 +265,20 @@ async def process_excel_file(
                     total_duration = (task_end_time - task_start_time).total_seconds()
                     error_msg = str(e)
                     logger.error(f"❌ 第{row_number}行: 处理异常 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s: {error_msg}", exc_info=True)
+                    dataframe.loc[row_index, ai_column] = f"处理异常: {error_msg}"
                     return {
-                        'row_index': row_data['index'],
-                        'ai_result': f"处理异常: {error_msg}",
+                        'row_index': row_index,
                         'status': '异常'
                     }
         
         # 创建信号量控制并发数
         semaphore = asyncio.Semaphore(max_concurrent)
         
-        # 创建并发任务 - 传递正确的参数
-        tasks = [process_single_row(row_data, semaphore, ai_service, prompt_to_use) for row_data in rows_data]
+        # 基于DataFrame索引创建并发任务
+        tasks = [
+            process_single_row(row_index, df, ai_column_name, semaphore, ai_service, prompt_to_use) 
+            for row_index in df.index
+        ]
         
         # 执行并发处理 - 添加详细的并发统计
         concurrent_start_time = datetime.now()
@@ -299,36 +291,29 @@ async def process_excel_file(
         concurrent_duration = (concurrent_end_time - concurrent_start_time).total_seconds()
         logger.info(f"🏁 并发执行完成 [{concurrent_end_time.strftime('%H:%M:%S.%f')[:-3]}] 并发总耗时{concurrent_duration:.2f}s")
         
-        # 处理结果，在原DataFrame基础上新增AI结果列
+        # 统计处理结果（AI结果已直接写入DataFrame）
         processed_count = 0
         error_count = 0
-        
-        # 创建新列名，包含模型名称
-        ai_column_name = f"迁移结果by{current_model}"
-        
-        # 初始化新列，默认为空
-        df[ai_column_name] = ""
+        skip_count = 0
         
         for i, result in enumerate(results):
             if isinstance(result, Exception):
                 logger.error(f"任务 {i+1} 发生异常: {result}")
-                # 对于异常的任务，使用原始索引找到对应行
-                if i < len(rows_data):
-                    row_index = rows_data[i]['index']
-                    df.loc[row_index, ai_column_name] = f"处理异常: {str(result)}"
+                # 对于异常的任务，在对应行标记异常
+                if i < len(df):
+                    df.iloc[i, df.columns.get_loc(ai_column_name)] = f"处理异常: {str(result)}"
                 error_count += 1
             else:
-                # 使用返回的row_index定位到DataFrame中的具体行
-                row_index = result['row_index']
-                df.loc[row_index, ai_column_name] = result['ai_result']
-                
+                # 统计处理结果
                 if result['status'] == '成功':
                     processed_count += 1
+                elif result['status'] == '跳过':
+                    skip_count += 1
                 elif result['status'] in ['失败', '异常']:
                     error_count += 1
         
-        logger.info(f"并发处理完成: 成功={processed_count}, 失败={error_count}, 总数={len(df)}")
-        logger.info(f"✅ 新增列: {ai_column_name}")
+        logger.info(f"并发处理完成: 成功={processed_count}, 失败={error_count}, 跳过={skip_count}, 总数={len(df)}")
+        logger.info(f"✅ AI结果已填入列: {ai_column_name}")
         
         # 8. 输出增强后的Excel文件（保留所有原始列 + 新的AI结果列）
         result_df = df
@@ -363,7 +348,7 @@ async def process_excel_file(
             # 添加说明信息到首行注释
             worksheet.write(f'A{len(result_df) + 3}', f'处理完成时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
             worksheet.write(f'A{len(result_df) + 4}', f'使用模型: {current_model}')
-            worksheet.write(f'A{len(result_df) + 5}', f'成功: {processed_count}, 失败: {error_count}, 总数: {len(df)}')
+            worksheet.write(f'A{len(result_df) + 5}', f'成功: {processed_count}, 失败: {error_count}, 跳过: {skip_count}, 总数: {len(df)}')
         
         output.seek(0)
         
@@ -375,7 +360,7 @@ async def process_excel_file(
         safe_model_name = re.sub(r'[^\w\-_\.]', '_', current_model)
         filename = f"{safe_filename}_enhanced_by_{safe_model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
-        logger.info(f"Excel处理完成: 成功={processed_count}, 失败={error_count}, 总耗时={datetime.now() - start_time}")
+        logger.info(f"Excel处理完成: 成功={processed_count}, 失败={error_count}, 跳过={skip_count}, 总耗时={datetime.now() - start_time}")
         
         return StreamingResponse(
             output,
