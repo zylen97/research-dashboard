@@ -10,8 +10,7 @@ import {
   SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse,
   BackupStats, BackupListResponse, BackupCreateResponse,
-  Prompt, PromptCreate, PromptUpdate,
-  Idea, IdeaCreate, IdeaUpdate
+  Prompt, PromptCreate, PromptUpdate
 } from '../types';
 import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
@@ -246,46 +245,7 @@ export const promptsApi = createCRUDApi<Prompt, PromptCreate, PromptUpdate>(
   'API.getPrompts'
 );
 
-// Ideas管理API - 使用工厂函数
-export const ideasApi = createExtendedCRUDApi<
-  Idea,
-  IdeaCreate,
-  IdeaUpdate,
-  {
-    getSeniorCollaborators: () => Promise<Collaborator[]>;
-  }
->(
-  '/ideas-management',
-  'API.getIdeas',
-  (basePath) => ({
-    getSeniorCollaborators: async () => {
-      const response = await api.get(`${basePath}/collaborators/senior`, {
-        params: { _t: Date.now() }
-      });
-      return handleListResponse<Collaborator>(response, 'API.getSeniorCollaborators');
-    },
-  })
-);
 
-// Simple Ideas API - 为后续ORM优化准备
-export const simpleIdeasApi = {
-  ...createCRUDApi<any, any, any>(
-    '/simple-ideas',
-    'API.getSimpleIdeas'
-  ),
-  
-  // 转换为项目
-  convertToProject: async (id: number) => {
-    const response = await api.post(`/simple-ideas/${id}/convert-to-project`);
-    return response.data;
-  },
-
-  // 为了兼容性保留post方法
-  post: async (url: string, data?: any) => {
-    const response = await api.post(`/simple-ideas${url}`, data);
-    return response.data;
-  }
-};
 
 // 其他API保持原样...
 export const ideaDiscoveryApi = {

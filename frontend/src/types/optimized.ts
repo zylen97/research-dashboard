@@ -114,27 +114,6 @@ export type CommunicationLogCreate = CommunicationLogBase & {
 // 更新交流日志
 export type CommunicationLogUpdate = Partial<CommunicationLogBase>;
 
-// ========== Ideas相关类型 ==========
-
-// Idea基础信息
-export interface IdeaBase {
-  research_question: string;
-  research_method: string;
-  source_journal: string;
-  source_literature: string;
-  responsible_person: string;
-  maturity: 'mature' | 'immature';
-  description?: string;
-}
-
-// 完整的Idea类型
-export interface Idea extends IdeaBase, WithId, Timestamps {}
-
-// 创建Idea - 所有基础字段必填（除了description）
-export type IdeaCreate = IdeaBase;
-
-// 更新Idea - 所有字段可选
-export type IdeaUpdate = Partial<IdeaBase>;
 
 // ========== 系统配置相关类型 ==========
 

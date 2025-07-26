@@ -386,50 +386,6 @@ export const ideaDiscoveryApi = {
     api.get('/ideas/health'),
 };
 
-// Ideas管理 API
-export const ideasApi = {
-  // 获取Ideas列表
-  getIdeas: async (params?: {
-    skip?: number;
-    limit?: number;
-    importance_filter?: number;
-  }): Promise<import('../types').Idea[]> => {
-    // 添加时间戳避免缓存问题
-    const response = await api.get('/ideas-management', { 
-      params: {
-        ...params,
-        _t: Date.now() // 缓存破坏参数
-      }
-    });
-    return handleListResponse<import('../types').Idea>(response, 'API.getIdeas');
-  },
-
-  // 获取单个Idea
-  getIdea: (id: number): Promise<import('../types').Idea> =>
-    api.get(`/ideas-management/${id}`),
-
-  // 创建Idea
-  createIdea: (data: import('../types').IdeaCreate): Promise<import('../types').Idea> =>
-    api.post('/ideas-management', data),
-
-  // 更新Idea  
-  updateIdea: (id: number, data: import('../types').IdeaUpdate): Promise<import('../types').Idea> =>
-    api.put(`/ideas-management/${id}`, data),
-
-  // 删除Idea
-  deleteIdea: (id: number): Promise<{ message: string }> =>
-    api.delete(`/ideas-management/${id}`),
-
-  // 获取高级合作者列表
-  getSeniorCollaborators: async (): Promise<import('../types').Collaborator[]> => {
-    const response = await api.get('/ideas-management/collaborators/senior', {
-      params: {
-        _t: Date.now() // 缓存破坏参数
-      }
-    });
-    return handleListResponse<import('../types').Collaborator>(response, 'API.getSeniorCollaborators');
-  },
-};
 
 // 验证 API
 export const validationApi = {

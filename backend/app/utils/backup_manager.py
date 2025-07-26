@@ -147,13 +147,17 @@ class BackupManager:
             cursor.execute("SELECT COUNT(*) FROM communication_logs")
             logs_count = cursor.fetchone()[0]
             
-            # 统计Ideas数量
+            # 统计Ideas数量 - 支持新旧表名
             try:
-                cursor.execute("SELECT COUNT(*) FROM simple_ideas")
+                cursor.execute("SELECT COUNT(*) FROM ideas")  # 新表名
                 ideas_count = cursor.fetchone()[0]
             except sqlite3.OperationalError:
-                # 如果simple_ideas表不存在（旧备份），设为0
-                ideas_count = 0
+                try:
+                    cursor.execute("SELECT COUNT(*) FROM simple_ideas")  # 旧表名兼容
+                    ideas_count = cursor.fetchone()[0]
+                except sqlite3.OperationalError:
+                    # 新旧表都不存在，设为0
+                    ideas_count = 0
             
             # 统计Prompts数量
             try:

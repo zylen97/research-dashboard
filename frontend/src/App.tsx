@@ -5,7 +5,7 @@ import MainLayout from './components/MainLayout';
 import ResearchDashboard from './pages/ResearchDashboard';
 import CollaboratorManagement from './pages/CollaboratorManagement';
 import IdeaDiscovery from './pages/IdeaDiscovery';
-import SimpleIdeasPage from './pages/SimpleIdeas';
+import IdeasManagement from './pages/IdeasManagement';
 import AuthPage from './pages/AuthPage';
 import DatabaseBackup from './pages/DatabaseBackup';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -39,7 +39,7 @@ const ProtectedRoutes: React.FC = () => {
         <Route path="/research" element={<Navigate to="/dashboard" replace />} />
         <Route path="/collaborators" element={<CollaboratorManagement />} />
         <Route path="/ideas" element={<IdeaDiscovery />} />
-        <Route path="/ideas-management" element={<SimpleIdeasPage />} />
+        <Route path="/ideas-management" element={<IdeasManagement />} />
         <Route path="/backup" element={<DatabaseBackup />} />
         <Route path="/auth" element={<Navigate to="/dashboard" replace />} />
       </Routes>

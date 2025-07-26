@@ -1,0 +1,423 @@
+/**
+ * Ideas管理页面 - 重新设计版本
+ * 简化表单：项目名称、项目描述、研究方法、来源、负责人、成熟度
+ * 包含编辑、删除、转化功能
+ */
+import React, { useState } from 'react';
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Select,
+  Space,
+  Popconfirm,
+  Card,
+  Typography,
+  Tag,
+  message,
+  Tooltip,
+} from 'antd';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  BulbOutlined,
+  SwapRightOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { ColumnsType } from 'antd/es/table';
+
+import { ideasApi } from '../services/ideasApi';
+import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
+
+const { Title } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
+
+const IdeasManagementPage: React.FC = () => {
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
+  const [form] = Form.useForm();
+  const queryClient = useQueryClient();
+
+  // 查询Ideas列表
+  const { data: ideas = [], isLoading, refetch } = useQuery({
+    queryKey: ['ideas'],
+    queryFn: () => ideasApi.getIdeas(),
+  });
+
+  // 创建Idea
+  const createMutation = useMutation({
+    mutationFn: ideasApi.createIdea,
+    onSuccess: () => {
+      message.success('Ideas创建成功');
+      queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      closeModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '创建失败');
+    },
+  });
+
+  // 更新Idea
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: IdeaUpdate }) =>
+      ideasApi.updateIdea(id, data),
+    onSuccess: () => {
+      message.success('Ideas更新成功');
+      queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      closeModal();
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '更新失败');
+    },
+  });
+
+  // 删除Idea
+  const deleteMutation = useMutation({
+    mutationFn: ideasApi.deleteIdea,
+    onSuccess: () => {
+      message.success('Ideas删除成功');
+      queryClient.invalidateQueries({ queryKey: ['ideas'] });
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '删除失败');
+    },
+  });
+
+  // 转化为项目
+  const convertMutation = useMutation({
+    mutationFn: ideasApi.convertToProject,
+    onSuccess: (response) => {
+      message.success(`已成功转化为研究项目：${response.project_title}`);
+      queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      queryClient.invalidateQueries({ queryKey: ['research_projects'] }); // 刷新研究项目列表
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '转化失败');
+    },
+  });
+
+  // 打开新增模态框
+  const openCreateModal = () => {
+    setEditingIdea(null);
+    form.resetFields();
+    form.setFieldsValue({ maturity: 'immature' }); // 设置默认值
+    setModalVisible(true);
+  };
+
+  // 打开编辑模态框
+  const openEditModal = (idea: Idea) => {
+    setEditingIdea(idea);
+    form.setFieldsValue(idea);
+    setModalVisible(true);
+  };
+
+  // 关闭模态框
+  const closeModal = () => {
+    setModalVisible(false);
+    setEditingIdea(null);
+    form.resetFields();
+  };
+
+  // 提交表单
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (editingIdea) {
+        // 更新
+        updateMutation.mutate({ id: editingIdea.id, data: values });
+      } else {
+        // 创建
+        createMutation.mutate(values);
+      }
+    } catch (error) {
+      // 表单验证失败
+      console.error('Form validation failed:', error);
+    }
+  };
+
+  // 删除确认
+  const handleDelete = (id: number) => {
+    deleteMutation.mutate(id);
+  };
+
+  // 转化为项目确认
+  const handleConvert = (id: number) => {
+    convertMutation.mutate(id);
+  };
+
+  // 表格列定义
+  const columns: ColumnsType<Idea> = [
+    {
+      title: '项目名称',
+      dataIndex: 'project_name',
+      key: 'project_name',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '项目描述',
+      dataIndex: 'project_description',
+      key: 'project_description',
+      width: 250,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '研究方法',
+      dataIndex: 'research_method',
+      key: 'research_method',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '来源',
+      dataIndex: 'source',
+      key: 'source',
+      width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '负责人',
+      dataIndex: 'responsible_person',
+      key: 'responsible_person',
+      width: 120,
+    },
+    {
+      title: '成熟度',
+      dataIndex: 'maturity',
+      key: 'maturity',
+      width: 100,
+      render: (maturity: string) => (
+        <Tag color={maturity === 'mature' ? 'green' : 'orange'}>
+          {MATURITY_OPTIONS.find(opt => opt.value === maturity)?.label || maturity}
+        </Tag>
+      ),
+    },
+    {
+      title: '创建时间',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 120,
+      render: (date: string) => new Date(date).toLocaleDateString(),
+    },
+    {
+      title: '操作',
+      key: 'actions',
+      width: 180,
+      fixed: 'right',
+      render: (_, record) => (
+        <Space size="small">
+          <Tooltip title="编辑">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => openEditModal(record)}
+              size="small"
+            />
+          </Tooltip>
+          <Tooltip title="转化为研究项目">
+            <Popconfirm
+              title="确认转化"
+              description="转化后将从Ideas列表中删除，并在研究看板中创建新项目"
+              onConfirm={() => handleConvert(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button
+                type="text"
+                icon={<SwapRightOutlined />}
+                size="small"
+                loading={convertMutation.isPending}
+              />
+            </Popconfirm>
+          </Tooltip>
+          <Tooltip title="删除">
+            <Popconfirm
+              title="确认删除"
+              description="删除后不可恢复"
+              onConfirm={() => handleDelete(record.id)}
+              okText="确认"
+              cancelText="取消"
+            >
+              <Button
+                type="text"
+                icon={<DeleteOutlined />}
+                danger
+                size="small"
+                loading={deleteMutation.isPending}
+              />
+            </Popconfirm>
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: '24px' }}>
+      <Card>
+        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+            <BulbOutlined style={{ marginRight: '8px', color: '#faad14' }} />
+            Ideas管理
+          </Title>
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              loading={isLoading}
+            >
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openCreateModal}
+            >
+              新增Idea
+            </Button>
+          </Space>
+        </div>
+
+        <Table
+          columns={columns}
+          dataSource={ideas}
+          rowKey="id"
+          loading={isLoading}
+          scroll={{ x: 1200 }}
+          pagination={{
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total) => `共 ${total} 条`,
+            defaultPageSize: 10,
+            pageSizeOptions: ['10', '20', '50'],
+          }}
+        />
+      </Card>
+
+      {/* 创建/编辑模态框 */}
+      <Modal
+        title={editingIdea ? '编辑 Idea' : '新增 Idea'}
+        open={modalVisible}
+        onOk={handleSubmit}
+        onCancel={closeModal}
+        confirmLoading={createMutation.isPending || updateMutation.isPending}
+        width={800}
+        destroyOnClose
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          requiredMark={false}
+        >
+          <Form.Item
+            name="project_name"
+            label="项目名称"
+            rules={[
+              { required: true, message: '请输入项目名称' },
+              { max: 200, message: '项目名称不能超过200字符' }
+            ]}
+          >
+            <Input placeholder="简洁明确的项目名称" />
+          </Form.Item>
+
+          <Form.Item
+            name="project_description"
+            label="项目描述（可选）"
+            rules={[{ max: 2000, message: '项目描述不能超过2000字符' }]}
+          >
+            <TextArea
+              rows={3}
+              placeholder="详细描述这个项目的内容和目标"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="research_method"
+            label="研究方法"
+            rules={[
+              { required: true, message: '请输入研究方法' },
+              { max: 1000, message: '研究方法不能超过1000字符' }
+            ]}
+          >
+            <TextArea
+              rows={2}
+              placeholder="描述计划采用的研究方法"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="source"
+            label="来源（可选）"
+            rules={[{ max: 500, message: '来源信息不能超过500字符' }]}
+          >
+            <TextArea
+              rows={2}
+              placeholder="期刊、文献或其他来源信息"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="responsible_person"
+            label="负责人"
+            rules={[
+              { required: true, message: '请输入负责人' },
+              { max: 100, message: '负责人姓名不能超过100字符' }
+            ]}
+          >
+            <Input placeholder="项目负责人姓名" />
+          </Form.Item>
+
+          <Form.Item
+            name="maturity"
+            label="成熟度"
+            rules={[{ required: true, message: '请选择成熟度' }]}
+          >
+            <Select placeholder="选择想法的成熟度">
+              {MATURITY_OPTIONS.map(option => (
+                <Option key={option.value} value={option.value}>
+                  {option.label}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
+  );
+};
+
+export default IdeasManagementPage;

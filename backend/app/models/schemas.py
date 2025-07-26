@@ -247,48 +247,50 @@ class AITestResponse(BaseModel):
     message: str
     response: Optional[str] = None
 
-# Idea schemas
+# Ideas管理 schemas - 重新设计版本
 class IdeaBase(BaseModel):
-    research_question: str = Field(..., description="研究问题")
-    research_method: str = Field(..., description="研究方法")
-    source_journal: str = Field(..., description="来源期刊")
-    source_literature: str = Field(..., description="来源文献")
-    responsible_person: str = Field(..., description="负责人")
+    project_name: str = Field(..., min_length=1, max_length=200, description="项目名称")
+    project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
+    research_method: str = Field(..., min_length=1, max_length=1000, description="研究方法")
+    source: Optional[str] = Field(None, max_length=500, description="来源信息")
+    responsible_person: str = Field(..., min_length=1, max_length=100, description="负责人")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
-    description: Optional[str] = Field(None, description="额外描述")
     
     @field_validator('maturity')
+    @classmethod
     def validate_maturity(cls, v):
         if v not in ['mature', 'immature']:
             raise ValueError('maturity must be either "mature" or "immature"')
         return v
 
 class IdeaCreate(IdeaBase):
+    """创建Ideas的数据模型"""
     pass
 
 class IdeaUpdate(BaseModel):
-    research_question: Optional[str] = None
-    research_method: Optional[str] = None
-    source_journal: Optional[str] = None
-    source_literature: Optional[str] = None
-    responsible_person: Optional[str] = None
+    """更新Ideas的数据模型"""
+    project_name: Optional[str] = Field(None, min_length=1, max_length=200, description="项目名称")
+    project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
+    research_method: Optional[str] = Field(None, min_length=1, max_length=1000, description="研究方法")
+    source: Optional[str] = Field(None, max_length=500, description="来源信息")
+    responsible_person: Optional[str] = Field(None, min_length=1, max_length=100, description="负责人")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
-    description: Optional[str] = None
     
     @field_validator('maturity')
+    @classmethod
     def validate_maturity(cls, v):
         if v is not None and v not in ['mature', 'immature']:
             raise ValueError('maturity must be either "mature" or "immature"')
         return v
 
 class Idea(IdeaBase):
+    """完整的Ideas数据模型"""
     id: int
     created_at: datetime
     updated_at: datetime
     
     class Config:
         from_attributes = True
-
 
 # Schema aliases for compatibility
 IdeaSchema = Idea

@@ -151,24 +151,26 @@ class SystemConfig(Base):
         Index('idx_config_encrypted_active', 'is_encrypted', 'is_active'),
     )
 
+
 class Idea(Base):
-    """Ideas管理模型"""
+    """Ideas管理模型 - 重新设计版本"""
     __tablename__ = "ideas"
     
     id = Column(Integer, primary_key=True, index=True)
-    research_question = Column(Text, nullable=False)  # 研究问题
-    research_method = Column(Text, nullable=False)  # 研究方法
-    source_journal = Column(Text, nullable=True)  # 来源期刊
-    source_literature = Column(Text, nullable=True)  # 来源文献
-    responsible_person = Column(String(100), nullable=False)  # 负责人
-    maturity = Column(String(20), nullable=False, default='immature')  # 成熟度: mature/immature
-    description = Column(Text)  # 额外描述
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    project_name = Column(Text, nullable=False, comment="项目名称")
+    project_description = Column(Text, nullable=True, comment="项目描述")
+    research_method = Column(Text, nullable=False, comment="研究方法")
+    source = Column(Text, nullable=True, comment="来源信息")
+    responsible_person = Column(String(100), nullable=False, comment="负责人")
+    maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
     
-    # Index for maturity filter
+    # 索引优化
     __table_args__ = (
         Index('idx_ideas_maturity', 'maturity'),
+        Index('idx_ideas_responsible_person', 'responsible_person'),
+        Index('idx_ideas_created_at', 'created_at'),
     )
 
 
