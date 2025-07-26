@@ -350,7 +350,8 @@ export const ideaDiscoveryApi = {
     
     const response = await api.post('/ideas/process-excel', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
-      responseType: 'blob'
+      responseType: 'blob',
+      timeout: 600000  // 增加到10分钟，支持处理大量数据
     });
     return response.data;
   },

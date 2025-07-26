@@ -351,7 +351,10 @@ async def process_excel_file(
         output.seek(0)
         
         # 9. 返回处理后的文件
-        filename = f"processed_{file.filename.replace('.xlsx', '').replace('.xls', '')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        # 生成安全的文件名（移除中文字符，避免编码问题）
+        import re
+        safe_filename = re.sub(r'[^\w\-_\.]', '_', file.filename.replace('.xlsx', '').replace('.xls', ''))
+        filename = f"ai_processed_{safe_filename}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
         logger.info(f"Excel处理完成: 成功={processed_count}, 失败={error_count}, 总耗时={datetime.now() - start_time}")
         
