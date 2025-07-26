@@ -341,11 +341,12 @@ export const ideasApi = createExtendedCRUDApi<
 
 // 其他API保持原样...
 export const ideaDiscoveryApi = {
-  processExcel: async (file: File, promptId?: number, customPrompt?: string): Promise<Blob> => {
+  processExcel: async (file: File, promptId?: number, customPrompt?: string, maxConcurrent?: number): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
     if (promptId) formData.append('prompt_id', promptId.toString());
     if (customPrompt) formData.append('custom_prompt', customPrompt);
+    if (maxConcurrent !== undefined) formData.append('max_concurrent', maxConcurrent.toString());
     
     const response = await api.post('/ideas/process-excel', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },

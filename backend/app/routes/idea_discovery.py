@@ -37,6 +37,7 @@ async def process_excel_file(
     file: UploadFile = File(...),
     prompt_id: Optional[int] = Form(None),
     custom_prompt: Optional[str] = Form(None),
+    max_concurrent: Optional[int] = Form(50),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -148,75 +149,124 @@ async def process_excel_file(
             prompt_to_use = default_prompt
             logger.info("使用默认prompt")
         
-        # 7. 处理Excel数据
-        logger.info(f"开始处理Excel数据，共 {len(df)} 行")
-        results = []
+        # 7. 处理Excel数据 - 使用并发处理
+        logger.info(f"开始并发处理Excel数据，共 {len(df)} 行，并发数: {max_concurrent}")
+        
+        # 准备数据行
+        rows_data = []
+        for index, row in df.iterrows():
+            abstract = str(row.get('摘要', '')).strip()
+            title = str(row.get('标题', '')).strip()
+            
+            # 跳过空行但记录
+            if not abstract or abstract == 'nan':
+                rows_data.append({
+                    'index': index,
+                    'title': title,
+                    'abstract': abstract,
+                    'content': None,  # 标记为跳过
+                    'row_number': index + 1
+                })
+                continue
+            
+            # 构建完整内容
+            content = f"标题：{title}\n摘要：{abstract}" if title and title != 'nan' else abstract
+            rows_data.append({
+                'index': index,
+                'title': title,
+                'abstract': abstract,
+                'content': content,
+                'row_number': index + 1
+            })
+        
+        total_rows = len(rows_data)
+        logger.info(f"准备处理 {total_rows} 行数据")
+        
+        # 并发处理函数
+        async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore) -> dict:
+            async with semaphore:
+                try:
+                    # 如果是空行，直接返回跳过状态
+                    if row_data['content'] is None:
+                        return {
+                            '序号': row_data['row_number'],
+                            '标题': row_data['title'],
+                            '原始摘要': row_data['abstract'],
+                            '优化后的研究内容': '',
+                            '处理状态': '跳过-空内容'
+                        }
+                    
+                    # 调用AI处理
+                    logger.debug(f"开始处理第 {row_data['row_number']} 行...")
+                    result = await ai_service.process_with_prompt(row_data['content'], prompt_to_use)
+                    
+                    if result['success']:
+                        logger.debug(f"第 {row_data['row_number']} 行处理成功")
+                        return {
+                            '序号': row_data['row_number'],
+                            '标题': row_data['title'],
+                            '原始摘要': row_data['abstract'],
+                            '优化后的研究内容': result['response'],
+                            '处理状态': '成功'
+                        }
+                    else:
+                        logger.error(f"第 {row_data['row_number']} 行AI处理失败: {result.get('error')}")
+                        return {
+                            '序号': row_data['row_number'],
+                            '标题': row_data['title'],
+                            '原始摘要': row_data['abstract'],
+                            '优化后的研究内容': '',
+                            '处理状态': f"失败-{result.get('error', '未知错误')}"
+                        }
+                        
+                except Exception as e:
+                    error_msg = str(e)
+                    logger.error(f"处理第 {row_data['row_number']} 行时发生异常: {error_msg}")
+                    return {
+                        '序号': row_data['row_number'],
+                        '标题': row_data['title'],
+                        '原始摘要': row_data['abstract'],
+                        '优化后的研究内容': '',
+                        '处理状态': f"错误-{error_msg}"
+                    }
+        
+        # 创建信号量控制并发数
+        semaphore = asyncio.Semaphore(max_concurrent)
+        
+        # 创建并发任务
+        tasks = [process_single_row(row_data, semaphore) for row_data in rows_data]
+        
+        # 执行并发处理
+        logger.info(f"开始并发执行 {len(tasks)} 个任务...")
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # 处理结果，确保异常也被记录
+        processed_results = []
         processed_count = 0
         error_count = 0
         
-        # 显示处理进度
-        total_rows = len(df)
-        
-        for index, row in df.iterrows():
-            try:
-                abstract = str(row.get('摘要', '')).strip()
-                title = str(row.get('标题', '')).strip()
-                
-                # 跳过空行
-                if not abstract or abstract == 'nan':
-                    results.append({
-                        '序号': index + 1,
-                        '标题': title,
-                        '原始摘要': abstract,
-                        '优化后的研究内容': '',
-                        '处理状态': '跳过-空内容'
-                    })
-                    continue
-                
-                # 构建完整内容
-                content = f"标题：{title}\n摘要：{abstract}" if title and title != 'nan' else abstract
-                
-                # 调用AI处理
-                logger.info(f"处理第 {index + 1}/{total_rows} 行...")
-                
-                # 使用系统配置的AI服务进行处理
-                result = await ai_service.process_with_prompt(content, prompt_to_use)
-                
-                if result['success']:
-                    results.append({
-                        '序号': index + 1,
-                        '标题': title,
-                        '原始摘要': abstract,
-                        '优化后的研究内容': result['response'],
-                        '处理状态': '成功'
-                    })
-                    processed_count += 1
-                else:
-                    results.append({
-                        '序号': index + 1,
-                        '标题': title,
-                        '原始摘要': abstract,
-                        '优化后的研究内容': '',
-                        '处理状态': f"失败-{result.get('error', '未知错误')}"
-                    })
-                    error_count += 1
-                    logger.error(f"处理第 {index + 1} 行失败: {result.get('error')}")
-                
-                # 添加延迟避免API限流
-                if index < len(df) - 1:  # 不是最后一行
-                    await asyncio.sleep(0.5)
-                    
-            except Exception as e:
-                error_msg = str(e)
-                logger.error(f"处理第 {index + 1} 行时出错: {error_msg}")
-                results.append({
-                    '序号': index + 1,
-                    '标题': row.get('标题', ''),
-                    '原始摘要': row.get('摘要', ''),
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"任务 {i+1} 发生异常: {result}")
+                processed_results.append({
+                    '序号': i + 1,
+                    '标题': rows_data[i]['title'] if i < len(rows_data) else '',
+                    '原始摘要': rows_data[i]['abstract'] if i < len(rows_data) else '',
                     '优化后的研究内容': '',
-                    '处理状态': f"错误-{error_msg}"
+                    '处理状态': f"异常-{str(result)}"
                 })
                 error_count += 1
+            else:
+                processed_results.append(result)
+                if result['处理状态'] == '成功':
+                    processed_count += 1
+                elif result['处理状态'].startswith('失败') or result['处理状态'].startswith('错误'):
+                    error_count += 1
+        
+        # 按序号排序确保顺序正确
+        results = sorted(processed_results, key=lambda x: x['序号'])
+        
+        logger.info(f"并发处理完成: 成功={processed_count}, 失败={error_count}, 总数={len(results)}")
         
         # 8. 创建结果Excel文件
         result_df = pd.DataFrame(results)

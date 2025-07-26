@@ -91,8 +91,20 @@ const IdeaDiscovery: React.FC = () => {
       setErrorMessage('');
 
       try {
-        // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id
-        const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId);
+        // 读取本地并发数配置
+        let maxConcurrent = 50; // 默认值
+        try {
+          const saved = localStorage.getItem('ai_concurrent_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            maxConcurrent = parsed.max_concurrent || 50;
+          }
+        } catch (error) {
+          console.warn('读取并发配置失败，使用默认值50:', error);
+        }
+
+        // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id和并发数
+        const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId, undefined, maxConcurrent);
         setResultBlob(blob);
         setState(ProcessingState.COMPLETED);
       } catch (error: any) {
