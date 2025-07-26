@@ -17,14 +17,14 @@ const ENV_CONFIGS: Record<Environment, EnvironmentConfig> = {
   development: {
     API_BASE_URL: 'http://localhost:8080',
     API_PREFIX: '/api',
-    API_TIMEOUT: 30000,
+    API_TIMEOUT: 120000,  // 增加到120秒，支持并发Excel处理
     USE_MOCK: false,
     LOG_LEVEL: 'debug',
   },
   production: {
     API_BASE_URL: '', // 使用相对路径，自动使用当前域名
     API_PREFIX: '/api',
-    API_TIMEOUT: 30000,
+    API_TIMEOUT: 120000,  // 增加到120秒，支持并发Excel处理
     USE_MOCK: false,
     LOG_LEVEL: 'error',
   },

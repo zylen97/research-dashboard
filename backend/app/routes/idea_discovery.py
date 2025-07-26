@@ -99,30 +99,14 @@ async def process_excel_file(
         # 获取AI模型名称用于文件列名
         ai_model_name = main_config.get('model', 'default')
         
-        # 6. 为每行数据生成AI建议
-        logger.info(f"开始为 {len(df)} 行数据生成AI建议...")
+        # 6. 为每行数据生成AI建议（并发批处理）
+        logger.info(f"开始为 {len(df)} 行数据生成AI建议（并发处理）...")
         suggestions = []
         processed_count = 0
         error_count = 0
         
-        for index, row in df.iterrows():
-            try:
-                logger.debug(f"处理第 {index+1}/{len(df)} 行数据...")
-                
-                # 构建AI提示内容
-                title = str(row['标题']) if pd.notna(row['标题']) else ""
-                abstract = str(row['摘要']) if pd.notna(row['摘要']) else ""
-                
-                if not title and not abstract:
-                    logger.warning(f"第{index+1}行数据不完整，跳过")
-                    suggestions.append("数据不完整，无法生成建议")
-                    continue
-                
-                # 构建数据内容
-                data_content = f"标题: {title}\n摘要: {abstract}"
-                
-                # 使用自定义提示词或默认提示词
-                default_prompt = """
+        # 默认提示词
+        default_prompt = """
 基于提供的文献标题和摘要，请生成一个简洁的研究迁移建议。
 
 要求：
@@ -133,13 +117,30 @@ async def process_excel_file(
 
 请直接给出建议内容，不需要格式化或额外说明。
 """
+        prompt_to_use = custom_prompt if custom_prompt else default_prompt
+        
+        logger.debug(f"使用的prompt类型: {'自定义' if custom_prompt else '默认'}")
+        if custom_prompt:
+            logger.debug(f"自定义prompt长度: {len(custom_prompt)}字符")
+        
+        # 单行处理函数
+        async def process_single_row(index, row):
+            try:
+                # 构建AI提示内容
+                title = str(row['标题']) if pd.notna(row['标题']) else ""
+                abstract = str(row['摘要']) if pd.notna(row['摘要']) else ""
                 
-                # 使用用户自定义的prompt，如果没有则使用默认prompt
-                prompt_to_use = custom_prompt if custom_prompt else default_prompt
+                if not title and not abstract:
+                    logger.warning(f"第{index+1}行数据不完整，跳过")
+                    return {
+                        'index': index,
+                        'success': False,
+                        'suggestion': "数据不完整，无法生成建议",
+                        'error': None
+                    }
                 
-                logger.debug(f"使用的prompt类型: {'自定义' if custom_prompt else '默认'}")
-                if custom_prompt:
-                    logger.debug(f"自定义prompt长度: {len(custom_prompt)}字符")
+                # 构建数据内容
+                data_content = f"标题: {title}\n摘要: {abstract}"
                 
                 # 调用AI服务（自动模式）
                 logger.debug(f"调用AI服务处理第{index+1}行...")
@@ -153,24 +154,88 @@ async def process_excel_file(
                     # 确保建议不超过150字
                     if len(suggestion) > 150:
                         suggestion = suggestion[:147] + "..."
-                    suggestions.append(suggestion)
                     logger.debug(f"第{index+1}行处理成功，建议长度: {len(suggestion)}")
+                    return {
+                        'index': index,
+                        'success': True,
+                        'suggestion': suggestion,
+                        'error': None
+                    }
                 else:
                     error_msg = ai_result.get('error', '未知错误')
                     logger.error(f"第{index+1}行AI处理失败: {error_msg}")
-                    suggestions.append(f"AI处理失败: {error_msg}")
-                    error_count += 1
-                
-                processed_count += 1
-                
-                # 添加小延迟避免API限流
-                await asyncio.sleep(0.1)
-                
+                    return {
+                        'index': index,
+                        'success': False,
+                        'suggestion': f"AI处理失败: {error_msg}",
+                        'error': error_msg
+                    }
+                    
             except Exception as e:
                 error_msg = f"处理第{index+1}行时发生异常: {str(e)}"
                 logger.error(error_msg)
-                suggestions.append(f"处理出错: {str(e)}")
-                error_count += 1
+                return {
+                    'index': index,
+                    'success': False,
+                    'suggestion': f"处理出错: {str(e)}",
+                    'error': str(e)
+                }
+        
+        # 批量并发处理
+        batch_size = 5  # 并发数量：5个一批
+        total_batches = (len(df) + batch_size - 1) // batch_size
+        
+        # 初始化结果列表，保持顺序
+        suggestions = [None] * len(df)
+        
+        for batch_num in range(total_batches):
+            start_idx = batch_num * batch_size
+            end_idx = min(start_idx + batch_size, len(df))
+            current_batch_size = end_idx - start_idx
+            
+            logger.info(f"处理第 {batch_num + 1}/{total_batches} 批，行数: {start_idx + 1}-{end_idx}")
+            
+            # 创建当前批次的任务
+            batch_tasks = []
+            for i in range(start_idx, end_idx):
+                row = df.iloc[i]
+                task = process_single_row(i, row)
+                batch_tasks.append(task)
+            
+            # 并发执行当前批次
+            try:
+                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+                
+                # 处理批次结果
+                for result in batch_results:
+                    if isinstance(result, Exception):
+                        # 处理异常情况
+                        logger.error(f"批处理中发生异常: {result}")
+                        error_count += 1
+                        # 找到对应的索引（这里简化处理）
+                        suggestions[processed_count] = f"批处理异常: {str(result)}"
+                    else:
+                        # 正常结果
+                        idx = result['index']
+                        suggestions[idx] = result['suggestion']
+                        if not result['success']:
+                            error_count += 1
+                    
+                    processed_count += 1
+                
+                logger.info(f"第 {batch_num + 1} 批处理完成，成功率: {((current_batch_size - sum(1 for r in batch_results if isinstance(r, Exception) or not r.get('success', True))) / current_batch_size * 100):.1f}%")
+                
+                # 批次间短暂延迟，避免过于频繁的请求
+                if batch_num < total_batches - 1:  # 最后一批不需要延迟
+                    await asyncio.sleep(0.5)
+                    
+            except Exception as e:
+                logger.error(f"第 {batch_num + 1} 批处理失败: {e}")
+                # 为这批数据填充错误信息
+                for i in range(start_idx, end_idx):
+                    suggestions[i] = f"批处理失败: {str(e)}"
+                    error_count += 1
+                    processed_count += 1
         
         logger.info(f"数据处理完成: 总共{len(df)}行，成功{processed_count - error_count}行，失败{error_count}行")
         
