@@ -56,8 +56,12 @@ async def process_excel_file(
     start_time = datetime.now()
     
     try:
+        # 生成安全的文件名用于日志和处理（避免中文编码问题）
+        import re
+        safe_original_filename = re.sub(r'[^\w\-_\.]', '_', file.filename or 'unknown_file')
+        
         # 1. 验证文件类型
-        if not file.filename.endswith(('.xlsx', '.xls')):
+        if not (file.filename and file.filename.lower().endswith(('.xlsx', '.xls'))):
             raise HTTPException(
                 status_code=400, 
                 detail="仅支持Excel文件格式 (.xlsx, .xls)"
@@ -83,7 +87,7 @@ async def process_excel_file(
             )
         
         # 4. 创建AI服务实例
-        logger.info(f"🚀 开始处理Excel文件: {file.filename}, 文件大小: {len(file_content)} bytes")
+        logger.info(f"🚀 开始处理Excel文件: {safe_original_filename}, 文件大小: {len(file_content)} bytes")
         
         try:
             logger.info("📦 创建AI服务实例...")
@@ -353,14 +357,14 @@ async def process_excel_file(
         output.seek(0)
         
         # 9. 返回增强后的文件
-        # 生成安全的文件名（移除中文字符，避免编码问题）
-        import re
-        safe_filename = re.sub(r'[^\w\-_\.]', '_', file.filename.replace('.xlsx', '').replace('.xls', ''))
+        # 使用已经生成的安全文件名，移除扩展名
+        safe_filename_base = safe_original_filename.replace('.xlsx', '').replace('.xls', '').replace('_xlsx', '').replace('_xls', '')
         # 使用模型名称作为文件名的一部分
         safe_model_name = re.sub(r'[^\w\-_\.]', '_', current_model)
-        filename = f"{safe_filename}_enhanced_by_{safe_model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        filename = f"{safe_filename_base}_enhanced_by_{safe_model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
-        logger.info(f"Excel处理完成: 成功={processed_count}, 失败={error_count}, 跳过={skip_count}, 总耗时={datetime.now() - start_time}")
+        logger.info(f"Excel处理完成 [{safe_original_filename}]: 成功={processed_count}, 失败={error_count}, 跳过={skip_count}, 总耗时={datetime.now() - start_time}")
+        logger.info(f"📥 生成下载文件: {filename}")
         
         return StreamingResponse(
             output,
