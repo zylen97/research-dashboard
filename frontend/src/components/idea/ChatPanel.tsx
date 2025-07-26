@@ -39,12 +39,16 @@ interface ChatPanelProps {
   onSendMessage?: (message: string) => Promise<string>;
   disabled?: boolean;
   placeholder?: string;
+  testResult?: string | null;
+  onTestResultShown?: () => void;
 }
 
 const ChatPanel: React.FC<ChatPanelProps> = ({
   onSendMessage,
   disabled = false,
-  placeholder = '输入消息测试AI对话...'
+  placeholder = '输入消息测试AI对话...',
+  testResult,
+  onTestResultShown
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState<string>('');
@@ -55,6 +59,39 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  // 处理测试结果显示
+  useEffect(() => {
+    if (testResult && onTestResultShown) {
+      const testMessageId = `test_${Date.now()}`;
+      const aiResponseId = `ai_test_${Date.now()}`;
+      
+      // 添加系统测试消息
+      const systemMessage: ChatMessage = {
+        id: testMessageId,
+        type: 'user',
+        content: '连接测试',
+        timestamp: new Date(),
+        status: 'success'
+      };
+      
+      // 添加AI测试回复
+      const aiTestMessage: ChatMessage = {
+        id: aiResponseId,
+        type: 'ai',
+        content: testResult,
+        timestamp: new Date(),
+        status: 'success'
+      };
+      
+      setMessages(prev => [...prev, systemMessage, aiTestMessage]);
+      
+      // 通知父组件测试结果已显示
+      onTestResultShown();
+      
+      message.success('测试连接成功！AI回复已显示在聊天记录中');
+    }
+  }, [testResult, onTestResultShown]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

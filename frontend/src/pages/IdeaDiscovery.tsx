@@ -50,6 +50,7 @@ const IdeaDiscovery: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<number>(0);
   const [customPrompt, setCustomPrompt] = useState<string>('');
+  const [testResult, setTestResult] = useState<string | null>(null);
 
   // 处理聊天消息发送
   const handleSendChatMessage = async (message: string): Promise<string> => {
@@ -65,6 +66,11 @@ const IdeaDiscovery: React.FC = () => {
       const errorMessage = error.response?.data?.message || error.message || '聊天服务不可用';
       throw new Error(errorMessage);
     }
+  };
+
+  // 处理测试连接成功
+  const handleTestSuccess = (result: string) => {
+    setTestResult(result);
   };
 
   // 处理文件选择
@@ -182,7 +188,10 @@ const IdeaDiscovery: React.FC = () => {
       <Row gutter={[16, 32]} style={{ width: '100%' }}>
         {/* 左侧：AI配置面板 */}
         <Col xs={24} md={12} lg={8} xl={8}>
-          <EmbeddedAIConfig onConfigChange={setAiConfig} />
+          <EmbeddedAIConfig 
+            onConfigChange={setAiConfig}
+            onTestSuccess={handleTestSuccess}
+          />
         </Col>
 
         {/* 中间：文件处理面板 */}
@@ -341,6 +350,8 @@ const IdeaDiscovery: React.FC = () => {
             onSendMessage={handleSendChatMessage}
             disabled={!aiConfig || !aiConfig.is_connected}
             placeholder={!aiConfig || !aiConfig.is_connected ? '请先配置并测试AI连接...' : '输入消息测试AI对话...'}
+            testResult={testResult}
+            onTestResultShown={() => setTestResult(null)}
           />
         </Col>
       </Row>

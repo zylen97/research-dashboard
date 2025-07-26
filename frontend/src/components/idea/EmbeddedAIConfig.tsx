@@ -35,9 +35,10 @@ interface AIConfig {
 
 interface EmbeddedAIConfigProps {
   onConfigChange?: (config: AIConfig | null) => void;
+  onTestSuccess?: (testResult: string) => void;
 }
 
-const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) => {
+const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onTestSuccess }) => {
   const [form] = Form.useForm();
   const [config, setConfig] = useState<AIConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -133,20 +134,17 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       const updatedSettings = await settingsApi.updateApiSettings(apiSettings);
       console.log('配置保存成功:', { api_key: '***', api_base: updatedSettings.api_base, model: updatedSettings.model });
       
-      // 创建新配置对象，但暂时不设置is_connected
+      // 创建新配置对象
       const newConfig: AIConfig = {
         api_key: updatedSettings.api_key,
         api_url: updatedSettings.api_base,
         model: updatedSettings.model,
-        is_connected: false // 先设为false，等待连接测试
+        is_connected: false // 保存后需要手动测试连接
       };
       
       setConfig(newConfig);
       setConnectionStatus(null); // 重置连接状态
-      message.success('AI配置保存成功，正在测试连接...');
-      
-      // 自动测试连接
-      await testConnection(newConfig);
+      message.success('AI配置保存成功！请点击“测试连接”验证配置');
     } catch (error: any) {
       console.error('保存配置失败:', error);
       const errorMessage = error.response?.data?.detail || error.message || '保存配置失败';
@@ -193,6 +191,11 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         // 通知父组件配置变化
         if (onConfigChange) {
           onConfigChange(updatedConfig);
+        }
+        
+        // 通知父组件测试成功，传递AI的实际回复
+        if (onTestSuccess && response.details?.response) {
+          onTestSuccess(response.details.response);
         }
       } else {
         const errorMsg = response.message || '连接测试失败';
@@ -359,7 +362,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             <Form.Item>
               <Space>
                 <Button type="primary" htmlType="submit" loading={loading} size="small">
-                  保存并测试
+                  保存
                 </Button>
                 <Button onClick={() => testConnection()} loading={testing} disabled={!config} size="small">
                   测试连接

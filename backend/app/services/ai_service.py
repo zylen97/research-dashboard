@@ -160,8 +160,7 @@ class AIService:
                 
                 async with httpx.AsyncClient(
                     timeout=timeout_config, 
-                    limits=limits,
-                    http2=True  # 启用HTTP/2
+                    limits=limits
                 ) as client:
                     response = await client.post(api_url, json=data, headers=headers)
                     
@@ -288,7 +287,7 @@ class AIService:
         }
         
         try:
-            # 使用与OpenAI API类似的超时和重试配置
+            # 使用与OpenAI API类似的超时配置
             timeout_config = httpx.Timeout(
                 connect=30.0,
                 read=120.0,
