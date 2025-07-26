@@ -149,7 +149,13 @@ async def process_excel_file(
             prompt_to_use = default_prompt
             logger.info("使用默认prompt")
         
-        # 7. 处理Excel数据 - 使用并发处理
+        # 7. 验证并发数参数
+        if max_concurrent is None or max_concurrent <= 0:
+            max_concurrent = 50
+        max_concurrent = min(max_concurrent, 50)  # 限制最大并发数
+        logger.info(f"验证并发数参数: {max_concurrent}")
+        
+        # 8. 处理Excel数据 - 使用并发处理
         logger.info(f"开始并发处理Excel数据，共 {len(df)} 行，并发数: {max_concurrent}")
         
         # 准备数据行
@@ -182,8 +188,8 @@ async def process_excel_file(
         total_rows = len(rows_data)
         logger.info(f"准备处理 {total_rows} 行数据")
         
-        # 并发处理函数
-        async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore) -> dict:
+        # 并发处理函数 - 修复变量作用域问题
+        async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore, ai_service_inst, prompt_text: str) -> dict:
             async with semaphore:
                 try:
                     # 如果是空行，直接返回跳过状态
@@ -198,7 +204,7 @@ async def process_excel_file(
                     
                     # 调用AI处理
                     logger.debug(f"开始处理第 {row_data['row_number']} 行...")
-                    result = await ai_service.process_with_prompt(row_data['content'], prompt_to_use)
+                    result = await ai_service_inst.process_with_prompt(row_data['content'], prompt_text)
                     
                     if result['success']:
                         logger.debug(f"第 {row_data['row_number']} 行处理成功")
@@ -233,8 +239,8 @@ async def process_excel_file(
         # 创建信号量控制并发数
         semaphore = asyncio.Semaphore(max_concurrent)
         
-        # 创建并发任务
-        tasks = [process_single_row(row_data, semaphore) for row_data in rows_data]
+        # 创建并发任务 - 传递正确的参数
+        tasks = [process_single_row(row_data, semaphore, ai_service, prompt_to_use) for row_data in rows_data]
         
         # 执行并发处理
         logger.info(f"开始并发执行 {len(tasks)} 个任务...")
