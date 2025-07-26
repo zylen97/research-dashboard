@@ -58,7 +58,8 @@ async def process_excel_file(
     try:
         # 生成安全的文件名用于日志和处理（避免中文编码问题）
         import re
-        safe_original_filename = re.sub(r'[^\w\-_\.]', '_', file.filename or 'unknown_file')
+        # 更严格的ASCII安全文件名：只保留英文字母、数字、连字符、下划线、点号
+        safe_original_filename = re.sub(r'[^a-zA-Z0-9\-_\.]', '_', file.filename or 'unknown_file')
         
         # 1. 验证文件类型
         if not (file.filename and file.filename.lower().endswith(('.xlsx', '.xls'))):
@@ -357,11 +358,16 @@ async def process_excel_file(
         output.seek(0)
         
         # 9. 返回增强后的文件
-        # 使用已经生成的安全文件名，移除扩展名
+        # 使用已经生成的安全文件名，移除扩展名，确保完全ASCII安全
         safe_filename_base = safe_original_filename.replace('.xlsx', '').replace('.xls', '').replace('_xlsx', '').replace('_xls', '')
-        # 使用模型名称作为文件名的一部分
-        safe_model_name = re.sub(r'[^\w\-_\.]', '_', current_model)
+        # 再次确保文件名基础部分完全ASCII安全
+        safe_filename_base = re.sub(r'[^a-zA-Z0-9\-_]', '_', safe_filename_base)
+        # 使用模型名称作为文件名的一部分，确保完全ASCII安全
+        safe_model_name = re.sub(r'[^a-zA-Z0-9\-_]', '_', current_model)
         filename = f"{safe_filename_base}_enhanced_by_{safe_model_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        # 最终验证：确保整个文件名完全ASCII安全
+        filename = re.sub(r'[^a-zA-Z0-9\-_\.]', '_', filename)
         
         logger.info(f"Excel处理完成 [{safe_original_filename}]: 成功={processed_count}, 失败={error_count}, 跳过={skip_count}, 总耗时={datetime.now() - start_time}")
         logger.info(f"📥 生成下载文件: {filename}")
