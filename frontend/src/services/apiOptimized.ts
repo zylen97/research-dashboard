@@ -268,20 +268,69 @@ export const ideasApi = createExtendedCRUDApi<
         throw error;
       }
     },
-    // 增强的安全获取方法，确保总是返回数组
+    // 超强化的安全获取方法，绝对确保返回数组，修复"q.some is not a function"错误
     getIdeasSafe: async (): Promise<Idea[]> => {
       try {
+        console.log('[API.getIdeasSafe] 开始请求Ideas数据...');
         const response = await api.get(`${basePath}/`);
+        console.log('[API.getIdeasSafe] 原始响应:', response);
+        
         const data = handleListResponse<Idea>(response, 'API.getIdeasSafe');
-        // 再次确保返回的是数组
-        if (!Array.isArray(data)) {
-          console.warn('[API.getIdeasSafe] 响应不是数组，返回空数组');
+        console.log('[API.getIdeasSafe] handleListResponse处理后的数据:', data, '类型:', typeof data, '是否为数组:', Array.isArray(data));
+        
+        // 多重数组验证
+        if (!data) {
+          console.warn('[API.getIdeasSafe] 数据为null/undefined，返回空数组');
           return [];
         }
-        return data;
+        
+        if (!Array.isArray(data)) {
+          console.warn('[API.getIdeasSafe] 响应不是数组，类型:', typeof data, '内容:', data);
+          
+          // 尝试从各种可能的结构中提取数组
+          if (typeof data === 'object' && data !== null) {
+            // 检查常见的数组包装字段
+            const possibleArrayFields = ['data', 'items', 'results', 'list', 'ideas'];
+            
+            for (const field of possibleArrayFields) {
+              if (field in data && Array.isArray((data as any)[field])) {
+                console.log(`[API.getIdeasSafe] 从.${field}字段提取数组`);
+                return (data as any)[field];
+              }
+            }
+            
+            // 如果是对象的值都看起来像Ideas，尝试转换
+            const values = Object.values(data);
+            if (values.length > 0 && values.every(item => 
+              typeof item === 'object' && 
+              item !== null && 
+              'id' in item
+            )) {
+              console.log('[API.getIdeasSafe] 将对象值转换为数组');
+              return values as Idea[];
+            }
+          }
+          
+          console.error('[API.getIdeasSafe] 无法提取数组，强制返回空数组');
+          return [];
+        }
+        
+        // 验证数组元素
+        const validatedData = data.filter(item => {
+          if (!item || typeof item !== 'object' || !('id' in item)) {
+            console.warn('[API.getIdeasSafe] 过滤无效Ideas项目:', item);
+            return false;
+          }
+          return true;
+        });
+        
+        console.log('[API.getIdeasSafe] 最终返回数组长度:', validatedData.length);
+        return validatedData;
+        
       } catch (error) {
         console.error('[API.getIdeasSafe] API请求失败:', error);
-        // 网络错误、认证失败等情况下返回空数组
+        
+        // 确保即使在错误情况下也返回数组
         return [];
       }
     },
