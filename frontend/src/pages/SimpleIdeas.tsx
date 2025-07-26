@@ -137,11 +137,13 @@ const SimpleIdeasPage: React.FC = () => {
     try {
       const values = await form.validateFields();
       
-      // 处理来源字段，分离期刊和文献
+      // 处理来源字段 - 简化逻辑，允许为空
+      const source = values.source?.trim() || null;
       const processedValues = {
         ...values,
-        source_journal: values.source || '',
-        source_literature: values.source || '',
+        // 如果有来源信息，同时填入期刊和文献字段；如果没有，设为null
+        source_journal: source,
+        source_literature: source,
       };
       delete processedValues.source;
       
@@ -371,8 +373,7 @@ const SimpleIdeasPage: React.FC = () => {
 
           <Form.Item
             name="source"
-            label="来源"
-            rules={[{ required: true, message: '请输入来源信息' }]}
+            label="来源（可选）"
           >
             <TextArea
               rows={2}

@@ -158,8 +158,8 @@ class Idea(Base):
     id = Column(Integer, primary_key=True, index=True)
     research_question = Column(Text, nullable=False)  # 研究问题
     research_method = Column(Text, nullable=False)  # 研究方法
-    source_journal = Column(Text, nullable=False)  # 来源期刊
-    source_literature = Column(Text, nullable=False)  # 来源文献
+    source_journal = Column(Text, nullable=True)  # 来源期刊
+    source_literature = Column(Text, nullable=True)  # 来源文献
     responsible_person = Column(String(100), nullable=False)  # 负责人
     maturity = Column(String(20), nullable=False, default='immature')  # 成熟度: mature/immature
     description = Column(Text)  # 额外描述

@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 修复ideas表字段名映射
-MIGRATION_VERSION = "v1.33_fix_ideas_field_mapping"
+# 迁移版本号 - 修复ideas表source字段为可选
+MIGRATION_VERSION = "v1.34_make_source_fields_nullable"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,130 +85,94 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.33迁移任务：修复ideas表字段名映射
-        # 问题：生产数据库使用新字段名(title,description等)，但代码期望旧字段名(research_question等)
-        # 解决：创建正确结构的ideas表，迁移数据
+        # 🔧 v1.34迁移任务：修复ideas表source字段为可选
+        # 问题：source_journal和source_literature字段为NOT NULL，导致前端提交空值时报500错误
+        # 解决：将这些字段改为允许NULL，并设置合理的默认值
         # ===========================================
         
-        logger.info("🔧 开始v1.33迁移：修复ideas表字段名映射...")
-        logger.info("🎯 目标：统一ideas表结构，使其与代码期望的字段名匹配")
+        logger.info("🔧 开始v1.34迁移：修复ideas表source字段为可选...")
+        logger.info("🎯 目标：将source_journal和source_literature字段改为可选，避免500错误")
         
         # 第一步：检查现有的ideas表结构
         logger.info("📋 检查现有ideas表结构...")
-        cursor.execute("PRAGMA table_info(ideas)")
-        columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
-        logger.info(f"当前ideas表字段: {', '.join(column_names)}")
-        
-        # 判断是否需要迁移（如果有title字段说明是新结构，需要转换）
-        if 'title' in column_names and 'research_question' not in column_names:
-            logger.info("🔄 检测到新字段结构，需要迁移到旧字段名...")
+        if table_exists(cursor, 'ideas'):
+            cursor.execute("PRAGMA table_info(ideas)")
+            columns = cursor.fetchall()
+            column_names = [col[1] for col in columns]
+            logger.info(f"当前ideas表字段: {', '.join(column_names)}")
             
-            # 第二步：备份现有数据
-            logger.info("📋 备份现有ideas数据...")
-            cursor.execute("SELECT * FROM ideas")
-            old_data = cursor.fetchall()
-            logger.info(f"📊 备份了 {len(old_data)} 条数据")
+            # 检查是否需要修改字段约束
+            needs_migration = False
             
-            # 第三步：重命名旧表
-            logger.info("📋 重命名旧表...")
-            cursor.execute("ALTER TABLE ideas RENAME TO ideas_old_backup")
+            # 检查source_journal和source_literature字段的约束
+            logger.info("📋 检查字段约束...")
+            for col in columns:
+                col_name, col_type, not_null = col[1], col[2], col[3]
+                if col_name in ['source_journal', 'source_literature'] and not_null == 1:
+                    logger.info(f"⚠️ 字段 {col_name} 当前为NOT NULL，需要修改为可选")
+                    needs_migration = True
             
-            # 第四步：创建新表（使用代码期望的字段名）
-            logger.info("📋 创建新的ideas表（使用正确的字段名）...")
-            cursor.execute("""
-                CREATE TABLE ideas (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    research_question TEXT NOT NULL,
-                    research_method TEXT,
-                    source_journal TEXT DEFAULT '',
-                    source_literature TEXT,
-                    responsible_person TEXT DEFAULT '',
-                    maturity VARCHAR(20) DEFAULT 'immature',
-                    description TEXT,
-                    collaborator_id INTEGER,
-                    importance INTEGER DEFAULT 3,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-            logger.info("✅ 新ideas表创建成功")
-            
-            # 第五步：迁移数据（映射字段名）
-            logger.info("📋 开始迁移数据...")
-            cursor.execute("PRAGMA table_info(ideas_old_backup)")
-            old_columns = {col[1]: i for i, col in enumerate(cursor.fetchall())}
-            
-            for row in old_data:
-                # 映射字段
-                research_question = row[old_columns.get('title', -1)] if 'title' in old_columns else row[old_columns.get('research_question', -1)]
-                research_method = row[old_columns.get('research_method', -1)] if 'research_method' in old_columns else ''
-                source_journal = row[old_columns.get('source_journal', -1)] if 'source_journal' in old_columns else ''
-                source_literature = row[old_columns.get('source', -1)] if 'source' in old_columns else row[old_columns.get('source_literature', -1)] if 'source_literature' in old_columns else ''
-                responsible_person = row[old_columns.get('responsible_person', -1)] if 'responsible_person' in old_columns else ''
-                maturity = row[old_columns.get('maturity', -1)] if 'maturity' in old_columns else 'immature'
-                description = row[old_columns.get('description', -1)] if 'description' in old_columns else ''
-                collaborator_id = row[old_columns.get('collaborator_id', -1)] if 'collaborator_id' in old_columns else None
-                importance = row[old_columns.get('importance', -1)] if 'importance' in old_columns else 3
-                created_at = row[old_columns.get('created_at', -1)] if 'created_at' in old_columns else datetime.now()
-                updated_at = row[old_columns.get('updated_at', -1)] if 'updated_at' in old_columns else datetime.now()
+            if needs_migration:
+                # 第二步：备份现有数据
+                logger.info("📋 备份现有ideas数据...")
+                cursor.execute("SELECT * FROM ideas")
+                old_data = cursor.fetchall()
+                logger.info(f"📊 备份了 {len(old_data)} 条数据")
                 
-                # 插入数据
+                # 第三步：重命名旧表
+                logger.info("📋 重命名旧表...")
+                cursor.execute("ALTER TABLE ideas RENAME TO ideas_old_v134")
+                
+                # 第四步：创建新表（修改字段约束）
+                logger.info("📋 创建新的ideas表（source字段为可选）...")
                 cursor.execute("""
-                    INSERT INTO ideas (
-                        research_question, research_method, source_journal, 
-                        source_literature, responsible_person, maturity, 
-                        description, collaborator_id, importance, 
-                        created_at, updated_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    research_question or '',
-                    research_method or '',
-                    source_journal or '',
-                    source_literature or '',
-                    responsible_person or '',
-                    maturity or 'immature',
-                    description or '',
-                    collaborator_id,
-                    importance or 3,
-                    created_at,
-                    updated_at
-                ))
-            
-            logger.info(f"✅ 成功迁移 {len(old_data)} 条数据")
-            
-        elif 'research_question' in column_names:
-            logger.info("✅ ideas表已经使用正确的字段名")
-            
-            # 确保必要字段存在
-            if 'source_journal' not in column_names:
-                cursor.execute("ALTER TABLE ideas ADD COLUMN source_journal TEXT DEFAULT ''")
-                logger.info("✅ 添加source_journal字段")
-            
-            if 'responsible_person' not in column_names:
-                cursor.execute("ALTER TABLE ideas ADD COLUMN responsible_person TEXT DEFAULT ''")
-                logger.info("✅ 添加responsible_person字段")
-            
-            if 'maturity' not in column_names:
-                cursor.execute("ALTER TABLE ideas ADD COLUMN maturity VARCHAR(20) DEFAULT 'immature'")
-                logger.info("✅ 添加maturity字段")
-        
+                    CREATE TABLE ideas (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        research_question TEXT NOT NULL,
+                        research_method TEXT NOT NULL,
+                        source_journal TEXT,
+                        source_literature TEXT,
+                        responsible_person TEXT NOT NULL,
+                        maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
+                        description TEXT,
+                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                logger.info("✅ 新ideas表创建成功（source字段已改为可选）")
+                
+                # 第五步：迁移数据
+                logger.info("📋 开始迁移数据...")
+                for row in old_data:
+                    cursor.execute("""
+                        INSERT INTO ideas (
+                            id, research_question, research_method, source_journal, 
+                            source_literature, responsible_person, maturity, 
+                            description, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, row)
+                
+                logger.info(f"✅ 成功迁移 {len(old_data)} 条数据")
+                
+                # 删除备份表（可选）
+                # cursor.execute("DROP TABLE ideas_old_v134")
+                # logger.info("🗑️ 删除旧表备份")
+                
+            else:
+                logger.info("✅ ideas表字段约束已经正确，无需迁移")
         else:
-            # 如果表不存在或结构完全错误，创建新表
+            # 如果表不存在，创建新表
             logger.info("📋 创建新的ideas表...")
-            cursor.execute("DROP TABLE IF EXISTS ideas")
             cursor.execute("""
                 CREATE TABLE ideas (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     research_question TEXT NOT NULL,
-                    research_method TEXT,
-                    source_journal TEXT DEFAULT '',
+                    research_method TEXT NOT NULL,
+                    source_journal TEXT,
                     source_literature TEXT,
-                    responsible_person TEXT DEFAULT '',
-                    maturity VARCHAR(20) DEFAULT 'immature',
+                    responsible_person TEXT NOT NULL,
+                    maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
                     description TEXT,
-                    collaborator_id INTEGER,
-                    importance INTEGER DEFAULT 3,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
@@ -219,9 +183,10 @@ def run_migration():
         logger.info("🔍 最终验证...")
         cursor.execute("PRAGMA table_info(ideas)")
         columns = cursor.fetchall()
-        column_names = [col[1] for col in columns]
-        
-        logger.info(f"✅ ideas表最终结构: {', '.join(column_names)}")
+        logger.info("✅ ideas表最终结构:")
+        for col in columns:
+            nullable = "NULL" if col[3] == 0 else "NOT NULL"
+            logger.info(f"  - {col[1]}: {col[2]} {nullable}")
         
         # 提交更改并标记完成
         conn.commit()
@@ -230,10 +195,10 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("======================================================================")
-        logger.info("🎉 v1.33 ideas表字段名映射修复完成！")
-        logger.info("✅ 统一了字段名，与代码期望保持一致")
+        logger.info("🎉 v1.34 ideas表source字段修复完成！")
+        logger.info("✅ source_journal和source_literature字段已改为可选")
+        logger.info("✅ 前端提交空值时不再报500错误")
         logger.info("✅ 保留了所有现有数据")
-        logger.info("✅ Ideas管理功能现在应该正常工作")
         logger.info("======================================================================")
         
         

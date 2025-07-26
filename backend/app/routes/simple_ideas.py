@@ -65,24 +65,40 @@ async def create_idea(
     db: Session = Depends(get_db)
 ):
     """创建新的Idea"""
-    # 验证maturity值
-    if idea.maturity not in ['mature', 'immature']:
-        raise HTTPException(status_code=400, detail="Maturity must be 'mature' or 'immature'")
-    
-    # 使用CRUD基类创建
-    new_idea = idea_crud.create(db, obj_in=idea)
-    
-    # 记录审计日志
-    audit_service = AuditService(db)
-    audit_service.log_action(
-        table_name="ideas",
-        action="CREATE",
-        record_id=new_idea.id,
-        new_values=idea.model_dump(),
-        user_id=getattr(request.state, "user_id", None)
-    )
-    
-    return new_idea
+    try:
+        # 验证maturity值
+        if idea.maturity not in ['mature', 'immature']:
+            raise HTTPException(status_code=400, detail="Maturity must be 'mature' or 'immature'")
+        
+        # 使用CRUD基类创建
+        new_idea = idea_crud.create(db, obj_in=idea)
+        
+        # 记录审计日志
+        try:
+            audit_service = AuditService(db)
+            audit_service.log_action(
+                table_name="ideas",
+                action="CREATE",
+                record_id=new_idea.id,
+                new_values=idea.model_dump(),
+                user_id=getattr(request.state, "user_id", None)
+            )
+        except Exception as audit_error:
+            # 审计日志失败不应该影响数据创建
+            print(f"审计日志记录失败: {audit_error}")
+        
+        return new_idea
+        
+    except HTTPException:
+        # 重新抛出HTTP异常
+        raise
+    except Exception as e:
+        # 捕获其他所有异常并返回详细错误信息
+        print(f"创建Idea时发生错误: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"创建Idea失败: {str(e)}"
+        )
 
 @router.put("/{idea_id}", response_model=IdeaSchema)
 async def update_idea(
