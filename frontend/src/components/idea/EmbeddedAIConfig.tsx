@@ -26,6 +26,7 @@ interface AIConfig {
   api_key: string;
   api_base?: string;
   model?: string;
+  is_connected?: boolean;
 }
 
 interface ConcurrentConfig {
@@ -79,6 +80,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         api_key: apiSettings.api_key,
         api_base: apiSettings.api_base,
         model: apiSettings.model,
+        is_connected: false,
       };
       
       setConfig(configData);
@@ -96,6 +98,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
         api_base: 'https://api.chatanywhere.tech/v1',
         model: 'claude-3-7-sonnet-20250219',
+        is_connected: false,
       };
       setConfig(defaultConfig);
       form.setFieldsValue(defaultConfig);
@@ -184,6 +187,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         api_key: updatedSettings.api_key,
         api_base: updatedSettings.api_base,
         model: updatedSettings.model,
+        is_connected: false, // 保存后需要重新测试连接
       };
       
       setConfig(newConfig);
@@ -206,6 +210,12 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       return;
     }
     
+    // 开始测试时重置连接状态
+    if (config) {
+      const updatedConfig = { ...config, is_connected: false };
+      setConfig(updatedConfig);
+    }
+    
     setTesting(true);
     console.log('开始测试AI连接...', { 
       api_key: '***', 
@@ -225,16 +235,34 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       if (response.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
+        
+        // 更新配置状态为已连接
+        if (config) {
+          const updatedConfig = { ...config, is_connected: true };
+          setConfig(updatedConfig);
+        }
       } else {
         const errorMsg = response.message || '连接测试失败';
         message.error(`连接测试失败：${errorMsg}`);
         setConnectionStatus('error');
+        
+        // 更新配置状态为未连接
+        if (config) {
+          const updatedConfig = { ...config, is_connected: false };
+          setConfig(updatedConfig);
+        }
       }
     } catch (error: any) {
       console.error('AI连接测试错误:', error);
       const errorMsg = error.response?.data?.detail || error.message || '连接测试失败';
       message.error('连接测试失败：' + errorMsg);
       setConnectionStatus('error');
+      
+      // 更新配置状态为未连接
+      if (config) {
+        const updatedConfig = { ...config, is_connected: false };
+        setConfig(updatedConfig);
+      }
     } finally {
       setTesting(false);
     }
