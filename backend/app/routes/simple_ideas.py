@@ -107,7 +107,7 @@ async def create_idea(
         table_name="ideas",
         action="CREATE",
         record_id=new_idea.id,
-        new_values=idea.dict(),
+        new_values=idea.model_dump(),
         user_id=getattr(request.state, "user_id", None)
     )
     
@@ -151,7 +151,7 @@ async def update_idea(
         action="UPDATE",
         record_id=idea_id,
         old_values=old_values,
-        new_values=idea_update.dict(exclude_unset=True),
+        new_values=idea_update.model_dump(exclude_unset=True),
         user_id=getattr(request.state, "user_id", None)
     )
     

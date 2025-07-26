@@ -50,7 +50,7 @@ async def create_collaborator(
     db: Session = Depends(get_db)
 ):
     """创建新合作者"""
-    db_collaborator = Collaborator(**collaborator.dict())
+    db_collaborator = Collaborator(**collaborator.model_dump())
     db.add(db_collaborator)
     db.commit()
     db.refresh(db_collaborator)
@@ -83,7 +83,7 @@ async def update_collaborator(
     # 保存旧值用于审计
     old_values = AuditService.serialize_model_instance(db_collaborator)
     
-    update_data = collaborator_update.dict(exclude_unset=True)
+    update_data = collaborator_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_collaborator, field, value)
     
@@ -350,7 +350,7 @@ async def create_collaborators_batch(
             ).first()
             
             if not existing:
-                db_collaborator = Collaborator(**collaborator_data.dict())
+                db_collaborator = Collaborator(**collaborator_data.model_dump())
                 db.add(db_collaborator)
                 created_collaborators.append(db_collaborator)
                 

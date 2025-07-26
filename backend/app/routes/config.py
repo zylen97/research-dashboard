@@ -100,7 +100,7 @@ async def create_config(
             detail=f"Configuration with key '{config.key}' already exists"
         )
     
-    db_config = SystemConfig(**config.dict())
+    db_config = SystemConfig(**config.model_dump())
     db_config.created_by_id = current_user.id
     db_config.updated_by_id = current_user.id
     
@@ -136,7 +136,7 @@ async def update_config(
             detail="Configuration not found"
         )
     
-    update_data = config_update.dict(exclude_unset=True)
+    update_data = config_update.model_dump(exclude_unset=True)
     
     # 如果更新值且是加密的，需要加密新值
     if 'value' in update_data and db_config.is_encrypted:

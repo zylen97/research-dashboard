@@ -90,7 +90,7 @@ async def create_research_project(
 ):
     """创建新研究项目"""
     # 安全验证和清理数据
-    security_result = SecurityValidator.validate_and_sanitize_project_data(project.dict())
+    security_result = SecurityValidator.validate_and_sanitize_project_data(project.model_dump())
     if not security_result["valid"]:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -139,7 +139,7 @@ async def update_research_project(
             detail="Research project not found"
         )
     
-    update_data = project_update.dict(exclude_unset=True, exclude={'collaborator_ids'})
+    update_data = project_update.model_dump(exclude_unset=True, exclude={'collaborator_ids'})
     
     # 特殊处理is_todo字段
     if 'is_todo' in update_data:
@@ -226,7 +226,7 @@ async def create_communication_log(
         )
     
     # Ensure project_id matches
-    log_data = log.dict()
+    log_data = log.model_dump()
     log_data['project_id'] = project_id
     
     db_log = CommunicationLog(**log_data)
@@ -263,7 +263,7 @@ async def update_communication_log(
         )
     
     # Update the log
-    update_data = log_update.dict(exclude_unset=True)
+    update_data = log_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
         setattr(db_log, field, value)
     

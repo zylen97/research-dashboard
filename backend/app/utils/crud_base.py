@@ -77,7 +77,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             创建的模型对象
         """
         try:
-            obj_in_data = obj_in.dict() if hasattr(obj_in, 'dict') else obj_in
+            obj_in_data = obj_in.model_dump() if hasattr(obj_in, 'model_dump') else obj_in
             db_obj = self.model(**obj_in_data)
             db.add(db_obj)
             db.commit()
@@ -106,7 +106,7 @@ class CRUDBase(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
             更新后的模型对象
         """
         try:
-            obj_data = obj_in.dict(exclude_unset=True) if hasattr(obj_in, 'dict') else obj_in
+            obj_data = obj_in.model_dump(exclude_unset=True) if hasattr(obj_in, 'model_dump') else obj_in
             
             for field in obj_data:
                 if hasattr(db_obj, field):
