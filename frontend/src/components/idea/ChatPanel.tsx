@@ -268,7 +268,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               position: 'relative',
               minHeight: 'auto',     // 自动调整高度
               width: '100%',         // 充分利用可用宽度
-              boxSizing: 'border-box' // 包含padding和border在内的尺寸计算
+              boxSizing: 'border-box', // 包含padding和border在内的尺寸计算
+              maxHeight: '300px',    // 设置最大高度
+              overflowY: 'auto',     // 超出时显示垂直滚动条
+              scrollbarWidth: 'thin' // Firefox细滚动条
             }}
           >
             {isSending ? (
@@ -360,7 +363,8 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           borderRadius: '6px',
           padding: '8px',
           minHeight: '0',  // 确保flex容器能够正确收缩
-          maxHeight: '100%' // 确保不会超出父容器
+          maxHeight: '100%', // 确保不会超出父容器
+          scrollBehavior: 'smooth' // 平滑滚动
         }}
       >
         {messages.length === 0 ? (
