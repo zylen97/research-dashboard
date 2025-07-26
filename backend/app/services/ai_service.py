@@ -16,6 +16,36 @@ class AIService:
     
     def __init__(self, db: Session):
         self.db = db
+        # 创建共享的HTTP客户端，避免每次创建新连接
+        self._http_client = None
+        
+    async def _get_http_client(self):
+        """获取或创建共享的HTTP客户端"""
+        if self._http_client is None:
+            timeout_config = httpx.Timeout(
+                connect=30.0,    # 连接超时
+                read=120.0,      # 读取超时
+                write=30.0,      # 写入超时
+                pool=10.0        # 连接池超时
+            )
+            
+            limits = httpx.Limits(
+                max_keepalive_connections=20,  # 增加保持连接数
+                max_connections=50,            # 增加最大连接数
+                keepalive_expiry=30.0          # 连接保持时间
+            )
+            
+            self._http_client = httpx.AsyncClient(
+                timeout=timeout_config,
+                limits=limits
+            )
+        return self._http_client
+    
+    async def close(self):
+        """关闭HTTP客户端"""
+        if self._http_client:
+            await self._http_client.aclose()
+            self._http_client = None
         
     async def get_ai_config(self) -> Dict[str, Any]:
         """获取AI配置"""
@@ -93,25 +123,9 @@ class AIService:
                 
                 logger.info(f"📡 发送HTTP请求到AI服务... (第{attempt + 1}/{max_retries}次尝试)")
                 
-                # 优化的httpx客户端配置
-                timeout_config = httpx.Timeout(
-                    connect=30.0,    # 连接超时
-                    read=120.0,      # 读取超时
-                    write=30.0,      # 写入超时
-                    pool=10.0        # 连接池超时
-                )
-                
-                limits = httpx.Limits(
-                    max_keepalive_connections=5,  # 最大保持连接数
-                    max_connections=10,           # 最大连接数
-                    keepalive_expiry=30.0         # 连接保持时间
-                )
-                
-                async with httpx.AsyncClient(
-                    timeout=timeout_config, 
-                    limits=limits
-                ) as client:
-                    response = await client.post(api_url, json=data, headers=headers)
+                # 使用共享的HTTP客户端
+                client = await self._get_http_client()
+                response = await client.post(api_url, json=data, headers=headers)
                     
                 logger.info(f"📡 收到响应: status_code={response.status_code} (第{attempt + 1}次尝试)")
                 

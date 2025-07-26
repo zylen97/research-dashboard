@@ -214,32 +214,41 @@ async def process_excel_file(
         total_rows = len(rows_data)
         logger.info(f"准备处理 {total_rows} 行数据")
         
-        # 并发处理函数 - 增强错误处理
+        # 并发处理函数 - 增强错误处理和性能监控
         async def process_single_row(row_data: dict, semaphore: asyncio.Semaphore, ai_service_inst, prompt_text: str) -> dict:
+            task_start_time = datetime.now()
+            row_number = row_data['row_number']
+            
             async with semaphore:
                 try:
                     # 如果是空行，直接返回跳过状态
                     if row_data['content'] is None:
-                        logger.info(f"⏭️ 跳过第 {row_data['row_number']} 行（空内容）")
+                        logger.info(f"⏭️ 第{row_number}行: 跳过空内容")
                         return {
-                            '序号': row_data['row_number'],
+                            '序号': row_number,
                             '标题': row_data['title'],
                             '原始摘要': row_data['abstract'],
                             '优化后的研究内容': '',
                             '处理状态': '跳过-空内容'
                         }
                     
-                    # 调用AI处理
-                    logger.info(f"🔄 开始处理第 {row_data['row_number']} 行...")
-                    logger.debug(f"内容: {row_data['content'][:100]}...")
+                    # 调用AI处理 - 添加详细时间追踪
+                    logger.info(f"🚀 第{row_number}行: 开始处理 [{task_start_time.strftime('%H:%M:%S.%f')[:-3]}]")
+                    logger.debug(f"第{row_number}行内容: {row_data['content'][:100]}...")
                     
                     try:
+                        ai_start_time = datetime.now()
                         result = await ai_service_inst.process_with_prompt(row_data['content'], prompt_text)
-                        logger.info(f"📤 第 {row_data['row_number']} 行AI调用完成: {result.get('success', False)}")
+                        ai_end_time = datetime.now()
+                        ai_duration = (ai_end_time - ai_start_time).total_seconds()
+                        
+                        logger.info(f"✅ 第{row_number}行: AI调用完成 [{ai_end_time.strftime('%H:%M:%S.%f')[:-3]}] 耗时{ai_duration:.2f}s 成功: {result.get('success', False)}")
                     except Exception as ai_error:
-                        logger.error(f"❌ 第 {row_data['row_number']} 行AI调用异常: {str(ai_error)}", exc_info=True)
+                        ai_end_time = datetime.now()
+                        ai_duration = (ai_end_time - task_start_time).total_seconds()
+                        logger.error(f"❌ 第{row_number}行: AI调用异常 [{ai_end_time.strftime('%H:%M:%S.%f')[:-3]}] 耗时{ai_duration:.2f}s: {str(ai_error)}", exc_info=True)
                         return {
-                            '序号': row_data['row_number'],
+                            '序号': row_number,
                             '标题': row_data['title'],
                             '原始摘要': row_data['abstract'],
                             '优化后的研究内容': '',
@@ -247,19 +256,23 @@ async def process_excel_file(
                         }
                     
                     if result and result.get('success'):
-                        logger.info(f"✅ 第 {row_data['row_number']} 行处理成功")
+                        task_end_time = datetime.now()
+                        total_duration = (task_end_time - task_start_time).total_seconds()
+                        logger.info(f"🎉 第{row_number}行: 处理成功 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s")
                         return {
-                            '序号': row_data['row_number'],
+                            '序号': row_number,
                             '标题': row_data['title'],
                             '原始摘要': row_data['abstract'],
                             '优化后的研究内容': result.get('response', ''),
                             '处理状态': '成功'
                         }
                     else:
+                        task_end_time = datetime.now()
+                        total_duration = (task_end_time - task_start_time).total_seconds()
                         error_detail = result.get('error', '未知错误') if result else 'AI调用返回空结果'
-                        logger.error(f"❌ 第 {row_data['row_number']} 行AI处理失败: {error_detail}")
+                        logger.error(f"❌ 第{row_number}行: AI处理失败 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s: {error_detail}")
                         return {
-                            '序号': row_data['row_number'],
+                            '序号': row_number,
                             '标题': row_data['title'],
                             '原始摘要': row_data['abstract'],
                             '优化后的研究内容': '',
@@ -267,10 +280,12 @@ async def process_excel_file(
                         }
                         
                 except Exception as e:
+                    task_end_time = datetime.now()
+                    total_duration = (task_end_time - task_start_time).total_seconds()
                     error_msg = str(e)
-                    logger.error(f"❌ 处理第 {row_data['row_number']} 行时发生异常: {error_msg}", exc_info=True)
+                    logger.error(f"❌ 第{row_number}行: 处理异常 [{task_end_time.strftime('%H:%M:%S.%f')[:-3]}] 总耗时{total_duration:.2f}s: {error_msg}", exc_info=True)
                     return {
-                        '序号': row_data['row_number'],
+                        '序号': row_number,
                         '标题': row_data['title'],
                         '原始摘要': row_data['abstract'],
                         '优化后的研究内容': '',
@@ -283,9 +298,16 @@ async def process_excel_file(
         # 创建并发任务 - 传递正确的参数
         tasks = [process_single_row(row_data, semaphore, ai_service, prompt_to_use) for row_data in rows_data]
         
-        # 执行并发处理
-        logger.info(f"开始并发执行 {len(tasks)} 个任务...")
+        # 执行并发处理 - 添加详细的并发统计
+        concurrent_start_time = datetime.now()
+        logger.info(f"🚀 开始并发执行 {len(tasks)} 个任务... [{concurrent_start_time.strftime('%H:%M:%S.%f')[:-3]}]")
+        logger.info(f"📊 并发配置: 信号量={max_concurrent}, 任务数={len(tasks)}")
+        
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        concurrent_end_time = datetime.now()
+        concurrent_duration = (concurrent_end_time - concurrent_start_time).total_seconds()
+        logger.info(f"🏁 并发执行完成 [{concurrent_end_time.strftime('%H:%M:%S.%f')[:-3]}] 并发总耗时{concurrent_duration:.2f}s")
         
         # 处理结果，确保异常也被记录
         processed_results = []

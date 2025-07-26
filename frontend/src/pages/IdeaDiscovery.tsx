@@ -103,6 +103,13 @@ const IdeaDiscovery: React.FC = () => {
           console.warn('读取并发配置失败，使用默认值50:', error);
         }
 
+        console.log('🚀 前端发起Excel处理:', {
+          fileName: selectedFile.name,
+          fileSize: selectedFile.size,
+          maxConcurrent: maxConcurrent,
+          promptId: selectedPromptId
+        });
+
         // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id和并发数
         const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId, undefined, maxConcurrent);
         setResultBlob(blob);
