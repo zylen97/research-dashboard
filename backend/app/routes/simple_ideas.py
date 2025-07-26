@@ -7,9 +7,8 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime
-from pydantic import BaseModel, Field
 
-from ..models import get_db, Idea, ResearchProject
+from ..models import get_db, Idea, ResearchProject, IdeaCreate, IdeaUpdate, IdeaSchema
 from ..models.database import Collaborator
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
@@ -17,40 +16,12 @@ from ..utils.response import success_response
 
 router = APIRouter()
 
-# Pydantic模型
-class SimpleIdeaBase(BaseModel):
-    research_question: str = Field(..., description="研究问题")
-    research_method: str = Field(..., description="研究方法")
-    source_journal: str = Field(..., description="来源期刊")
-    source_literature: str = Field(..., description="来源文献")
-    responsible_person: str = Field(..., description="负责人")
-    maturity: str = Field(default="immature", description="成熟度：mature/immature")
-    description: Optional[str] = Field(None, description="额外描述")
-
-class SimpleIdeaCreate(SimpleIdeaBase):
-    pass
-
-class SimpleIdeaUpdate(BaseModel):
-    research_question: Optional[str] = None
-    research_method: Optional[str] = None
-    source_journal: Optional[str] = None
-    source_literature: Optional[str] = None
-    responsible_person: Optional[str] = None
-    maturity: Optional[str] = None
-    description: Optional[str] = None
-
-class SimpleIdea(SimpleIdeaBase):
-    id: int
-    created_at: datetime
-    updated_at: datetime
-    
-    class Config:
-        from_attributes = True
+# 使用统一的schema模型
 
 # 创建CRUD实例
-idea_crud = CRUDBase[Idea, SimpleIdeaCreate, SimpleIdeaUpdate](Idea)
+idea_crud = CRUDBase[Idea, IdeaCreate, IdeaUpdate](Idea)
 
-@router.get("/", response_model=List[SimpleIdea])
+@router.get("/", response_model=List[IdeaSchema])
 async def get_ideas(
     request: Request,
     skip: int = 0,
@@ -75,7 +46,7 @@ async def get_ideas(
     
     return ideas
 
-@router.get("/{idea_id}", response_model=SimpleIdea)
+@router.get("/{idea_id}", response_model=IdeaSchema)
 async def get_idea(
     idea_id: int,
     request: Request,
@@ -87,9 +58,9 @@ async def get_idea(
         raise HTTPException(status_code=404, detail="Idea not found")
     return idea
 
-@router.post("/", response_model=SimpleIdea)
+@router.post("/", response_model=IdeaSchema)
 async def create_idea(
-    idea: SimpleIdeaCreate,
+    idea: IdeaCreate,
     request: Request,
     db: Session = Depends(get_db)
 ):
@@ -113,10 +84,10 @@ async def create_idea(
     
     return new_idea
 
-@router.put("/{idea_id}", response_model=SimpleIdea)
+@router.put("/{idea_id}", response_model=IdeaSchema)
 async def update_idea(
     idea_id: int,
-    idea_update: SimpleIdeaUpdate,
+    idea_update: IdeaUpdate,
     request: Request,
     db: Session = Depends(get_db)
 ):

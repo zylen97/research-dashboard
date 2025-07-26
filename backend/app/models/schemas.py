@@ -253,9 +253,9 @@ class IdeaBase(BaseModel):
     research_method: str = Field(..., description="研究方法")
     source_journal: str = Field(..., description="来源期刊")
     source_literature: str = Field(..., description="来源文献")
+    responsible_person: str = Field(..., description="负责人")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
     description: Optional[str] = Field(None, description="额外描述")
-    collaborator_id: Optional[int] = Field(None, description="负责人ID")
     
     @field_validator('maturity')
     def validate_maturity(cls, v):
@@ -271,9 +271,9 @@ class IdeaUpdate(BaseModel):
     research_method: Optional[str] = None
     source_journal: Optional[str] = None
     source_literature: Optional[str] = None
+    responsible_person: Optional[str] = None
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
     description: Optional[str] = None
-    collaborator_id: Optional[int] = None
     
     @field_validator('maturity')
     def validate_maturity(cls, v):
@@ -285,7 +285,6 @@ class Idea(IdeaBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    collaborator: Optional['Collaborator'] = None
     
     class Config:
         from_attributes = True
