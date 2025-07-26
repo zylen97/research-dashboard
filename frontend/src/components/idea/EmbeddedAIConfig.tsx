@@ -10,15 +10,13 @@ import {
   Alert,
   Select,
   Spin,
-  Collapse,
-  Tag
+  Collapse
 } from 'antd';
 import {
   ApiOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  SettingOutlined,
-  RobotOutlined
+  SettingOutlined
 } from '@ant-design/icons';
 import { settingsApi, APISettings, Model } from '../../services/settingsApi';
 
@@ -246,21 +244,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     };
   };
 
-  const getCurrentConfigDisplay = () => {
-    if (!config) return null;
-    
-    return (
-      <Space>
-        <RobotOutlined />
-        <Text strong>AI配置</Text>
-        <Text type="secondary">•</Text>
-        <Text>{config.model}</Text>
-        <Tag color={connectionStatus === 'success' ? 'green' : connectionStatus === 'error' ? 'red' : 'blue'}>
-          {getConnectionStatus().message}
-        </Tag>
-      </Space>
-    );
-  };
 
   if (loading) {
     return (
@@ -285,13 +268,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       } 
       size="small"
     >
-      {/* 当前配置状态显示 */}
-      <div style={{ marginBottom: '16px' }}>
-        <Text type="secondary">当前AI配置：</Text>
-        <div style={{ marginTop: '8px' }}>
-          {getCurrentConfigDisplay() || <Text type="secondary">暂未配置</Text>}
-        </div>
-      </div>
 
       {connectionStatus && (
         <Alert
