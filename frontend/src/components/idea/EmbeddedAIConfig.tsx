@@ -327,7 +327,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
               rules={[{ required: true, message: '请输入API密钥' }]}
               tooltip="请输入你的API密钥"
             >
-              <Input.Password 
+              <Input 
                 placeholder="sk-xxxxxxxxxxxxxxxxxxxx" 
                 autoComplete="off"
               />

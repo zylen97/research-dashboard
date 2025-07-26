@@ -38,6 +38,14 @@ class APITestResponse(BaseModel):
     message: str
     details: Optional[dict] = None
 
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    success: bool
+    response: str
+    message: Optional[str] = None
+
 # 可用模型列表
 AVAILABLE_MODELS = [
     {
@@ -264,3 +272,50 @@ async def test_api_connection(
 async def get_available_models():
     """获取可用模型列表"""
     return {"models": AVAILABLE_MODELS}
+
+@router.post("/chat", response_model=ChatResponse)
+async def send_chat_message(
+    chat_request: ChatRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """发送聊天消息并获取AI回复"""
+    try:
+        user_id = request.state.current_user.id
+        message_content = chat_request.message.strip()
+        
+        if not message_content:
+            return ChatResponse(
+                success=False,
+                response="",
+                message="消息内容不能为空"
+            )
+        
+        print(f"用户 {user_id} 发送聊天消息: {message_content[:50]}...")
+        
+        # 创建AI服务实例
+        ai_service = create_ai_service(db)
+        
+        # 调用AI生成聊天回复
+        result = await ai_service.generate_chat_response(message_content)
+        
+        if result['success']:
+            return ChatResponse(
+                success=True,
+                response=result['response'],
+                message="聊天回复生成成功"
+            )
+        else:
+            return ChatResponse(
+                success=False,
+                response="",
+                message=f"AI回复生成失败: {result.get('error', '未知错误')}"
+            )
+            
+    except Exception as e:
+        print(f"聊天请求处理异常: {e}")
+        return ChatResponse(
+            success=False,
+            response="",
+            message=f"聊天服务异常: {str(e)}"
+        )

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -35,6 +35,7 @@ class ProcessExcelResponse(BaseModel):
 @router.post("/process-excel")
 async def process_excel_file(
     file: UploadFile = File(...),
+    custom_prompt: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -120,8 +121,8 @@ async def process_excel_file(
                 # 构建数据内容
                 data_content = f"标题: {title}\n摘要: {abstract}"
                 
-                # 自定义提示词，专注于研究迁移建议
-                custom_prompt = """
+                # 使用自定义提示词或默认提示词
+                default_prompt = """
 基于提供的文献标题和摘要，请生成一个简洁的研究迁移建议。
 
 要求：
@@ -133,11 +134,18 @@ async def process_excel_file(
 请直接给出建议内容，不需要格式化或额外说明。
 """
                 
+                # 使用用户自定义的prompt，如果没有则使用默认prompt
+                prompt_to_use = custom_prompt if custom_prompt else default_prompt
+                
+                logger.debug(f"使用的prompt类型: {'自定义' if custom_prompt else '默认'}")
+                if custom_prompt:
+                    logger.debug(f"自定义prompt长度: {len(custom_prompt)}字符")
+                
                 # 调用AI服务（自动模式）
                 logger.debug(f"调用AI服务处理第{index+1}行...")
                 ai_result = await ai_service.generate_research_suggestions_auto(
                     data_content=data_content,
-                    custom_prompt=custom_prompt
+                    custom_prompt=prompt_to_use
                 )
                 
                 if ai_result['success']:
@@ -179,7 +187,8 @@ async def process_excel_file(
         # 9. 计算处理时间
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
+        prompt_info = "自定义prompt" if custom_prompt else "默认prompt"
+        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, prompt类型: {prompt_info}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
         
         # 10. 返回增强的Excel文件
         return StreamingResponse(
@@ -190,7 +199,8 @@ async def process_excel_file(
                 "X-Processing-Time": str(processing_time),
                 "X-Rows-Processed": str(processed_count),
                 "X-AI-Model": ai_model_name,
-                "X-System-Config": "auto"
+                "X-System-Config": "auto",
+                "X-Prompt-Type": "custom" if custom_prompt else "default"
             }
         )
         

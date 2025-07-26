@@ -361,9 +361,12 @@ export const backupApi = {
 // Idea发掘 API (智能版 - 使用系统AI配置)
 export const ideaDiscoveryApi = {
   // 智能处理Excel文件（自动使用系统配置的AI）
-  processExcel: (file: File): Promise<Blob> => {
+  processExcel: (file: File, customPrompt?: string): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (customPrompt) {
+      formData.append('custom_prompt', customPrompt);
+    }
     return api.post('/ideas/process-excel', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',

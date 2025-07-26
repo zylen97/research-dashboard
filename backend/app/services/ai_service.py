@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from app.models.database import SystemConfig
 from app.utils.encryption import encryption_util
 import logging
+import time
+from functools import wraps
 
 logger = logging.getLogger(__name__)
 
@@ -128,62 +130,133 @@ class AIService:
             "temperature": temperature
         }
         
-        try:
-            logger.debug("发送HTTP请求到AI服务...")
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                response = await client.post(api_url, json=data, headers=headers)
+        # 重试机制配置
+        max_retries = 3
+        base_delay = 1  # 基础延迟秒数
+        
+        for attempt in range(max_retries):
+            try:
+                if attempt > 0:
+                    # 指数双退延迟
+                    delay = base_delay * (2 ** (attempt - 1))
+                    logger.info(f"第{attempt + 1}次重试，延迟{delay}秒...")
+                    await asyncio.sleep(delay)
                 
-            logger.debug(f"收到响应: status_code={response.status_code}")
+                logger.debug(f"发送HTTP请求到AI服务... (第{attempt + 1}/{max_retries}次尝试)")
                 
-            if response.status_code == 200:
-                result = response.json()
-                ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-                logger.debug(f"AI响应成功，内容长度: {len(ai_response) if ai_response else 0}")
-                return {
-                    "success": True,
-                    "response": ai_response,
-                    "usage": result.get("usage", {})
-                }
-            else:
-                error_text = response.text
-                logger.error(f"AI API错误: status={response.status_code}, 响应内容: {error_text[:500]}...")
+                # 优化的httpx客户端配置
+                timeout_config = httpx.Timeout(
+                    connect=30.0,    # 连接超时
+                    read=120.0,      # 读取超时
+                    write=30.0,      # 写入超时
+                    pool=10.0        # 连接池超时
+                )
                 
-                # 尝试解析错误信息
-                try:
-                    error_detail = response.json().get('error', {}).get('message', error_text)
-                except:
-                    error_detail = error_text
+                limits = httpx.Limits(
+                    max_keepalive_connections=5,  # 最大保持连接数
+                    max_connections=10,           # 最大连接数
+                    keepalive_expiry=30.0         # 连接保持时间
+                )
+                
+                async with httpx.AsyncClient(
+                    timeout=timeout_config, 
+                    limits=limits,
+                    http2=True  # 启用HTTP/2
+                ) as client:
+                    response = await client.post(api_url, json=data, headers=headers)
                     
+                logger.debug(f"收到响应: status_code={response.status_code} (第{attempt + 1}次尝试)")
+                
+        # 处理响应结果
+        if response.status_code == 200:
+            result = response.json()
+            ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+            logger.debug(f"AI响应成功，内容长度: {len(ai_response) if ai_response else 0}")
+            return {
+                "success": True,
+                "response": ai_response,
+                "usage": result.get("usage", {})
+            }
+        else:
+            error_text = response.text
+            logger.error(f"AI API错误: status={response.status_code}, 响应内容: {error_text[:500]}...")
+            
+            # 尝试解析错误信息
+            try:
+                error_detail = response.json().get('error', {}).get('message', error_text)
+            except:
+                error_detail = error_text
+                
+            # 根据状态码提供更详细的错误信息
+            if response.status_code == 401:
+                error_msg = "API密钥验证失败，请检查API Key是否正确"
+            elif response.status_code == 403:
+                error_msg = "API访问被拒绝，请检查API Key权限"
+            elif response.status_code == 429:
+                error_msg = "API调用频率超限，请稍后重试"
+            elif response.status_code == 500:
+                error_msg = "AI服务内部错误，请稍后重试"
+            elif response.status_code == 502 or response.status_code == 503:
+                error_msg = "AI服务暂时不可用，请稍后重试"
+            else:
+                error_msg = f"API错误 {response.status_code}: {error_detail}"
+                
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+                
+                # 如果成功，直接返回结果
+                break
+                
+            except httpx.TimeoutException as e:
+                error_msg = f"AI服务请求超时 (第{attempt + 1}/{max_retries}次)"
+                logger.warning(f"{error_msg}: {e}")
+                if attempt == max_retries - 1:  # 最后一次尝试
+                    logger.error("所有重试尝试都超时失败")
+                    return {
+                        "success": False,
+                        "error": f"AI服务请求超时，已重试{max_retries}次仍无法连接，请检查网络或稍后重试",
+                        "response": None
+                    }
+                continue  # 继续重试
+                
+            except httpx.ConnectError as e:
+                error_msg = f"无法连接到AI服务 (第{attempt + 1}/{max_retries}次)"
+                logger.warning(f"{error_msg}: {e}")
+                if attempt == max_retries - 1:  # 最后一次尝试
+                    logger.error("所有重试尝试都连接失败")
+                    return {
+                        "success": False,
+                        "error": f"无法连接到AI服务，已重试{max_retries}次仍无法连接，请检查API地址和网络设置",
+                        "response": None
+                    }
+                continue  # 继续重试
+                
+            except httpx.HTTPStatusError as e:
+                # HTTP错误不重试，直接返回
+                logger.error(f"HTTP状态错误: {e.response.status_code} - {e.response.text[:200]}")
                 return {
                     "success": False,
-                    "error": f"API错误 {response.status_code}: {error_detail}",
+                    "error": f"AI服务返回HTTP错误: {e.response.status_code}",
                     "response": None
                 }
                 
-        except httpx.TimeoutException as e:
-            error_msg = "AI服务请求超时，请稍后重试"
-            logger.error(f"请求超时: {e}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "response": None
-            }
-        except httpx.ConnectError as e:
-            error_msg = "无法连接到AI服务，请检查网络连接和API地址"
-            logger.error(f"连接错误: {e}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "response": None
-            }
-        except Exception as e:
-            error_msg = f"AI服务调用失败: {str(e)}"
-            logger.error(f"AI API调用异常: {e}")
-            return {
-                "success": False,
-                "error": error_msg,
-                "response": None
-            }
+            except Exception as e:
+                error_msg = f"AI服务调用异常 (第{attempt + 1}/{max_retries}次)"
+                logger.warning(f"{error_msg}: {e}")
+                if attempt == max_retries - 1:  # 最后一次尝试
+                    logger.error("所有重试尝试都失败")
+                    return {
+                        "success": False,
+                        "error": f"AI服务调用失败: {str(e)} (已重试{max_retries}次)",
+                        "response": None
+                    }
+                continue  # 继续重试
+        
+        # 没有异常，说明成功了，返回正常结果
+        # (这部分代码在重试循环外面)
     
     async def call_anthropic_api(self, config: Dict[str, Any], prompt: str, data_context: str = None) -> Dict[str, Any]:
         """调用Anthropic API"""
@@ -215,7 +288,14 @@ class AIService:
         }
         
         try:
-            async with httpx.AsyncClient(timeout=60.0) as client:
+            # 使用与OpenAI API类似的超时和重试配置
+            timeout_config = httpx.Timeout(
+                connect=30.0,
+                read=120.0,
+                write=30.0,
+                pool=10.0
+            )
+            async with httpx.AsyncClient(timeout=timeout_config) as client:
                 response = await client.post(api_url, json=data, headers=headers)
                 
             if response.status_code == 200:
@@ -307,6 +387,67 @@ class AIService:
         try:
             result = await self.call_openai_api(main_config, prompt, data_content)
             logger.debug(f"AI调用结果: success={result.get('success')}, error={result.get('error', 'none')}")
+            return result
+        except Exception as e:
+            error_msg = f"调用AI服务时发生异常: {str(e)}"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+
+    async def generate_chat_response(self, message: str) -> Dict[str, Any]:
+        """
+        生成聊天回复（用于测试AI配置）
+        
+        Args:
+            message: 用户消息内容
+        
+        Returns:
+            包含AI回复的字典
+        """
+        logger.debug(f"开始生成聊天回复，消息长度: {len(message) if message else 0}")
+        
+        # 获取主AI配置
+        main_config = await self.get_main_ai_config()
+        if not main_config:
+            error_msg = "未找到主AI配置，请先在系统设置中配置AI提供商"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+        
+        # 检查配置是否完整
+        if not main_config.get('api_key'):
+            error_msg = "AI配置不完整，API密钥未设置"
+            logger.error(error_msg)
+            return {
+                "success": False,
+                "error": error_msg,
+                "response": None
+            }
+        
+        # 构建聊天专用的prompt
+        chat_prompt = """你是一个专业的AI助手，能够回答用户的各种问题并提供帮助。
+
+请根据用户的消息给予友好、准确、有用的回复。回复应该：
+1. 简洁明了，重点突出
+2. 内容准确可靠
+3. 语气友好自然
+4. 如果涉及专业知识，请提供适当的解释
+
+请直接回复用户的问题，不需要额外的格式或说明。"""
+        
+        logger.debug(f"使用AI模型: {main_config.get('model', 'unknown')}")
+        logger.debug(f"用户消息: {message[:100]}...")
+        
+        # 调用OpenAI兼容接口
+        try:
+            result = await self.call_openai_api(main_config, chat_prompt, message)
+            logger.debug(f"聊天AI调用结果: success={result.get('success')}, error={result.get('error', 'none')}")
             return result
         except Exception as e:
             error_msg = f"调用AI服务时发生异常: {str(e)}"

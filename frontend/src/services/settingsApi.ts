@@ -30,6 +30,16 @@ export interface Model {
   description: string;
 }
 
+export interface ChatRequest {
+  message: string;
+}
+
+export interface ChatResponse {
+  success: boolean;
+  response: string;
+  message?: string;
+}
+
 // Settings API 服务
 export const settingsApi = {
   // 获取当前用户的API设置
@@ -47,4 +57,8 @@ export const settingsApi = {
   // 获取可用模型列表
   getModels: (): Promise<{ models: Model[] }> =>
     api.get('/settings/models'),
+
+  // 发送聊天消息
+  sendChatMessage: (message: string): Promise<ChatResponse> =>
+    api.post('/settings/chat', { message }),
 };
