@@ -69,7 +69,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onT
         api_key: apiSettings.api_key,
         api_url: apiSettings.api_base,
         model: apiSettings.model,
-        is_connected: false // 初始化时设为false，需要测试连接
+        is_connected: !!apiSettings.api_key // 如果有API密钥，认为可以使用（后端会自己验证）
       };
       
       setConfig(configData);
@@ -79,10 +79,9 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onT
         model: apiSettings.model
       });
       
-      // 不要自动设置连接状态为成功，而是保持未知状态
-      // 用户需要手动测试连接或者在保存配置时自动测试
-      if (apiSettings.api_key) {
-        setConnectionStatus(null); // 设为null表示未测试
+      // 如果有完整配置，设为可用状态，允许用户使用
+      if (apiSettings.api_key && apiSettings.api_base && apiSettings.model) {
+        setConnectionStatus(null); // 设为null表示未测试但可用
       } else {
         setConnectionStatus('error');
       }
@@ -245,9 +244,9 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onT
       };
     }
     return {
-      status: 'warning' as const,
-      message: '请配置并测试API连接',
-      icon: <ApiOutlined style={{ color: '#faad14' }} />
+      status: 'info' as const,
+      message: '配置已加载，可以使用（建议测试连接）',
+      icon: <ApiOutlined style={{ color: '#1890ff' }} />
     };
   };
 
@@ -260,7 +259,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange, onT
         <Text strong>AI配置</Text>
         <Text type="secondary">•</Text>
         <Text>{config.model}</Text>
-        <Tag color={connectionStatus === 'success' ? 'green' : connectionStatus === 'error' ? 'red' : 'orange'}>
+        <Tag color={connectionStatus === 'success' ? 'green' : connectionStatus === 'error' ? 'red' : 'blue'}>
           {getConnectionStatus().message}
         </Tag>
       </Space>
