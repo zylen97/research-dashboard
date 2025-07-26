@@ -108,7 +108,7 @@ const ResearchDashboard: React.FC = () => {
   });
 
   return (
-    <div>
+    <div style={{ padding: '24px' }}>
       {/* 待办项目行样式 */}
       <style>{`
         .todo-project-row {

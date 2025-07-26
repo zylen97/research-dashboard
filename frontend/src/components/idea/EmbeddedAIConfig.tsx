@@ -261,8 +261,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
           <ApiOutlined />
           <span>AI配置管理</span>
         </Space>
-      } 
-      size="small"
+      }
     >
 
       {connectionStatus && (

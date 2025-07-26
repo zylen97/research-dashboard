@@ -402,7 +402,7 @@ const CollaboratorManagement: React.FC = () => {
   };
 
   return (
-    <div>
+    <div style={{ padding: '24px' }}>
       {/* 小组合作者行样式 */}
       <style>{`
         .group-collaborator-row {
