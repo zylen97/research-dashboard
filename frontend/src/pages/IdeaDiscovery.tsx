@@ -173,12 +173,12 @@ const IdeaDiscovery: React.FC = () => {
   return (
     <div style={{ padding: '24px', maxWidth: 'none', width: '100%' }}>
       {/* 页面标题 */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <Title level={2}>
-          <FileExcelOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
+      <div style={{ marginBottom: '32px' }}>
+        <Title level={3} style={{ margin: 0 }}>
+          <FileExcelOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
           研究Idea发掘与配置面板
         </Title>
-        <Paragraph type="secondary">
+        <Paragraph type="secondary" style={{ marginTop: '8px', marginBottom: 0 }}>
           管理Prompt模板，配置AI，处理Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
@@ -198,7 +198,12 @@ const IdeaDiscovery: React.FC = () => {
 
         {/* 第3栏：文件处理面板 */}
         <Col xs={24} md={12} lg={8} xl={8}>
-          <Card title="Excel文件处理">
+          <Card title={
+            <Space>
+              <FileExcelOutlined />
+              <span>Excel文件处理</span>
+            </Space>
+          }>
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
 
               {/* Prompt选择区域 */}
@@ -348,6 +353,17 @@ const IdeaDiscovery: React.FC = () => {
                   )}
                 </div>
               )}
+              
+              {/* 使用说明 */}
+              <Card size="small" style={{ marginTop: 16 }}>
+                <Space direction="vertical" size="small">
+                  <Text strong>使用说明：</Text>
+                  <Text type="secondary">• 选择合适的Prompt模板用于指导AI分析</Text>
+                  <Text type="secondary">• Excel文件必须包含"摘要"和"标题"两列</Text>
+                  <Text type="secondary">• 上传文件后点击"开始AI分析处理"进行批量处理</Text>
+                  <Text type="secondary">• 处理完成后可下载包含AI建议的增强文件</Text>
+                </Space>
+              </Card>
             </Space>
           </Card>
         </Col>
