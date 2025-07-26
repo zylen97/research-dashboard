@@ -40,6 +40,7 @@ const { Option } = Select;
 const IdeasManagementPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
+  const [convertingIdeaId, setConvertingIdeaId] = useState<number | null>(null);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
@@ -148,16 +149,49 @@ const IdeasManagementPage: React.FC = () => {
     },
   });
 
-  // 转化为项目
+  // 转化为项目 - 增强缓存同步机制
   const convertMutation = useMutation({
     mutationFn: ideasApi.convertToProject,
-    onSuccess: (response) => {
-      message.success(`已成功转化为研究项目：${response.project_title}`);
-      queryClient.invalidateQueries({ queryKey: ['ideas'] });
-      queryClient.invalidateQueries({ queryKey: ['research_projects'] }); // 刷新研究项目列表
+    onSuccess: async (response, variables) => {
+      const convertedIdeaId = variables; // 转化的idea ID
+      
+      try {
+        // 1. 立即显示成功消息
+        message.success(`已成功转化为研究项目：${response.project_title}`);
+        
+        // 2. 乐观更新：立即从本地缓存移除已转化的idea
+        queryClient.setQueryData(['ideas'], (oldData: any) => {
+          if (Array.isArray(oldData)) {
+            return oldData.filter(idea => idea.id !== convertedIdeaId);
+          }
+          return oldData;
+        });
+        
+        // 3. 强制刷新数据确保同步
+        await Promise.all([
+          refetch(), // 强制重新获取Ideas列表
+          queryClient.invalidateQueries({ queryKey: ['research_projects'] }) // 刷新研究项目列表
+        ]);
+        console.log('[IdeasManagement] 转化后缓存刷新完成');
+      } catch (error) {
+        console.warn('[IdeasManagement] 缓存刷新失败，但转化成功:', error);
+        // 如果刷新失败，至少确保本地状态是正确的
+        await refetch();
+      } finally {
+        // 4. 清除loading状态
+        setConvertingIdeaId(null);
+      }
     },
     onError: (error: any) => {
-      message.error(error.response?.data?.detail || '转化失败');
+      const errorMsg = error.response?.data?.detail || '转化失败';
+      message.error(errorMsg);
+      
+      // 转化失败时，确保数据状态正确
+      refetch();
+      console.error('[IdeasManagement] 转化失败:', error);
+      
+      // 清除loading状态
+      setConvertingIdeaId(null);
     },
   });
 
@@ -208,6 +242,7 @@ const IdeasManagementPage: React.FC = () => {
 
   // 转化为项目确认
   const handleConvert = (id: number) => {
+    setConvertingIdeaId(id); // 设置正在转化的ID
     convertMutation.mutate(id);
   };
 
@@ -300,31 +335,38 @@ const IdeasManagementPage: React.FC = () => {
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
-          <Tooltip title="编辑">
+          <Tooltip title={convertingIdeaId === record.id ? "转化中，请稍候..." : "编辑"}>
             <Button
               type="text"
               icon={<EditOutlined />}
               onClick={() => openEditModal(record)}
               size="small"
+              disabled={convertingIdeaId === record.id}
             />
           </Tooltip>
-          <Tooltip title="转化为研究项目">
+          <Tooltip title={
+            convertingIdeaId === record.id ? "正在转化为研究项目..." : 
+            convertingIdeaId !== null ? "其他项目转化中，请稍候..." : 
+            "转化为研究项目"
+          }>
             <Popconfirm
               title="确认转化"
               description="转化后将从Ideas列表中删除，并在研究看板中创建新项目"
               onConfirm={() => handleConvert(record.id)}
               okText="确认"
               cancelText="取消"
+              disabled={convertingIdeaId !== null}
             >
               <Button
                 type="text"
                 icon={<SwapRightOutlined />}
                 size="small"
-                loading={convertMutation.isPending}
+                loading={convertingIdeaId === record.id}
+                disabled={convertingIdeaId !== null && convertingIdeaId !== record.id}
               />
             </Popconfirm>
           </Tooltip>
-          <Tooltip title="删除">
+          <Tooltip title={convertingIdeaId === record.id ? "转化中，请稍候..." : "删除"}>
             <Popconfirm
               title="确认删除"
               description="删除后不可恢复"
@@ -338,6 +380,7 @@ const IdeasManagementPage: React.FC = () => {
                 danger
                 size="small"
                 loading={deleteMutation.isPending}
+                disabled={convertingIdeaId === record.id}
               />
             </Popconfirm>
           </Tooltip>
