@@ -148,18 +148,18 @@ async def update_api_settings(
     
     # 使用ORM更新或创建系统配置
     system_config = db.query(SystemConfig).filter(
-        SystemConfig.config_key == 'main_ai_config'
+        SystemConfig.key == 'main_ai_config'
     ).first()
     
     if system_config:
         # 更新现有配置
-        system_config.config_value = config_json
+        system_config.value = config_json
         system_config.is_active = True
     else:
         # 创建新配置
         system_config = SystemConfig(
-            config_key='main_ai_config',
-            config_value=config_json,
+            key='main_ai_config',
+            value=config_json,
             category='ai',
             description='Main AI Configuration',
             is_encrypted=False,
@@ -223,15 +223,15 @@ async def test_api_connection(
             
             # 使用ORM更新系统配置中的连接状态
             system_config = db.query(SystemConfig).filter(
-                SystemConfig.config_key == 'main_ai_config',
+                SystemConfig.key == 'main_ai_config',
                 SystemConfig.is_active == True
             ).first()
             
             if system_config:
                 try:
-                    current_config = json.loads(system_config.config_value)
+                    current_config = json.loads(system_config.value)
                     current_config["is_connected"] = True
-                    system_config.config_value = json.dumps(current_config)
+                    system_config.value = json.dumps(current_config)
                     db.commit()
                     print("系统配置中的连接状态已更新为true")
                     

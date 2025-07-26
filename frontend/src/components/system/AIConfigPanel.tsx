@@ -12,7 +12,8 @@ import {
   Avatar,
   List,
   Alert,
-  Select
+  Select,
+  InputNumber
 } from 'antd';
 import {
   ApiOutlined,
@@ -43,11 +44,16 @@ const AVAILABLE_MODELS = [
   'gpt-4o-mini'
 ];
 
-// 默认配置
+// 默认配置（服务器端）
 const DEFAULT_CONFIG = {
   api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
   api_url: 'https://api.chatanywhere.tech/v1',
   model: 'claude-3-7-sonnet-20250219'
+};
+
+// 本地并发数配置（仅客户端）
+const DEFAULT_CONCURRENT_CONFIG = {
+  max_concurrent: 50
 };
 
 interface AIConfig {
@@ -55,6 +61,10 @@ interface AIConfig {
   api_url?: string;
   model?: string;
   is_connected?: boolean;
+}
+
+interface ConcurrentConfig {
+  max_concurrent: number;
 }
 
 interface SystemConfig {
@@ -84,6 +94,9 @@ const AIConfigPanel: React.FC = () => {
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
   
+  // 本地并发数配置状态
+  const [concurrentConfig, setConcurrentConfig] = useState<ConcurrentConfig>(DEFAULT_CONCURRENT_CONFIG);
+  
   // 聊天功能状态
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -91,7 +104,39 @@ const AIConfigPanel: React.FC = () => {
 
   useEffect(() => {
     fetchConfig();
+    loadConcurrentConfig();
   }, []);
+
+  // 加载本地并发数配置
+  const loadConcurrentConfig = () => {
+    try {
+      const saved = localStorage.getItem('ai_concurrent_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setConcurrentConfig(parsed);
+      }
+    } catch (error) {
+      console.warn('加载并发数配置失败，使用默认值:', error);
+    }
+  };
+
+  // 保存本地并发数配置
+  const saveConcurrentConfig = (newConfig: ConcurrentConfig) => {
+    try {
+      localStorage.setItem('ai_concurrent_config', JSON.stringify(newConfig));
+      setConcurrentConfig(newConfig);
+    } catch (error) {
+      console.error('保存并发数配置失败:', error);
+    }
+  };
+
+  // 处理并发数变更
+  const handleConcurrentChange = (value: number | null) => {
+    if (value !== null && value >= 0 && value <= 50) {
+      const newConfig = { max_concurrent: value };
+      saveConcurrentConfig(newConfig);
+    }
+  };
 
   const fetchConfig = async () => {
     setLoading(true);
@@ -393,6 +438,35 @@ const AIConfigPanel: React.FC = () => {
                   ))}
                 </Select>
               </Form.Item>
+
+              {/* 独立的并发数配置区域（不属于服务器配置） */}
+              <div style={{ marginTop: '24px', marginBottom: '16px' }}>
+                <div style={{ 
+                  padding: '16px', 
+                  backgroundColor: '#fafafa', 
+                  borderRadius: '6px', 
+                  border: '1px solid #f0f0f0' 
+                }}>
+                  <div style={{ marginBottom: '8px', fontWeight: 'bold', color: '#333' }}>
+                    客户端并发数配置 (仅本地生效)
+                  </div>
+                  <div style={{ marginBottom: '12px', fontSize: '12px', color: '#666' }}>
+                    设置同时进行的AI请求数量，范围0-50。仅在当前浏览器中生效，不会保存到服务器。
+                  </div>
+                  <InputNumber
+                    min={0}
+                    max={50}
+                    value={concurrentConfig.max_concurrent}
+                    onChange={handleConcurrentChange}
+                    placeholder="50"
+                    style={{ width: '120px' }}
+                    addonAfter="并发数"
+                  />
+                  <span style={{ marginLeft: '12px', fontSize: '12px', color: '#999' }}>
+                    默认: 50
+                  </span>
+                </div>
+              </div>
 
               <Form.Item>
                 <Space>
