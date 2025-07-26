@@ -157,6 +157,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     if (value !== null && value >= 0 && value <= 50) {
       const newConfig = { max_concurrent: value };
       saveConcurrentConfig(newConfig);
+      message.success(`并发数已设置为 ${value}，下次处理时生效`);
     }
   };
 
@@ -401,8 +402,11 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             size="small"
             style={{ width: '80px' }}
           />
+          <Text style={{ fontSize: '11px', color: '#52c41a', fontWeight: 'bold' }}>
+            当前: {concurrentConfig.max_concurrent}
+          </Text>
           <Text style={{ fontSize: '11px', color: '#999' }}>
-            默认: 50
+            (默认: 50)
           </Text>
         </Space>
       </div>
