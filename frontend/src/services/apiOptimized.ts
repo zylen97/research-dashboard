@@ -12,6 +12,7 @@ import {
   BackupStats, BackupListResponse, BackupCreateResponse,
   Prompt, PromptCreate, PromptUpdate
 } from '../types';
+import { Idea, IdeaCreate, IdeaUpdate, ConvertToProjectResponse } from '../types/ideas';
 import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
@@ -243,6 +244,48 @@ export const backupApi = {
 export const promptsApi = createCRUDApi<Prompt, PromptCreate, PromptUpdate>(
   '/prompts',
   'API.getPrompts'
+);
+
+// Ideas管理API - 使用扩展CRUD工厂，包含转化功能和增强错误处理
+export const ideasApi = createExtendedCRUDApi<
+  Idea,
+  IdeaCreate,
+  IdeaUpdate,
+  {
+    convertToProject: (id: number) => Promise<ConvertToProjectResponse>;
+    getIdeasSafe: () => Promise<Idea[]>;
+  }
+>(
+  '/ideas',
+  'API.getIdeas',
+  (basePath) => ({
+    convertToProject: async (id: number): Promise<ConvertToProjectResponse> => {
+      try {
+        const response = await api.post(`${basePath}/${id}/convert-to-project`);
+        return response.data;
+      } catch (error) {
+        console.error('Ideas转化为项目失败:', error);
+        throw error;
+      }
+    },
+    // 增强的安全获取方法，确保总是返回数组
+    getIdeasSafe: async (): Promise<Idea[]> => {
+      try {
+        const response = await api.get(`${basePath}/`);
+        const data = handleListResponse<Idea>(response, 'API.getIdeasSafe');
+        // 再次确保返回的是数组
+        if (!Array.isArray(data)) {
+          console.warn('[API.getIdeasSafe] 响应不是数组，返回空数组');
+          return [];
+        }
+        return data;
+      } catch (error) {
+        console.error('[API.getIdeasSafe] API请求失败:', error);
+        // 网络错误、认证失败等情况下返回空数组
+        return [];
+      }
+    },
+  })
 );
 
 

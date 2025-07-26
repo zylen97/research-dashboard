@@ -30,7 +30,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
-import { ideasApi } from '../services/ideasApi';
+import { ideasApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 
 const { Title } = Typography;
@@ -43,15 +43,30 @@ const IdeasManagementPage: React.FC = () => {
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
-  // 查询Ideas列表
-  const { data: ideas = [], isLoading, refetch } = useQuery({
+  // 查询Ideas列表 - 使用增强的安全方法
+  const { data: ideasData = [], isLoading, refetch, error } = useQuery({
     queryKey: ['ideas'],
-    queryFn: () => ideasApi.getIdeas(),
+    queryFn: () => ideasApi.getIdeasSafe(),
+    // 添加错误重试机制
+    retry: (failureCount, error) => {
+      // 认证错误不重试，其他错误最多重试2次
+      if ((error as any)?.response?.status === 401) return false;
+      return failureCount < 2;
+    },
   });
+
+  // 数据验证 - 确保ideas始终是数组
+  const ideas = React.useMemo(() => {
+    if (!Array.isArray(ideasData)) {
+      console.warn('[IdeasManagement] 接收到非数组数据:', ideasData);
+      return [];
+    }
+    return ideasData;
+  }, [ideasData]);
 
   // 创建Idea
   const createMutation = useMutation({
-    mutationFn: ideasApi.createIdea,
+    mutationFn: ideasApi.create,
     onSuccess: () => {
       message.success('Ideas创建成功');
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
@@ -65,7 +80,7 @@ const IdeasManagementPage: React.FC = () => {
   // 更新Idea
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: IdeaUpdate }) =>
-      ideasApi.updateIdea(id, data),
+      ideasApi.update(id, data),
     onSuccess: () => {
       message.success('Ideas更新成功');
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
@@ -78,7 +93,7 @@ const IdeasManagementPage: React.FC = () => {
 
   // 删除Idea
   const deleteMutation = useMutation({
-    mutationFn: ideasApi.deleteIdea,
+    mutationFn: ideasApi.delete,
     onSuccess: () => {
       message.success('Ideas删除成功');
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
@@ -324,6 +339,12 @@ const IdeasManagementPage: React.FC = () => {
             showTotal: (total) => `共 ${total} 条`,
             defaultPageSize: 10,
             pageSizeOptions: ['10', '20', '50'],
+          }}
+          // 添加空状态和错误状态处理
+          locale={{
+            emptyText: error 
+              ? `数据加载失败: ${error.message || '请检查网络连接'}` 
+              : '暂无数据'
           }}
         />
       </Card>
