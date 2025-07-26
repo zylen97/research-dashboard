@@ -238,7 +238,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
         style={{
           padding: '12px 0',
           justifyContent: isUser ? 'flex-end' : 'flex-start',
-          border: 'none'
+          border: 'none',
+          minHeight: 'auto',   // 允许自动高度
+          alignItems: 'flex-start'  // 顶部对齐，适合长消息
         }}
       >
         <div
@@ -246,7 +248,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
             display: 'flex',
             flexDirection: isUser ? 'row-reverse' : 'row',
             alignItems: 'flex-start',
-            maxWidth: '80%',
+            maxWidth: '90%',  // 增加最大宽度以显示更多内容
             gap: '8px'
           }}
         >
@@ -263,7 +265,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
               padding: '8px 12px',
               borderRadius: '8px',
               border: `1px solid ${isUser ? '#91d5ff' : (isError ? '#ffccc7' : '#b7eb8f')}`,
-              position: 'relative'
+              position: 'relative',
+              minHeight: 'auto',     // 自动调整高度
+              width: '100%',         // 充分利用可用宽度
+              boxSizing: 'border-box' // 包含padding和border在内的尺寸计算
             }}
           >
             {isSending ? (
@@ -276,7 +281,10 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
                 style={{ 
                   margin: 0, 
                   whiteSpace: 'pre-wrap',
-                  color: isError ? '#ff4d4f' : undefined
+                  color: isError ? '#ff4d4f' : undefined,
+                  wordBreak: 'break-word',  // 长单词自动换行
+                  lineHeight: '1.5',       // 增加行高提升可读性
+                  fontSize: '14px'         // 设置合适的字体大小
                 }}
               >
                 {msg.content}
@@ -334,7 +342,7 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           </Button>
         </Tooltip>
       }
-      style={{ height: '600px', display: 'flex', flexDirection: 'column' }}
+      style={{ height: '800px', display: 'flex', flexDirection: 'column' }}
       bodyStyle={{ 
         flex: 1, 
         display: 'flex', 
@@ -350,7 +358,9 @@ const ChatPanel: React.FC<ChatPanelProps> = ({
           marginBottom: '16px',
           border: '1px solid #f0f0f0',
           borderRadius: '6px',
-          padding: '8px'
+          padding: '8px',
+          minHeight: '0',  // 确保flex容器能够正确收缩
+          maxHeight: '100%' // 确保不会超出父容器
         }}
       >
         {messages.length === 0 ? (
