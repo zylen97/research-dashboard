@@ -72,11 +72,15 @@ const SimpleIdeasPage: React.FC = () => {
     setModalVisible(true);
     
     if (idea) {
+      // 合并来源字段
+      const sources = [];
+      if (idea.source_journal) sources.push(`期刊: ${idea.source_journal}`);
+      if (idea.source_literature) sources.push(`文献: ${idea.source_literature}`);
+      
       form.setFieldsValue({
         research_question: idea.research_question,
         research_method: idea.research_method,
-        source_journal: idea.source_journal,
-        source_literature: idea.source_literature,
+        source: sources.join(' | ') || '',
         responsible_person: idea.responsible_person,
         maturity: idea.maturity,
         description: idea.description,
@@ -102,13 +106,21 @@ const SimpleIdeasPage: React.FC = () => {
     try {
       const values = await form.validateFields();
       
+      // 处理来源字段，分离期刊和文献
+      const processedValues = {
+        ...values,
+        source_journal: values.source || '',
+        source_literature: values.source || '',
+      };
+      delete processedValues.source;
+      
       if (editingIdea) {
         // 更新
-        await api.put(`/simple-ideas/${editingIdea.id}`, values);
+        await api.put(`/simple-ideas/${editingIdea.id}`, processedValues);
         message.success('Idea更新成功');
       } else {
         // 创建
-        await api.post('/simple-ideas/', values);
+        await api.post('/simple-ideas/', processedValues);
         message.success('Idea创建成功');
       }
       
@@ -339,19 +351,11 @@ const SimpleIdeasPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="source_journal"
-            label="来源期刊"
-            rules={[{ required: true, message: '请输入来源期刊' }]}
+            name="source"
+            label="来源"
+            rules={[{ required: true, message: '请输入来源信息' }]}
           >
-            <Input placeholder="请输入来源期刊" />
-          </Form.Item>
-
-          <Form.Item
-            name="source_literature"
-            label="来源文献"
-            rules={[{ required: true, message: '请输入来源文献' }]}
-          >
-            <TextArea rows={2} placeholder="请输入来源文献" />
+            <TextArea rows={2} placeholder="请输入来源信息（如期刊、文献等）" />
           </Form.Item>
 
           <Form.Item
