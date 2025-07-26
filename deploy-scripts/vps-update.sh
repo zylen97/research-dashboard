@@ -52,6 +52,7 @@ if [ -f "frontend/build.tar.gz" ]; then
     
     # 清理并部署到Web目录
     rm -rf /var/www/html/*
+    mkdir -p /var/www/html
     cp -r * /var/www/html/ || error_exit "前端文件复制失败"
     
     # 返回上级目录并清理临时目录
@@ -108,6 +109,12 @@ if [ -f "../deployment/nginx-3001.conf" ]; then
     
     # 复制新配置
     cp ../deployment/nginx-3001.conf /etc/nginx/sites-available/research-dashboard-3001
+    
+    # 创建符号链接（如果不存在）
+    if [ ! -L "/etc/nginx/sites-enabled/research-dashboard-3001" ]; then
+        ln -sf /etc/nginx/sites-available/research-dashboard-3001 /etc/nginx/sites-enabled/
+        log "创建nginx配置符号链接"
+    fi
     
     # 测试nginx配置
     if nginx -t; then
