@@ -11,28 +11,28 @@ import {
   Space,
   Row,
   Col,
+  Select,
 } from 'antd';
 import {
   FileExcelOutlined,
   RobotOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
-import { ideaDiscoveryApi } from '../services/api';
+import { ideaDiscoveryApi, promptsApi } from '../services/api';
 import EmbeddedAIConfig from '../components/idea/EmbeddedAIConfig';
-import PromptEditor from '../components/idea/PromptEditor';
+import PromptManagement from '../components/idea/PromptManagement';
 import ChatPanel from '../components/idea/ChatPanel';
 import { settingsApi } from '../services/settingsApi';
+import { Prompt } from '../types';
 
 const { Title, Text, Paragraph } = Typography;
 
 // 处理状态枚举
 enum ProcessingState {
   IDLE = 'idle',           // 空闲状态
-  FILE_READY = 'file_ready', // 文件已上传，等待prompt确认
-  PROMPT_READY = 'prompt_ready', // prompt已确认，可以开始处理
   PROCESSING = 'processing', // 处理中
   COMPLETED = 'completed',   // 完成
-  ERROR = 'error'           // 错误
+  ERROR = 'error'           // 错误  
 }
 
 interface AIConfig {
@@ -49,8 +49,35 @@ const IdeaDiscovery: React.FC = () => {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<number>(0);
-  const [customPrompt, setCustomPrompt] = useState<string>('');
   const [testResult, setTestResult] = useState<string | null>(null);
+  
+  // Prompts相关状态
+  const [prompts, setPrompts] = useState<Prompt[]>([]);
+  const [selectedPromptId, setSelectedPromptId] = useState<number | undefined>(undefined);
+  const [promptsLoading, setPromptsLoading] = useState(false);
+
+  // 加载prompts列表
+  const loadPrompts = async () => {
+    setPromptsLoading(true);
+    try {
+      const data = await promptsApi.getPrompts();
+      setPrompts(data);
+      // 默认选择第一个prompt
+      if (data.length > 0 && data[0] && !selectedPromptId) {
+        setSelectedPromptId(data[0].id);
+      }
+    } catch (error: any) {
+      console.error('加载Prompt列表失败:', error);
+      message.error('加载Prompt列表失败');
+    } finally {
+      setPromptsLoading(false);
+    }
+  };
+
+  // 组件挂载时加载prompts
+  React.useEffect(() => {
+    loadPrompts();
+  }, []);
 
   // 处理聊天消息发送
   const handleSendChatMessage = async (message: string): Promise<string> => {
@@ -78,21 +105,8 @@ const IdeaDiscovery: React.FC = () => {
     setSelectedFile(file);
     setResultBlob(null);
     setErrorMessage('');
-    setState(ProcessingState.FILE_READY); // 文件上传后进入prompt编辑状态
+    setState(ProcessingState.IDLE); // 文件选择后回到空闲状态，等待用户点击处理按钮
     return false; // 阻止自动上传
-  };
-
-  // 处理prompt确认
-  const handlePromptConfirm = (prompt: string) => {
-    setCustomPrompt(prompt);
-    setState(ProcessingState.PROMPT_READY); // prompt确认后可以开始处理
-    message.success('Prompt已确认，现在可以开始AI分析');
-  };
-
-  // 取消prompt编辑，返回文件选择
-  const handlePromptCancel = () => {
-    setState(ProcessingState.IDLE);
-    setSelectedFile(null);
   };
 
   // 开始处理
@@ -107,13 +121,18 @@ const IdeaDiscovery: React.FC = () => {
       return;
     }
 
+    if (!selectedPromptId) {
+      message.error('请选择要使用的Prompt');
+      return;
+    }
+
     setState(ProcessingState.PROCESSING);
     setProcessingStartTime(Date.now());
     setErrorMessage('');
 
     try {
-      // 使用系统配置的AI提供商（自动模式），传入自定义prompt
-      const blob = await ideaDiscoveryApi.processExcel(selectedFile, customPrompt);
+      // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id
+      const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId);
       setResultBlob(blob);
       setState(ProcessingState.COMPLETED);
       message.success('处理完成！');
@@ -160,9 +179,12 @@ const IdeaDiscovery: React.FC = () => {
     setSelectedFile(null);
     setResultBlob(null);
     setErrorMessage('');
-    setCustomPrompt('');
     setState(ProcessingState.IDLE);
     setProcessingStartTime(0);
+    // 重置prompt选择为第一个可用的prompt
+    if (prompts.length > 0 && prompts[0]) {
+      setSelectedPromptId(prompts[0].id);
+    }
   };
 
   // 获取处理时间
@@ -178,26 +200,54 @@ const IdeaDiscovery: React.FC = () => {
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <Title level={2}>
           <FileExcelOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
-          研究Idea发掘与AI配置中心 
+          研究Idea发掘与Prompt管理中心 
         </Title>
         <Paragraph type="secondary">
-          配置AI，上传包含"摘要"和"标题"列的Excel文件，AI将为每行数据生成研究迁移建议
+          管理Prompt模板，配置AI，选择模板处理Excel文件，AI将为每行数据生成研究迁移建议
         </Paragraph>
       </div>
 
       <Row gutter={[16, 32]} style={{ width: '100%' }}>
-        {/* 左侧：AI配置面板 */}
-        <Col xs={24} md={12} lg={8} xl={8}>
+        {/* 第1栏：Prompt管理面板 */}
+        <Col xs={24} md={12} lg={6} xl={6}>
+          <PromptManagement height="500px" />
+        </Col>
+
+        {/* 第2栏：AI配置面板 */}
+        <Col xs={24} md={12} lg={6} xl={6}>
           <EmbeddedAIConfig 
             onConfigChange={setAiConfig}
             onTestSuccess={handleTestSuccess}
           />
         </Col>
 
-        {/* 中间：文件处理面板 */}
-        <Col xs={24} md={12} lg={8} xl={8}>
+        {/* 第3栏：文件处理面板 */}
+        <Col xs={24} md={12} lg={6} xl={6}>
           <Card title="Excel文件处理">
             <Space direction="vertical" size="large" style={{ width: '100%' }}>
+
+              {/* Prompt选择区域 */}
+              <div>
+                <Text strong style={{ marginBottom: '8px', display: 'block' }}>选择Prompt模板：</Text>
+                <Select
+                  value={selectedPromptId}
+                  onChange={setSelectedPromptId}
+                  style={{ width: '100%' }}
+                  placeholder="请选择Prompt模板"
+                  loading={promptsLoading}
+                  disabled={state === ProcessingState.PROCESSING}
+                  optionFilterProp="children"
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
+                  options={prompts.map(prompt => ({
+                    value: prompt.id,
+                    label: prompt.name,
+                    title: prompt.content.substring(0, 100) + (prompt.content.length > 100 ? '...' : '')
+                  }))}
+                />
+              </div>
 
               {/* 文件上传区域 */}
               <Upload.Dragger
@@ -205,60 +255,37 @@ const IdeaDiscovery: React.FC = () => {
                 accept=".xlsx,.xls"
                 beforeUpload={handleFileSelect}
                 showUploadList={false}
-                disabled={state === ProcessingState.PROCESSING || state === ProcessingState.FILE_READY || state === ProcessingState.PROMPT_READY}
-                style={{ padding: '60px 40px' }}
+                disabled={state === ProcessingState.PROCESSING}
+                style={{ padding: '40px 20px' }}
               >
                 <p className="ant-upload-drag-icon">
                   <FileExcelOutlined style={{ fontSize: '64px', color: '#1890ff' }} />
                 </p>
-                <p className="ant-upload-text" style={{ fontSize: '18px', marginBottom: '8px' }}>
+                <p className="ant-upload-text" style={{ fontSize: '16px', marginBottom: '8px' }}>
                   点击或拖拽Excel文件到此区域上传
                 </p>
-                <p className="ant-upload-hint" style={{ fontSize: '14px' }}>
-                  支持.xlsx和.xls格式，文件需包含"摘要"和"标题"列
+                <p className="ant-upload-hint" style={{ fontSize: '12px' }}>
+                  支持.xlsx和.xls格式，需包含"摘要"和"标题"列
                 </p>
               </Upload.Dragger>
 
-          {/* 文件信息显示 */}
-          {selectedFile && state === ProcessingState.FILE_READY && (
-            <Alert
-              message="文件已上传"
-              description={
-                <div>
-                  <div>文件名: {selectedFile.name}</div>
-                  <div>文件大小: {(selectedFile.size / 1024).toFixed(2)} KB</div>
-                  <div style={{ marginTop: 8, color: '#1890ff' }}>
-                    请在下方编辑AI交互的prompt，然后确认开始处理
-                  </div>
-                </div>
-              }
-              type="info"
-              showIcon
-            />
-          )}
-
-          {/* Prompt编辑器 */}
-          {state === ProcessingState.FILE_READY && (
-            <PromptEditor
-              onPromptConfirm={handlePromptConfirm}
-              onCancel={handlePromptCancel}
-            />
-          )}
-
-          {/* Prompt已确认提示 */}
-          {state === ProcessingState.PROMPT_READY && selectedFile && (
-            <Alert
-              message="准备就绪"
-              description={
-                <div>
-                  <div>文件: {selectedFile.name}</div>
-                  <div>Prompt已确认，点击下方按钮开始AI分析处理</div>
-                </div>
-              }
-              type="success"
-              showIcon
-            />
-          )}
+              {/* 文件信息显示 */}
+              {selectedFile && (
+                <Alert
+                  message="文件已选择"
+                  description={
+                    <div>
+                      <div>文件名: {selectedFile.name}</div>
+                      <div>文件大小: {(selectedFile.size / 1024).toFixed(2)} KB</div>
+                      <div style={{ marginTop: 8, color: '#1890ff' }}>
+                        已选择Prompt: {prompts.find(p => p.id === selectedPromptId)?.name || '未选择'}
+                      </div>
+                    </div>
+                  }
+                  type="info"
+                  showIcon
+                />
+              )}
 
           {/* 处理状态显示 */}
           {state === ProcessingState.PROCESSING && (
@@ -316,7 +343,7 @@ const IdeaDiscovery: React.FC = () => {
           )}
 
               {/* 操作按钮 */}
-              {state === ProcessingState.PROMPT_READY && (
+              {selectedFile && (
                 <div style={{ textAlign: 'center' }}>
                   <Space>
                     <Button
@@ -324,18 +351,24 @@ const IdeaDiscovery: React.FC = () => {
                       size="large"
                       icon={<RobotOutlined />}
                       onClick={handleStartProcessing}
-                      style={{ minWidth: '200px' }}
-                      disabled={!aiConfig || !aiConfig.is_connected}
+                      style={{ minWidth: '180px' }}
+                      disabled={!aiConfig || !aiConfig.is_connected || !selectedPromptId || state === ProcessingState.PROCESSING}
+                      loading={state === ProcessingState.PROCESSING}
                     >
                       开始AI分析处理
                     </Button>
-                    <Button onClick={handleReset}>
-                      重新选择文件
+                    <Button onClick={handleReset} disabled={state === ProcessingState.PROCESSING}>
+                      重新选择
                     </Button>
                   </Space>
                   {(!aiConfig || !aiConfig.is_connected) && (
                     <div style={{ marginTop: '8px' }}>
-                      <Text type="secondary">请先在左侧配置并测试AI连接</Text>
+                      <Text type="secondary">请先在第2栏配置并测试AI连接</Text>
+                    </div>
+                  )}
+                  {!selectedPromptId && (
+                    <div style={{ marginTop: '8px' }}>
+                      <Text type="secondary">请先选择Prompt模板</Text>
                     </div>
                   )}
                 </div>
@@ -344,8 +377,8 @@ const IdeaDiscovery: React.FC = () => {
           </Card>
         </Col>
 
-        {/* 右侧：聊天测试面板 */}
-        <Col xs={24} md={24} lg={8} xl={8}>
+        {/* 第4栏：聊天测试面板 */}
+        <Col xs={24} md={24} lg={6} xl={6}>
           <ChatPanel
             onSendMessage={handleSendChatMessage}
             disabled={!aiConfig || !aiConfig.is_connected}
@@ -362,17 +395,18 @@ const IdeaDiscovery: React.FC = () => {
           <Col xs={24} md={12} lg={12}>
             <div style={{ lineHeight: '2' }}>
               <Text>
-                <strong>1. AI配置：</strong>在左侧填写API密钥和地址并测试连接<br />
-                <strong>2. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-                <strong>3. 处理流程：</strong>系统将使用已配置的AI读取每行数据，生成研究迁移建议<br />
+                <strong>1. Prompt管理：</strong>在第1栏管理和创建Prompt模板<br />
+                <strong>2. AI配置：</strong>在第2栏填写API密钥和地址并测试连接<br />
+                <strong>3. 文件处理：</strong>在第3栏选择Prompt模板，上传Excel文件并开始处理<br />
               </Text>
             </div>
           </Col>
           <Col xs={24} md={12} lg={12}>
             <div style={{ lineHeight: '2' }}>
               <Text>
-                <strong>4. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
-                <strong>5. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
+                <strong>4. 聊天测试：</strong>在第4栏测试AI对话功能<br />
+                <strong>5. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
+                <strong>6. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列
               </Text>
             </div>
           </Col>

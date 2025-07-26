@@ -1,6 +1,7 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import pandas as pd
@@ -35,6 +36,7 @@ class ProcessExcelResponse(BaseModel):
 @router.post("/process-excel")
 async def process_excel_file(
     file: UploadFile = File(...),
+    prompt_id: Optional[int] = Form(None),
     custom_prompt: Optional[str] = Form(None),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
@@ -42,7 +44,14 @@ async def process_excel_file(
     """
     智能Excel处理端点（使用系统配置的AI）
     自动使用系统配置的AI提供商处理Excel文件
-    直接上传Excel -> AI自动处理 -> 返回增强Excel
+    支持prompt选择：数据库预定义prompt或自定义prompt
+    
+    参数:
+    - file: Excel文件（必须包含"摘要"和"标题"列）
+    - prompt_id: 可选，数据库中预定义prompt的ID
+    - custom_prompt: 可选，用户自定义的prompt文本
+    
+    Prompt优先级：prompt_id > custom_prompt > 默认prompt
     """
     start_time = datetime.now()
     
@@ -99,11 +108,10 @@ async def process_excel_file(
         # 获取AI模型名称用于文件列名
         ai_model_name = main_config.get('model', 'default')
         
-        # 6. 为每行数据生成AI建议（并发批处理）
-        logger.info(f"开始为 {len(df)} 行数据生成AI建议（并发处理）...")
-        suggestions = []
-        processed_count = 0
-        error_count = 0
+        # 6. 获取要使用的prompt（优先级：prompt_id > custom_prompt > default_prompt）
+        prompt_to_use = None
+        prompt_source = "default"
+        prompt_name = "系统默认"
         
         # 默认提示词
         default_prompt = """
@@ -117,11 +125,49 @@ async def process_excel_file(
 
 请直接给出建议内容，不需要格式化或额外说明。
 """
-        prompt_to_use = custom_prompt if custom_prompt else default_prompt
         
-        logger.debug(f"使用的prompt类型: {'自定义' if custom_prompt else '默认'}")
-        if custom_prompt:
-            logger.debug(f"自定义prompt长度: {len(custom_prompt)}字符")
+        # 优先使用数据库中的prompt
+        if prompt_id:
+            try:
+                logger.info(f"查询数据库中的prompt_id: {prompt_id}")
+                prompt_result = db.execute(
+                    text("SELECT name, content FROM prompts WHERE id = :id"),
+                    {"id": prompt_id}
+                ).fetchone()
+                
+                if prompt_result:
+                    prompt_to_use = prompt_result.content
+                    prompt_source = "database"
+                    prompt_name = prompt_result.name
+                    logger.info(f"使用数据库prompt: {prompt_name} (ID: {prompt_id})")
+                else:
+                    logger.warning(f"prompt_id {prompt_id} 不存在，回退到默认prompt")
+                    prompt_to_use = default_prompt
+                    
+            except Exception as e:
+                logger.error(f"查询prompt失败: {e}，使用默认prompt")
+                prompt_to_use = default_prompt
+                
+        # 其次使用自定义prompt
+        elif custom_prompt:
+            prompt_to_use = custom_prompt
+            prompt_source = "custom"
+            prompt_name = "用户自定义"
+            logger.info("使用用户自定义prompt")
+            
+        # 最后使用默认prompt
+        else:
+            prompt_to_use = default_prompt
+            logger.info("使用系统默认prompt")
+        
+        logger.debug(f"最终使用的prompt类型: {prompt_source}, 名称: {prompt_name}")
+        logger.debug(f"Prompt长度: {len(prompt_to_use)}字符")
+        
+        # 7. 为每行数据生成AI建议（并发批处理）
+        logger.info(f"开始为 {len(df)} 行数据生成AI建议（并发处理）...")
+        suggestions = []
+        processed_count = 0
+        error_count = 0
         
         # 单行处理函数
         async def process_single_row(index, row):
@@ -239,23 +285,22 @@ async def process_excel_file(
         
         logger.info(f"数据处理完成: 总共{len(df)}行，成功{processed_count - error_count}行，失败{error_count}行")
         
-        # 7. 添加AI建议列到DataFrame
+        # 8. 添加AI建议列到DataFrame
         # 使用模型名称作为列名
         column_name = f"迁移意见by{ai_model_name}"
         df[column_name] = suggestions
         
-        # 8. 生成增强的Excel文件
+        # 9. 生成增强的Excel文件
         excel_buffer = io.BytesIO()
         df.to_excel(excel_buffer, index=False, engine='openpyxl')
         excel_buffer.seek(0)
         
-        # 9. 计算处理时间
+        # 10. 计算处理时间
         processing_time = (datetime.now() - start_time).total_seconds()
         
-        prompt_info = "自定义prompt" if custom_prompt else "默认prompt"
-        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, prompt类型: {prompt_info}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
+        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, prompt来源: {prompt_source}, prompt名称: {prompt_name}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
         
-        # 10. 返回增强的Excel文件
+        # 11. 返回增强的Excel文件
         return StreamingResponse(
             io.BytesIO(excel_buffer.read()),
             media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -265,7 +310,9 @@ async def process_excel_file(
                 "X-Rows-Processed": str(processed_count),
                 "X-AI-Model": ai_model_name,
                 "X-System-Config": "auto",
-                "X-Prompt-Type": "custom" if custom_prompt else "default"
+                "X-Prompt-Type": prompt_source,
+                "X-Prompt-Name": prompt_name.encode('utf-8').decode('utf-8') if prompt_name else "default",
+                "X-Prompt-ID": str(prompt_id) if prompt_id else "none"
             }
         )
         

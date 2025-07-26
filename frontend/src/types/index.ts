@@ -290,3 +290,22 @@ export interface AITestResponse {
   response_content?: string;
 }
 
+// Prompt管理类型
+export interface Prompt {
+  id: number;
+  name: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PromptCreate {
+  name: string;
+  content: string;
+}
+
+export interface PromptUpdate {
+  name?: string;
+  content?: string;
+}
+

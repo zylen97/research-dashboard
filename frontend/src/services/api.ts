@@ -7,7 +7,8 @@ import {
   PaginationParams,
   User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
-  BackupListResponse, BackupCreateResponse
+  BackupListResponse, BackupCreateResponse,
+  Prompt, PromptCreate, PromptUpdate
 } from '../types';
 import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
@@ -361,9 +362,12 @@ export const backupApi = {
 // Idea发掘 API (智能版 - 使用系统AI配置)
 export const ideaDiscoveryApi = {
   // 智能处理Excel文件（自动使用系统配置的AI）
-  processExcel: async (file: File, customPrompt?: string): Promise<Blob> => {
+  processExcel: async (file: File, promptId?: number, customPrompt?: string): Promise<Blob> => {
     const formData = new FormData();
     formData.append('file', file);
+    if (promptId) {
+      formData.append('prompt_id', promptId.toString());
+    }
     if (customPrompt) {
       formData.append('custom_prompt', customPrompt);
     }
@@ -502,6 +506,31 @@ export const auditApi = {
     limit?: number;
   }): Promise<any[]> =>
     api.get(`/audit/user/${userId}`, { params }),
+};
+
+// Prompts管理 API
+export const promptsApi = {
+  // 获取所有prompts列表
+  getPrompts: async (): Promise<Prompt[]> => {
+    const response = await api.get('/prompts/');
+    return handleListResponse<Prompt>(response, 'API.getPrompts');
+  },
+
+  // 获取单个prompt
+  getPrompt: (id: number): Promise<Prompt> =>
+    api.get(`/prompts/${id}`),
+
+  // 创建新prompt
+  createPrompt: (data: PromptCreate): Promise<Prompt> =>
+    api.post('/prompts/', data),
+
+  // 更新prompt
+  updatePrompt: (id: number, data: PromptUpdate): Promise<Prompt> =>
+    api.put(`/prompts/${id}`, data),
+
+  // 删除prompt
+  deletePrompt: (id: number): Promise<{ success: boolean; message: string }> =>
+    api.delete(`/prompts/${id}`),
 };
 
 export default api;
