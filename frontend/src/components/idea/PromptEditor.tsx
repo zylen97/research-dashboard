@@ -6,7 +6,6 @@ import {
   Space,
   Typography,
   Select,
-  Alert,
   Tooltip,
   Tag
 } from 'antd';
@@ -18,7 +17,7 @@ import {
 } from '@ant-design/icons';
 
 const { TextArea } = Input;
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const { Option } = Select;
 
 // 默认prompt模板
@@ -229,23 +228,6 @@ const PromptEditor: React.FC<PromptEditorProps> = ({
             字符数: {stats.length} | 行数: {stats.lines}
           </div>
         </div>
-
-        {/* 提示信息 */}
-        <Alert
-          message="Prompt使用说明"
-          description={
-            <div>
-              <Paragraph style={{ margin: 0, fontSize: '13px' }}>
-                • 系统会为每条文献数据自动添加"标题:"和"摘要:"字段<br/>
-                • 建议在prompt中明确指定输出格式和字数要求<br/>
-                • 可以使用模板快速开始，然后根据需要自定义修改
-              </Paragraph>
-            </div>
-          }
-          type="info"
-          showIcon
-          style={{ fontSize: '12px' }}
-        />
 
         {/* 操作按钮 */}
         <div style={{ textAlign: 'center' }}>

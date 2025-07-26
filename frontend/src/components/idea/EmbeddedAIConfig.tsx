@@ -327,17 +327,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
           </Space>
         </Form.Item>
       </Form>
-      
-      {/* 使用说明 */}
-      <Card size="small" style={{ marginTop: 16 }}>
-        <Space direction="vertical" size="small">
-          <Text strong>使用说明：</Text>
-          <Text type="secondary">• API密钥可从AI服务商获取（如OpenAI、Anthropic等）</Text>
-          <Text type="secondary">• API地址为AI服务的接口地址，默认使用ChatAnywhere</Text>
-          <Text type="secondary">• 保存配置后请点击"测试连接"验证配置是否正确</Text>
-          <Text type="secondary">• 只有测试连接成功后才能使用AI分析功能</Text>
-        </Space>
-      </Card>
     </Card>
   );
 };

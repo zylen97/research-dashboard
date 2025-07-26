@@ -397,17 +397,6 @@ const PromptManagement: React.FC<PromptManagementProps> = ({ height = "600px" })
           </div>
         )}
       </Modal>
-      
-      {/* 使用说明 */}
-      <Card size="small" style={{ marginTop: 16 }}>
-        <Space direction="vertical" size="small">
-          <Text strong>使用说明：</Text>
-          <Text type="secondary">• 点击"新建Prompt"创建新的AI提示词模板</Text>
-          <Text type="secondary">• Prompt模板用于指导AI如何分析Excel数据并生成研究建议</Text>
-          <Text type="secondary">• 支持查看、编辑、删除等操作，模板内容实时保存</Text>
-          <Text type="secondary">• 建议为不同的研究方向创建专门的Prompt模板</Text>
-        </Space>
-      </Card>
     </Card>
   );
 };

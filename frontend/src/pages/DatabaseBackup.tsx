@@ -436,18 +436,6 @@ const DatabaseBackup: React.FC = () => {
           />
         )}
       </Card>
-      
-      {/* 提示信息 */}
-      <Card style={{ marginTop: 16 }}>
-        <Title level={5}>使用说明</Title>
-        <Space direction="vertical">
-          <Text>• 系统会自动保留最近 {stats?.max_backups || 7} 个备份</Text>
-          <Text>• 创建备份前请确保没有正在进行的重要操作</Text>
-          <Text>• 恢复备份会覆盖当前所有数据，请谨慎操作</Text>
-          <Text>• 建议定期下载备份到本地进行异地保存</Text>
-          <Text type="danger">• 生产环境的操作请格外小心！</Text>
-        </Space>
-      </Card>
     </div>
   );
 };

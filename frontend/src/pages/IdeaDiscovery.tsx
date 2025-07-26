@@ -353,45 +353,10 @@ const IdeaDiscovery: React.FC = () => {
                   )}
                 </div>
               )}
-              
-              {/* 使用说明 */}
-              <Card size="small" style={{ marginTop: 16 }}>
-                <Space direction="vertical" size="small">
-                  <Text strong>使用说明：</Text>
-                  <Text type="secondary">• 选择合适的Prompt模板用于指导AI分析</Text>
-                  <Text type="secondary">• Excel文件必须包含"摘要"和"标题"两列</Text>
-                  <Text type="secondary">• 上传文件后点击"开始AI分析处理"进行批量处理</Text>
-                  <Text type="secondary">• 处理完成后可下载包含AI建议的增强文件</Text>
-                </Space>
-              </Card>
             </Space>
           </Card>
         </Col>
       </Row>
-
-      {/* 使用说明 */}
-      <Card title="使用说明" style={{ marginTop: '32px' }}>
-        <Row gutter={[32, 16]}>
-          <Col xs={24} md={12} lg={12}>
-            <div style={{ lineHeight: '2' }}>
-              <Text>
-                <strong>1. Prompt管理：</strong>在第1栏管理和创建Prompt模板<br />
-                <strong>2. AI配置：</strong>在第2栏填写API密钥和地址并测试连接<br />
-                <strong>3. 文件处理：</strong>在第3栏选择Prompt模板，上传Excel文件并开始处理<br />
-              </Text>
-            </div>
-          </Col>
-          <Col xs={24} md={12} lg={12}>
-            <div style={{ lineHeight: '2' }}>
-              <Text>
-                <strong>4. 文件要求：</strong>Excel文件必须包含"摘要"和"标题"两列<br />
-                <strong>5. 结果文件：</strong>将在原文件基础上新增"迁移意见by[AI模型名]"列<br />
-                <strong>6. 注意事项：</strong>处理时间取决于数据行数和AI响应速度，请耐心等待
-              </Text>
-            </div>
-          </Col>
-        </Row>
-      </Card>
     </div>
   );
 };

@@ -232,12 +232,12 @@ const SimpleIdeasPage: React.FC = () => {
   return (
     <div style={{ padding: '24px' }}>
       {/* 页面标题 */}
-      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-        <Title level={2}>
-          <BulbOutlined style={{ marginRight: '12px', color: '#1890ff' }} />
+      <div style={{ marginBottom: '32px' }}>
+        <Title level={3} style={{ margin: 0 }}>
+          <BulbOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
           Ideas管理
         </Title>
-        <Paragraph type="secondary">
+        <Paragraph type="secondary" style={{ marginTop: '8px', marginBottom: 0 }}>
           管理研究想法，设置负责人和成熟度评级
         </Paragraph>
       </div>
