@@ -9,7 +9,8 @@ import {
   Typography,
   Alert,
   Select,
-  Spin
+  Spin,
+  InputNumber
 } from 'antd';
 import {
   ApiOutlined,
@@ -28,6 +29,15 @@ interface AIConfig {
   is_connected?: boolean;
 }
 
+interface ConcurrentConfig {
+  max_concurrent: number;
+}
+
+// 默认并发数配置
+const DEFAULT_CONCURRENT_CONFIG: ConcurrentConfig = {
+  max_concurrent: 50
+};
+
 interface EmbeddedAIConfigProps {
   onConfigChange?: (config: AIConfig | null) => void;
 }
@@ -39,10 +49,14 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
   const [models, setModels] = useState<Model[]>([]);
+  
+  // 本地并发数配置状态
+  const [concurrentConfig, setConcurrentConfig] = useState<ConcurrentConfig>(DEFAULT_CONCURRENT_CONFIG);
 
   useEffect(() => {
     fetchConfig();
     fetchModels();
+    loadConcurrentConfig();
   }, []);
 
   useEffect(() => {
@@ -109,6 +123,37 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
           description: "高性能多模态模型"
         }
       ]);
+    }
+  };
+
+  // 加载本地并发数配置
+  const loadConcurrentConfig = () => {
+    try {
+      const saved = localStorage.getItem('ai_concurrent_config');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setConcurrentConfig(parsed);
+      }
+    } catch (error) {
+      console.warn('加载并发数配置失败，使用默认值:', error);
+    }
+  };
+
+  // 保存本地并发数配置
+  const saveConcurrentConfig = (newConfig: ConcurrentConfig) => {
+    try {
+      localStorage.setItem('ai_concurrent_config', JSON.stringify(newConfig));
+      setConcurrentConfig(newConfig);
+    } catch (error) {
+      console.error('保存并发数配置失败:', error);
+    }
+  };
+
+  // 处理并发数变更
+  const handleConcurrentChange = (value: number | null) => {
+    if (value !== null && value >= 0 && value <= 50) {
+      const newConfig = { max_concurrent: value };
+      saveConcurrentConfig(newConfig);
     }
   };
 
@@ -326,6 +371,35 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
           </Space>
         </Form.Item>
       </Form>
+
+      {/* 独立的并发数配置区域 */}
+      <div style={{ 
+        marginTop: '16px', 
+        padding: '12px', 
+        backgroundColor: '#fafafa', 
+        borderRadius: '6px', 
+        border: '1px solid #f0f0f0' 
+      }}>
+        <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '12px', color: '#333' }}>
+          客户端并发数 (本地配置)
+        </div>
+        <div style={{ marginBottom: '8px', fontSize: '11px', color: '#666' }}>
+          AI请求并发数量，范围0-50，仅在当前浏览器生效
+        </div>
+        <Space align="center">
+          <InputNumber
+            min={0}
+            max={50}
+            value={concurrentConfig.max_concurrent}
+            onChange={handleConcurrentChange}
+            size="small"
+            style={{ width: '80px' }}
+          />
+          <Text style={{ fontSize: '11px', color: '#999' }}>
+            默认: 50
+          </Text>
+        </Space>
+      </div>
     </Card>
   );
 };
