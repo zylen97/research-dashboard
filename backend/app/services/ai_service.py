@@ -167,47 +167,47 @@ class AIService:
                     
                 logger.debug(f"收到响应: status_code={response.status_code} (第{attempt + 1}次尝试)")
                 
-        # 处理响应结果
-        if response.status_code == 200:
-            result = response.json()
-            ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
-            logger.debug(f"AI响应成功，内容长度: {len(ai_response) if ai_response else 0}")
-            return {
-                "success": True,
-                "response": ai_response,
-                "usage": result.get("usage", {})
-            }
-        else:
-            error_text = response.text
-            logger.error(f"AI API错误: status={response.status_code}, 响应内容: {error_text[:500]}...")
-            
-            # 尝试解析错误信息
-            try:
-                error_detail = response.json().get('error', {}).get('message', error_text)
-            except:
-                error_detail = error_text
+                # 处理响应结果
+                if response.status_code == 200:
+                    result = response.json()
+                    ai_response = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    logger.debug(f"AI响应成功，内容长度: {len(ai_response) if ai_response else 0}")
+                    return {
+                        "success": True,
+                        "response": ai_response,
+                        "usage": result.get("usage", {})
+                    }
+                else:
+                    error_text = response.text
+                    logger.error(f"AI API错误: status={response.status_code}, 响应内容: {error_text[:500]}...")
+                    
+                    # 尝试解析错误信息
+                    try:
+                        error_detail = response.json().get('error', {}).get('message', error_text)
+                    except:
+                        error_detail = error_text
+                        
+                    # 根据状态码提供更详细的错误信息
+                    if response.status_code == 401:
+                        error_msg = "API密钥验证失败，请检查API Key是否正确"
+                    elif response.status_code == 403:
+                        error_msg = "API访问被拒绝，请检查API Key权限"
+                    elif response.status_code == 429:
+                        error_msg = "API调用频率超限，请稍后重试"
+                    elif response.status_code == 500:
+                        error_msg = "AI服务内部错误，请稍后重试"
+                    elif response.status_code == 502 or response.status_code == 503:
+                        error_msg = "AI服务暂时不可用，请稍后重试"
+                    else:
+                        error_msg = f"API错误 {response.status_code}: {error_detail}"
+                        
+                    return {
+                        "success": False,
+                        "error": error_msg,
+                        "response": None
+                    }
                 
-            # 根据状态码提供更详细的错误信息
-            if response.status_code == 401:
-                error_msg = "API密钥验证失败，请检查API Key是否正确"
-            elif response.status_code == 403:
-                error_msg = "API访问被拒绝，请检查API Key权限"
-            elif response.status_code == 429:
-                error_msg = "API调用频率超限，请稍后重试"
-            elif response.status_code == 500:
-                error_msg = "AI服务内部错误，请稍后重试"
-            elif response.status_code == 502 or response.status_code == 503:
-                error_msg = "AI服务暂时不可用，请稍后重试"
-            else:
-                error_msg = f"API错误 {response.status_code}: {error_detail}"
-                
-            return {
-                "success": False,
-                "error": error_msg,
-                "response": None
-            }
-                
-                # 如果成功，直接返回结果
+                # 如果成功，跳出重试循环
                 break
                 
             except httpx.TimeoutException as e:
