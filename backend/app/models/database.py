@@ -1,4 +1,5 @@
 from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint
+from sqlalchemy.orm import backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
@@ -192,6 +193,31 @@ class UserProjectTodo(Base):
     __table_args__ = (
         UniqueConstraint('user_id', 'project_id', name='_user_project_uc'),
     )
+
+
+class Prompt(Base):
+    """Prompts管理模型"""
+    __tablename__ = "prompts"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, unique=True, index=True)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserApiSettings(Base):
+    """用户API设置模型"""
+    __tablename__ = "user_api_settings"
+    
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
+    api_key = Column(String(500))
+    api_base = Column(String(500))
+    model = Column(String(100))
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    user = relationship("User", backref="api_settings")
 
 
 # Create database tables

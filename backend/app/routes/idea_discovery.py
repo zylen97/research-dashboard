@@ -1,7 +1,6 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Form
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import pandas as pd
@@ -9,7 +8,7 @@ import io
 import asyncio
 from datetime import datetime
 
-from app.models.database import get_db
+from app.models.database import get_db, Prompt
 from app.utils.response import success_response
 from app.utils.auth import get_current_user
 from app.models.schemas import User
@@ -99,233 +98,186 @@ async def process_excel_file(
         
         logger.info(f"找到AI配置: model={main_config.get('model')}, api_url={main_config.get('api_url')}, is_connected={main_config.get('is_connected')}")
         
-        if not main_config.get('is_connected'):
-            error_msg = f"AI连接未测试通过，请在页面左侧点击'测试连接'按钮确保API可用 (当前状态: is_connected={main_config.get('is_connected')})"
-            logger.warning(error_msg)
-            # 不立即抛出异常，而是尝试继续处理，让AI服务自己决定是否能调用
-            logger.info("忽略连接状态检查，尝试直接调用AI服务...")
+        # 检查连接状态
+        if not main_config.get('is_connected', False):
+            error_msg = "AI配置存在但尚未测试连接，请先在页面左侧的AI配置中点击'测试连接'按钮"
+            logger.error(error_msg)
+            raise HTTPException(
+                status_code=400,
+                detail=error_msg
+            )
         
-        # 获取AI模型名称用于文件列名
-        ai_model_name = main_config.get('model', 'default')
+        logger.info("AI配置有效且已连接")
         
-        # 6. 获取要使用的prompt（优先级：prompt_id > custom_prompt > default_prompt）
-        prompt_to_use = None
-        prompt_source = "default"
-        prompt_name = "系统默认"
-        
-        # 默认提示词
-        default_prompt = """
-基于提供的文献标题和摘要，请生成一个简洁的研究迁移建议。
+        # 6. 确定使用哪个prompt
+        default_prompt = """请将给定的研究内容优化和精炼，使其更加清晰、专业，并强调其创新性和研究价值。
 
 要求：
-1. 分析该研究的核心技术或方法
-2. 建议如何将其应用到其他领域或问题
-3. 提出具体的迁移方向或应用场景
-4. 建议控制在50-100字内
+1. 保持原意不变的前提下，改进语言表达
+2. 突出研究的创新点和潜在价值
+3. 确保专业性和学术性
+4. 返回优化后的内容即可，不要添加额外的说明或评论
 
-请直接给出建议内容，不需要格式化或额外说明。
-"""
+研究内容："""
+        
+        prompt_to_use = None
         
         # 优先使用数据库中的prompt
         if prompt_id:
             try:
                 logger.info(f"查询数据库中的prompt_id: {prompt_id}")
-                prompt_result = db.execute(
-                    text("SELECT name, content FROM prompts WHERE id = :id"),
-                    {"id": prompt_id}
-                ).fetchone()
+                # 使用ORM查询prompt
+                prompt_obj = db.query(Prompt).filter(Prompt.id == prompt_id).first()
                 
-                if prompt_result:
-                    prompt_to_use = prompt_result.content
-                    prompt_source = "database"
-                    prompt_name = prompt_result.name
-                    logger.info(f"使用数据库prompt: {prompt_name} (ID: {prompt_id})")
+                if prompt_obj:
+                    prompt_to_use = prompt_obj.content
+                    logger.info(f"使用数据库prompt: {prompt_obj.name}")
                 else:
-                    logger.warning(f"prompt_id {prompt_id} 不存在，回退到默认prompt")
-                    prompt_to_use = default_prompt
-                    
+                    logger.warning(f"未找到prompt_id={prompt_id}，将使用自定义prompt或默认prompt")
             except Exception as e:
-                logger.error(f"查询prompt失败: {e}，使用默认prompt")
-                prompt_to_use = default_prompt
-                
+                logger.error(f"查询prompt失败: {e}")
+                # 继续使用自定义prompt或默认prompt
+        
         # 其次使用自定义prompt
-        elif custom_prompt:
+        if not prompt_to_use and custom_prompt:
             prompt_to_use = custom_prompt
-            prompt_source = "custom"
-            prompt_name = "用户自定义"
-            logger.info("使用用户自定义prompt")
-            
+            logger.info("使用自定义prompt")
+        
         # 最后使用默认prompt
-        else:
+        if not prompt_to_use:
             prompt_to_use = default_prompt
-            logger.info("使用系统默认prompt")
+            logger.info("使用默认prompt")
         
-        logger.debug(f"最终使用的prompt类型: {prompt_source}, 名称: {prompt_name}")
-        logger.debug(f"Prompt长度: {len(prompt_to_use)}字符")
-        
-        # 7. 为每行数据生成AI建议（并发批处理）
-        logger.info(f"开始为 {len(df)} 行数据生成AI建议（并发处理）...")
-        suggestions = []
+        # 7. 处理Excel数据
+        logger.info(f"开始处理Excel数据，共 {len(df)} 行")
+        results = []
         processed_count = 0
         error_count = 0
         
-        # 单行处理函数
-        async def process_single_row(index, row):
+        # 显示处理进度
+        total_rows = len(df)
+        
+        for index, row in df.iterrows():
             try:
-                # 构建AI提示内容
-                title = str(row['标题']) if pd.notna(row['标题']) else ""
-                abstract = str(row['摘要']) if pd.notna(row['摘要']) else ""
+                abstract = str(row.get('摘要', '')).strip()
+                title = str(row.get('标题', '')).strip()
                 
-                if not title and not abstract:
-                    logger.warning(f"第{index+1}行数据不完整，跳过")
-                    return {
-                        'index': index,
-                        'success': False,
-                        'suggestion': "数据不完整，无法生成建议",
-                        'error': None
-                    }
+                # 跳过空行
+                if not abstract or abstract == 'nan':
+                    results.append({
+                        '序号': index + 1,
+                        '标题': title,
+                        '原始摘要': abstract,
+                        '优化后的研究内容': '',
+                        '处理状态': '跳过-空内容'
+                    })
+                    continue
                 
-                # 构建数据内容
-                data_content = f"标题: {title}\n摘要: {abstract}"
+                # 构建完整内容
+                content = f"标题：{title}\n摘要：{abstract}" if title and title != 'nan' else abstract
                 
-                # 调用AI服务（自动模式）
-                logger.debug(f"调用AI服务处理第{index+1}行...")
-                ai_result = await ai_service.generate_research_suggestions_auto(
-                    data_content=data_content,
-                    custom_prompt=prompt_to_use
-                )
+                # 调用AI处理
+                logger.info(f"处理第 {index + 1}/{total_rows} 行...")
                 
-                if ai_result['success']:
-                    suggestion = ai_result['response'].strip()
-                    # 确保建议不超过150字
-                    if len(suggestion) > 150:
-                        suggestion = suggestion[:147] + "..."
-                    logger.debug(f"第{index+1}行处理成功，建议长度: {len(suggestion)}")
-                    return {
-                        'index': index,
-                        'success': True,
-                        'suggestion': suggestion,
-                        'error': None
-                    }
-                else:
-                    error_msg = ai_result.get('error', '未知错误')
-                    logger.error(f"第{index+1}行AI处理失败: {error_msg}")
-                    return {
-                        'index': index,
-                        'success': False,
-                        'suggestion': f"AI处理失败: {error_msg}",
-                        'error': error_msg
-                    }
-                    
-            except Exception as e:
-                error_msg = f"处理第{index+1}行时发生异常: {str(e)}"
-                logger.error(error_msg)
-                return {
-                    'index': index,
-                    'success': False,
-                    'suggestion': f"处理出错: {str(e)}",
-                    'error': str(e)
-                }
-        
-        # 批量并发处理
-        batch_size = 5  # 并发数量：5个一批
-        total_batches = (len(df) + batch_size - 1) // batch_size
-        
-        # 初始化结果列表，保持顺序
-        suggestions = [None] * len(df)
-        
-        for batch_num in range(total_batches):
-            start_idx = batch_num * batch_size
-            end_idx = min(start_idx + batch_size, len(df))
-            current_batch_size = end_idx - start_idx
-            
-            logger.info(f"处理第 {batch_num + 1}/{total_batches} 批，行数: {start_idx + 1}-{end_idx}")
-            
-            # 创建当前批次的任务
-            batch_tasks = []
-            for i in range(start_idx, end_idx):
-                row = df.iloc[i]
-                task = process_single_row(i, row)
-                batch_tasks.append(task)
-            
-            # 并发执行当前批次
-            try:
-                batch_results = await asyncio.gather(*batch_tasks, return_exceptions=True)
+                # 使用系统配置的AI服务进行处理
+                result = await ai_service.process_with_prompt(content, prompt_to_use)
                 
-                # 处理批次结果
-                for result in batch_results:
-                    if isinstance(result, Exception):
-                        # 处理异常情况
-                        logger.error(f"批处理中发生异常: {result}")
-                        error_count += 1
-                        # 找到对应的索引（这里简化处理）
-                        suggestions[processed_count] = f"批处理异常: {str(result)}"
-                    else:
-                        # 正常结果
-                        idx = result['index']
-                        suggestions[idx] = result['suggestion']
-                        if not result['success']:
-                            error_count += 1
-                    
+                if result['success']:
+                    results.append({
+                        '序号': index + 1,
+                        '标题': title,
+                        '原始摘要': abstract,
+                        '优化后的研究内容': result['response'],
+                        '处理状态': '成功'
+                    })
                     processed_count += 1
+                else:
+                    results.append({
+                        '序号': index + 1,
+                        '标题': title,
+                        '原始摘要': abstract,
+                        '优化后的研究内容': '',
+                        '处理状态': f"失败-{result.get('error', '未知错误')}"
+                    })
+                    error_count += 1
+                    logger.error(f"处理第 {index + 1} 行失败: {result.get('error')}")
                 
-                logger.info(f"第 {batch_num + 1} 批处理完成，成功率: {((current_batch_size - sum(1 for r in batch_results if isinstance(r, Exception) or not r.get('success', True))) / current_batch_size * 100):.1f}%")
-                
-                # 批次间短暂延迟，避免过于频繁的请求
-                if batch_num < total_batches - 1:  # 最后一批不需要延迟
+                # 添加延迟避免API限流
+                if index < len(df) - 1:  # 不是最后一行
                     await asyncio.sleep(0.5)
                     
             except Exception as e:
-                logger.error(f"第 {batch_num + 1} 批处理失败: {e}")
-                # 为这批数据填充错误信息
-                for i in range(start_idx, end_idx):
-                    suggestions[i] = f"批处理失败: {str(e)}"
-                    error_count += 1
-                    processed_count += 1
+                error_msg = str(e)
+                logger.error(f"处理第 {index + 1} 行时出错: {error_msg}")
+                results.append({
+                    '序号': index + 1,
+                    '标题': row.get('标题', ''),
+                    '原始摘要': row.get('摘要', ''),
+                    '优化后的研究内容': '',
+                    '处理状态': f"错误-{error_msg}"
+                })
+                error_count += 1
         
-        logger.info(f"数据处理完成: 总共{len(df)}行，成功{processed_count - error_count}行，失败{error_count}行")
+        # 8. 创建结果Excel文件
+        result_df = pd.DataFrame(results)
         
-        # 8. 添加AI建议列到DataFrame
-        # 使用模型名称作为列名
-        column_name = f"迁移意见by{ai_model_name}"
-        df[column_name] = suggestions
+        # 创建Excel输出
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+            result_df.to_excel(writer, sheet_name='处理结果', index=False)
+            
+            # 获取workbook和worksheet对象
+            workbook = writer.book
+            worksheet = writer.sheets['处理结果']
+            
+            # 设置列宽
+            worksheet.set_column('A:A', 10)  # 序号
+            worksheet.set_column('B:B', 30)  # 标题
+            worksheet.set_column('C:C', 50)  # 原始摘要
+            worksheet.set_column('D:D', 60)  # 优化后的研究内容
+            worksheet.set_column('E:E', 20)  # 处理状态
+            
+            # 添加处理统计信息
+            stats_df = pd.DataFrame([{
+                '处理时间': str(datetime.now() - start_time),
+                '总行数': total_rows,
+                '成功处理': processed_count,
+                '处理失败': error_count,
+                '跳过行数': total_rows - processed_count - error_count,
+                'AI模型': main_config.get('model', 'unknown'),
+                'Prompt来源': 'prompt' if prompt_id else ('自定义' if custom_prompt else '默认')
+            }])
+            stats_df.to_excel(writer, sheet_name='处理统计', index=False)
         
-        # 9. 生成增强的Excel文件
-        excel_buffer = io.BytesIO()
-        df.to_excel(excel_buffer, index=False, engine='openpyxl')
-        excel_buffer.seek(0)
+        output.seek(0)
         
-        # 10. 计算处理时间
-        processing_time = (datetime.now() - start_time).total_seconds()
+        # 9. 返回处理后的文件
+        filename = f"processed_{file.filename.replace('.xlsx', '').replace('.xls', '')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
-        logger.info(f"成功处理Excel文件: {file.filename}, 使用AI模型: {ai_model_name}, prompt来源: {prompt_source}, prompt名称: {prompt_name}, 处理行数: {processed_count}, 耗时: {processing_time:.2f}秒")
+        logger.info(f"Excel处理完成: 成功={processed_count}, 失败={error_count}, 总耗时={datetime.now() - start_time}")
         
-        # 11. 返回增强的Excel文件
         return StreamingResponse(
-            io.BytesIO(excel_buffer.read()),
-            media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            output,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             headers={
-                "Content-Disposition": f"attachment; filename=enhanced_{file.filename}",
-                "X-Processing-Time": str(processing_time),
-                "X-Rows-Processed": str(processed_count),
-                "X-AI-Model": ai_model_name,
-                "X-System-Config": "auto",
-                "X-Prompt-Type": prompt_source,
-                "X-Prompt-Name": prompt_name.encode('utf-8').decode('utf-8') if prompt_name else "default",
-                "X-Prompt-ID": str(prompt_id) if prompt_id else "none"
+                "Content-Disposition": f"attachment; filename={filename}"
             }
         )
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Excel处理失败: {str(e)}")
+        logger.error(f"处理Excel文件时发生未预期错误: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"处理失败: {str(e)}"
+            detail=f"处理文件时发生错误: {str(e)}"
         )
 
 @router.get("/health")
 async def health_check():
     """健康检查端点"""
-    return {"status": "healthy", "service": "idea_discovery_simple"}
+    return success_response({
+        "status": "healthy",
+        "service": "idea_discovery",
+        "timestamp": datetime.now().isoformat()
+    })

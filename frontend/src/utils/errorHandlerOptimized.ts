@@ -124,7 +124,7 @@ export const errorInterceptorOptimized = (error: AxiosError) => {
   (error as any).formattedMessage = errorMessage;
   
   // 开发环境下打印详细错误信息
-  if (process.env.NODE_ENV === 'development') {
+  if (process.env['NODE_ENV'] === 'development') {
     console.error('[API Error]', {
       url: error.config?.url,
       method: error.config?.method,
@@ -189,7 +189,7 @@ export function withErrorHandler<T extends (...args: any[]) => Promise<any>>(
       return result;
     } catch (error: any) {
       const message = error.formattedMessage || errorMessage || 
-        OPERATION_MESSAGES[operation]?.error || '操作失败';
+        OPERATION_MESSAGES[operation]?.['error'] || '操作失败';
       
       showOperationMessage(operation, false, message);
       

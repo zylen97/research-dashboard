@@ -1,22 +1,22 @@
 """
-API Settings 管理路由 - 简化版
-参考 ultra-writing 项目实现
+优化后的API Settings 管理路由
+使用ORM替代原始SQL
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from pydantic import BaseModel, Field
 from typing import Optional, List
 import httpx
 import json
 
 from ..models import get_db
+from ..models.database import UserApiSettings, SystemConfig
 from ..services.ai_service import create_ai_service
 
 router = APIRouter()
 
-# 数据模型
+# 数据模型（与原版保持一致）
 class APISettings(BaseModel):
     api_key: str = Field(..., description="API密钥")
     api_base: str = Field(
@@ -46,7 +46,7 @@ class ChatResponse(BaseModel):
     response: str
     message: Optional[str] = None
 
-# 可用模型列表
+# 可用模型列表（与原版相同）
 AVAILABLE_MODELS = [
     {
         "id": "claude-3-7-sonnet-20250219",
@@ -83,17 +83,16 @@ async def get_settings(
     """获取当前用户的API设置"""
     user_id = request.state.current_user.id
     
-    # 查询用户设置
-    result = db.execute(
-        text("SELECT api_key, api_base, model FROM user_api_settings WHERE user_id = :user_id"),
-        {"user_id": user_id}
-    ).fetchone()
+    # 使用ORM查询用户设置
+    user_settings = db.query(UserApiSettings).filter(
+        UserApiSettings.user_id == user_id
+    ).first()
     
-    if result:
+    if user_settings:
         return APISettings(
-            api_key=result.api_key,
-            api_base=result.api_base,
-            model=result.model
+            api_key=user_settings.api_key,
+            api_base=user_settings.api_base,
+            model=user_settings.model
         )
     else:
         # 返回默认设置
@@ -114,26 +113,27 @@ async def update_api_settings(
     
     print(f"更新API设置: user_id={user_id}, api_key={'***已设置***' if settings.api_key else '未设置'}, api_base={settings.api_base}, model={settings.model}")
     
-    # 更新或插入用户设置
-    db.execute(
-        text("""
-            INSERT INTO user_api_settings (user_id, api_key, api_base, model, updated_at)
-            VALUES (:user_id, :api_key, :api_base, :model, CURRENT_TIMESTAMP)
-            ON CONFLICT(user_id) DO UPDATE SET
-                api_key = :api_key,
-                api_base = :api_base,
-                model = :model,
-                updated_at = CURRENT_TIMESTAMP
-        """),
-        {
-            "user_id": user_id,
-            "api_key": settings.api_key,
-            "api_base": settings.api_base,
-            "model": settings.model
-        }
-    )
+    # 使用ORM更新或创建用户设置
+    user_settings = db.query(UserApiSettings).filter(
+        UserApiSettings.user_id == user_id
+    ).first()
     
-    # 同时更新系统级配置 (main_ai_config)，供AI服务使用
+    if user_settings:
+        # 更新现有记录
+        user_settings.api_key = settings.api_key
+        user_settings.api_base = settings.api_base
+        user_settings.model = settings.model
+    else:
+        # 创建新记录
+        user_settings = UserApiSettings(
+            user_id=user_id,
+            api_key=settings.api_key,
+            api_base=settings.api_base,
+            model=settings.model
+        )
+        db.add(user_settings)
+    
+    # 同时更新系统级配置 (main_ai_config)
     main_config = {
         "api_key": settings.api_key,
         "api_url": settings.api_base,
@@ -146,18 +146,26 @@ async def update_api_settings(
     
     print(f"同步更新系统配置: {main_config}")
     
-    # 更新或插入系统配置
-    db.execute(
-        text("""
-            INSERT INTO system_configs (key, value, category, description, is_encrypted, is_active, created_at, updated_at)
-            VALUES ('main_ai_config', :value, 'ai', 'Main AI Configuration', 0, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            ON CONFLICT(key) DO UPDATE SET
-                value = :value,
-                updated_at = CURRENT_TIMESTAMP,
-                is_active = 1
-        """),
-        {"value": config_json}
-    )
+    # 使用ORM更新或创建系统配置
+    system_config = db.query(SystemConfig).filter(
+        SystemConfig.config_key == 'main_ai_config'
+    ).first()
+    
+    if system_config:
+        # 更新现有配置
+        system_config.config_value = config_json
+        system_config.is_active = True
+    else:
+        # 创建新配置
+        system_config = SystemConfig(
+            config_key='main_ai_config',
+            config_value=config_json,
+            category='ai',
+            description='Main AI Configuration',
+            is_encrypted=False,
+            is_active=True
+        )
+        db.add(system_config)
     
     db.commit()
     print("API设置和系统配置更新完成")
@@ -213,27 +221,21 @@ async def test_api_connection(
             
             print("API连接测试成功，更新系统配置中的连接状态...")
             
-            # 更新系统配置中的连接状态
-            # 先获取当前配置
-            current_config_result = db.execute(
-                text("SELECT value FROM system_configs WHERE key = 'main_ai_config' AND is_active = 1")
-            ).fetchone()
+            # 使用ORM更新系统配置中的连接状态
+            system_config = db.query(SystemConfig).filter(
+                SystemConfig.config_key == 'main_ai_config',
+                SystemConfig.is_active == True
+            ).first()
             
-            if current_config_result:
+            if system_config:
                 try:
-                    current_config = json.loads(current_config_result.value)
+                    current_config = json.loads(system_config.config_value)
                     current_config["is_connected"] = True
-                    updated_config_json = json.dumps(current_config)
-                    
-                    # 更新配置
-                    db.execute(
-                        text("UPDATE system_configs SET value = :value, updated_at = CURRENT_TIMESTAMP WHERE key = 'main_ai_config'"),
-                        {"value": updated_config_json}
-                    )
+                    system_config.config_value = json.dumps(current_config)
                     db.commit()
                     print("系统配置中的连接状态已更新为true")
                     
-                    # 清理AI服务缓存，确保下次调用时重新加载配置
+                    # 清理AI服务缓存
                     ai_service = create_ai_service(db)
                     ai_service.clear_cache()
                     print("AI服务缓存已清理")

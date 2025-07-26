@@ -114,18 +114,19 @@ export function createOptimizedAxiosInstance(): AxiosInstance {
       
       // 处理统一的API响应格式
       if (data && typeof data === 'object' && 'success' in data) {
-        if (!data.success) {
+        const apiResponse = data as ApiResponse;
+        if (!apiResponse.success) {
           // 如果响应标记为失败，抛出错误
-          const error: any = new Error(data.message || 'API call failed');
+          const error: any = new Error(apiResponse.message || 'API call failed');
           error.response = {
             ...response,
-            data: data,
+            data: apiResponse,
           };
           throw error;
         }
         
         // 如果是成功的响应，返回data字段
-        response.data = data.data !== undefined ? data.data : data;
+        response.data = apiResponse.data !== undefined ? apiResponse.data : apiResponse;
       }
       
       // 自动处理列表响应

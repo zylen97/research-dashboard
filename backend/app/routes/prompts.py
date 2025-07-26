@@ -1,22 +1,22 @@
 """
-Prompts管理API路由
-简化版prompts CRUD操作，不涉及用户关联
+优化后的Prompts管理API路由
+使用ORM和CRUDBase替代原始SQL
 """
 
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import text
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List
 from datetime import datetime
 
-from app.models.database import get_db
+from app.models.database import get_db, Prompt
 from app.utils.auth import get_current_user
 from app.models.schemas import User
+from app.utils.crud_base import CRUDBase
 
 router = APIRouter()
 
-# 数据模型
+# 数据模型（与原版保持一致）
 class PromptBase(BaseModel):
     name: str
     content: str
@@ -27,7 +27,7 @@ class PromptCreate(PromptBase):
 class PromptUpdate(PromptBase):
     pass
 
-class Prompt(PromptBase):
+class PromptResponse(PromptBase):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -35,33 +35,23 @@ class Prompt(PromptBase):
     class Config:
         from_attributes = True
 
-@router.get("/", response_model=List[Prompt])
+# 创建CRUD实例
+prompt_crud = CRUDBase[Prompt, PromptCreate, PromptUpdate](Prompt)
+
+@router.get("/", response_model=List[PromptResponse])
 async def get_prompts(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取所有prompts列表"""
     try:
-        result = db.execute(
-            text("SELECT id, name, content, created_at, updated_at FROM prompts ORDER BY created_at DESC")
-        ).fetchall()
-        
-        prompts = []
-        for row in result:
-            prompts.append({
-                "id": row.id,
-                "name": row.name,
-                "content": row.content,
-                "created_at": row.created_at,
-                "updated_at": row.updated_at
-            })
-        
+        # 使用ORM查询，按创建时间倒序
+        prompts = db.query(Prompt).order_by(Prompt.created_at.desc()).all()
         return prompts
-        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取prompts失败: {str(e)}")
 
-@router.post("/", response_model=Prompt)
+@router.post("/", response_model=PromptResponse)
 async def create_prompt(
     prompt: PromptCreate,
     current_user: User = Depends(get_current_user),
@@ -70,43 +60,13 @@ async def create_prompt(
     """创建新prompt"""
     try:
         # 检查名称是否已存在
-        existing = db.execute(
-            text("SELECT id FROM prompts WHERE name = :name"),
-            {"name": prompt.name}
-        ).fetchone()
-        
+        existing = db.query(Prompt).filter(Prompt.name == prompt.name).first()
         if existing:
             raise HTTPException(status_code=400, detail="Prompt名称已存在")
         
-        # 插入新prompt
-        result = db.execute(
-            text("""
-                INSERT INTO prompts (name, content, created_at, updated_at) 
-                VALUES (:name, :content, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-                RETURNING id, name, content, created_at, updated_at
-            """),
-            {"name": prompt.name, "content": prompt.content}
-        )
-        
-        # SQLite不支持RETURNING，需要单独查询
-        db.commit()
-        
-        # 获取插入的记录
-        new_prompt = db.execute(
-            text("SELECT id, name, content, created_at, updated_at FROM prompts WHERE name = :name ORDER BY id DESC LIMIT 1"),
-            {"name": prompt.name}
-        ).fetchone()
-        
-        if not new_prompt:
-            raise HTTPException(status_code=500, detail="创建prompt失败")
-        
-        return {
-            "id": new_prompt.id,
-            "name": new_prompt.name,
-            "content": new_prompt.content,
-            "created_at": new_prompt.created_at,
-            "updated_at": new_prompt.updated_at
-        }
+        # 使用CRUD基类创建
+        new_prompt = prompt_crud.create(db, obj_in=prompt)
+        return new_prompt
         
     except HTTPException:
         raise
@@ -114,7 +74,7 @@ async def create_prompt(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"创建prompt失败: {str(e)}")
 
-@router.put("/{prompt_id}", response_model=Prompt)
+@router.put("/{prompt_id}", response_model=PromptResponse)
 async def update_prompt(
     prompt_id: int,
     prompt: PromptUpdate,
@@ -124,48 +84,22 @@ async def update_prompt(
     """更新prompt"""
     try:
         # 检查prompt是否存在
-        existing = db.execute(
-            text("SELECT id FROM prompts WHERE id = :id"),
-            {"id": prompt_id}
-        ).fetchone()
-        
-        if not existing:
+        db_prompt = prompt_crud.get(db, id=prompt_id)
+        if not db_prompt:
             raise HTTPException(status_code=404, detail="Prompt不存在")
         
         # 检查新名称是否与其他prompt冲突
-        name_conflict = db.execute(
-            text("SELECT id FROM prompts WHERE name = :name AND id != :id"),
-            {"name": prompt.name, "id": prompt_id}
-        ).fetchone()
+        if prompt.name != db_prompt.name:
+            name_conflict = db.query(Prompt).filter(
+                Prompt.name == prompt.name,
+                Prompt.id != prompt_id
+            ).first()
+            if name_conflict:
+                raise HTTPException(status_code=400, detail="Prompt名称已存在")
         
-        if name_conflict:
-            raise HTTPException(status_code=400, detail="Prompt名称已存在")
-        
-        # 更新prompt
-        db.execute(
-            text("""
-                UPDATE prompts 
-                SET name = :name, content = :content, updated_at = CURRENT_TIMESTAMP 
-                WHERE id = :id
-            """),
-            {"name": prompt.name, "content": prompt.content, "id": prompt_id}
-        )
-        
-        db.commit()
-        
-        # 获取更新后的记录
-        updated_prompt = db.execute(
-            text("SELECT id, name, content, created_at, updated_at FROM prompts WHERE id = :id"),
-            {"id": prompt_id}
-        ).fetchone()
-        
-        return {
-            "id": updated_prompt.id,
-            "name": updated_prompt.name,
-            "content": updated_prompt.content,
-            "created_at": updated_prompt.created_at,
-            "updated_at": updated_prompt.updated_at
-        }
+        # 使用CRUD基类更新
+        updated_prompt = prompt_crud.update(db, db_obj=db_prompt, obj_in=prompt)
+        return updated_prompt
         
     except HTTPException:
         raise
@@ -182,23 +116,20 @@ async def delete_prompt(
     """删除prompt"""
     try:
         # 检查prompt是否存在
-        existing = db.execute(
-            text("SELECT id, name FROM prompts WHERE id = :id"),
-            {"id": prompt_id}
-        ).fetchone()
-        
-        if not existing:
+        db_prompt = prompt_crud.get(db, id=prompt_id)
+        if not db_prompt:
             raise HTTPException(status_code=404, detail="Prompt不存在")
         
-        # 删除prompt
-        db.execute(
-            text("DELETE FROM prompts WHERE id = :id"),
-            {"id": prompt_id}
-        )
+        # 记录要删除的prompt名称（用于返回消息）
+        prompt_name = db_prompt.name
         
-        db.commit()
+        # 使用CRUD基类删除
+        prompt_crud.remove(db, id=prompt_id)
         
-        return {"success": True, "message": f"Prompt '{existing.name}' 已删除"}
+        return {
+            "success": True,
+            "message": f"成功删除prompt: {prompt_name}"
+        }
         
     except HTTPException:
         raise
@@ -206,7 +137,7 @@ async def delete_prompt(
         db.rollback()
         raise HTTPException(status_code=500, detail=f"删除prompt失败: {str(e)}")
 
-@router.get("/{prompt_id}", response_model=Prompt)
+@router.get("/{prompt_id}", response_model=PromptResponse)
 async def get_prompt(
     prompt_id: int,
     current_user: User = Depends(get_current_user),
@@ -214,22 +145,10 @@ async def get_prompt(
 ):
     """获取单个prompt详情"""
     try:
-        prompt = db.execute(
-            text("SELECT id, name, content, created_at, updated_at FROM prompts WHERE id = :id"),
-            {"id": prompt_id}
-        ).fetchone()
-        
+        prompt = prompt_crud.get(db, id=prompt_id)
         if not prompt:
             raise HTTPException(status_code=404, detail="Prompt不存在")
-        
-        return {
-            "id": prompt.id,
-            "name": prompt.name,
-            "content": prompt.content,
-            "created_at": prompt.created_at,
-            "updated_at": prompt.updated_at
-        }
-        
+        return prompt
     except HTTPException:
         raise
     except Exception as e:

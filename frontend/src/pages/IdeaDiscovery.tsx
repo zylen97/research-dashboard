@@ -7,7 +7,6 @@ import {
   Alert,
   Spin,
   Result,
-  message,
   Space,
   Row,
   Col,
@@ -18,10 +17,11 @@ import {
   RobotOutlined,
   DownloadOutlined,
 } from '@ant-design/icons';
-import { ideaDiscoveryApi, promptsApi } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { ideaDiscoveryApi, promptsApi } from '../services/apiOptimized';
+import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import EmbeddedAIConfig from '../components/idea/EmbeddedAIConfig';
 import PromptManagement from '../components/idea/PromptManagement';
-import { Prompt } from '../types';
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -47,108 +47,98 @@ const IdeaDiscovery: React.FC = () => {
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [processingStartTime, setProcessingStartTime] = useState<number>(0);
-  
-  // Prompts相关状态
-  const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [selectedPromptId, setSelectedPromptId] = useState<number | undefined>(undefined);
-  const [promptsLoading, setPromptsLoading] = useState(false);
 
-  // 加载prompts列表
-  const loadPrompts = async () => {
-    setPromptsLoading(true);
-    try {
-      const data = await promptsApi.getPrompts();
-      setPrompts(data);
-      // 默认选择第一个prompt
-      if (data.length > 0 && data[0] && !selectedPromptId) {
-        setSelectedPromptId(data[0].id);
-      }
-    } catch (error: any) {
-      console.error('加载Prompt列表失败:', error);
-      message.error('加载Prompt列表失败');
-    } finally {
-      setPromptsLoading(false);
-    }
-  };
+  // 使用React Query获取prompts列表
+  const { data: prompts = [], isLoading: promptsLoading } = useQuery({
+    queryKey: ['prompts'],
+    queryFn: () => promptsApi.getList(),
+  });
 
-  // 组件挂载时加载prompts
+  // 当prompts加载完成后设置默认选中项
   React.useEffect(() => {
-    loadPrompts();
-  }, []);
+    if (prompts.length > 0 && prompts[0] && !selectedPromptId) {
+      setSelectedPromptId(prompts[0].id);
+    }
+  }, [prompts, selectedPromptId]);
 
   // 处理文件选择
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
     setResultBlob(null);
     setErrorMessage('');
-    setState(ProcessingState.IDLE); // 文件选择后回到空闲状态，等待用户点击处理按钮
+    setState(ProcessingState.IDLE);
     return false; // 阻止自动上传
   };
 
-  // 开始处理
-  const handleStartProcessing = async () => {
-    if (!selectedFile) {
-      message.error('请先选择文件');
-      return;
-    }
-
-    if (!aiConfig || !aiConfig.is_connected) {
-      message.error('请先配置并测试AI连接');
-      return;
-    }
-
-    if (!selectedPromptId) {
-      message.error('请选择要使用的Prompt');
-      return;
-    }
-
-    setState(ProcessingState.PROCESSING);
-    setProcessingStartTime(Date.now());
-    setErrorMessage('');
-
-    try {
-      // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id
-      const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId);
-      setResultBlob(blob);
-      setState(ProcessingState.COMPLETED);
-      message.success('处理完成！');
-    } catch (error: any) {
-      console.error('处理失败:', error);
-      let errorMsg = '处理失败，请重试';
-      
-      if (error.response?.data?.detail) {
-        errorMsg = error.response.data.detail;
-      } else if (error.message) {
-        errorMsg = error.message;
+  // 开始处理（使用错误处理包装器）
+  const handleStartProcessing = withErrorHandler(
+    async () => {
+      if (!selectedFile) {
+        throw new Error('请先选择文件');
       }
-      
-      console.log('错误详情:', { 
-        status: error.response?.status,
-        detail: error.response?.data?.detail,
-        message: error.message,
-        fullError: error
-      });
-      
-      setErrorMessage(errorMsg);
-      setState(ProcessingState.ERROR);
-      message.error('AI文本生成失败：' + errorMsg);
+
+      if (!aiConfig || !aiConfig.is_connected) {
+        throw new Error('请先配置并测试AI连接');
+      }
+
+      if (!selectedPromptId) {
+        throw new Error('请选择要使用的Prompt');
+      }
+
+      setState(ProcessingState.PROCESSING);
+      setProcessingStartTime(Date.now());
+      setErrorMessage('');
+
+      try {
+        // 使用系统配置的AI提供商（自动模式），传入选择的prompt_id
+        const blob = await ideaDiscoveryApi.processExcel(selectedFile, selectedPromptId);
+        setResultBlob(blob);
+        setState(ProcessingState.COMPLETED);
+      } catch (error: any) {
+        // 提取错误信息
+        let errorMsg = '处理失败，请重试';
+        
+        if (error.response?.data?.detail) {
+          errorMsg = error.response.data.detail;
+        } else if (error.message) {
+          errorMsg = error.message;
+        }
+        
+        setErrorMessage(errorMsg);
+        setState(ProcessingState.ERROR);
+        throw new Error(errorMsg);
+      }
+    },
+    'processExcel',
+    {
+      successMessage: '处理完成！',
+      errorMessage: 'AI文本生成失败',
     }
-  };
+  );
 
-  // 下载结果
-  const handleDownload = () => {
-    if (!resultBlob || !selectedFile) return;
+  // 下载结果（使用错误处理包装器）
+  const handleDownload = withErrorHandler(
+    async () => {
+      if (!resultBlob || !selectedFile) {
+        throw new Error('没有可下载的文件');
+      }
 
-    const url = window.URL.createObjectURL(resultBlob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `enhanced_${selectedFile.name}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    window.URL.revokeObjectURL(url);
-    message.success('文件下载成功！');
-  };
+      const url = window.URL.createObjectURL(resultBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `enhanced_${selectedFile.name}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    },
+    'downloadFile',
+    {
+      successMessage: '文件下载成功！',
+      errorMessage: '文件下载失败',
+    }
+  );
 
   // 重置状态
   const handleReset = () => {
@@ -267,63 +257,63 @@ const IdeaDiscovery: React.FC = () => {
                 />
               )}
 
-          {/* 处理状态显示 */}
-          {state === ProcessingState.PROCESSING && (
-            <Card style={{ textAlign: 'center', backgroundColor: '#f0f9ff' }}>
-              <Spin size="large" />
-              <div style={{ marginTop: '16px' }}>
-                <Text strong>正在处理中，请稍候...</Text>
-                <div style={{ marginTop: '8px' }}>
-                  <Text type="secondary">
-                    AI正在逐行分析数据并生成研究迁移建议 {getProcessingTime()}
-                  </Text>
-                </div>
-              </div>
-            </Card>
-          )}
+              {/* 处理状态显示 */}
+              {state === ProcessingState.PROCESSING && (
+                <Card style={{ textAlign: 'center', backgroundColor: '#f0f9ff' }}>
+                  <Spin size="large" />
+                  <div style={{ marginTop: '16px' }}>
+                    <Text strong>正在处理中，请稍候...</Text>
+                    <div style={{ marginTop: '8px' }}>
+                      <Text type="secondary">
+                        AI正在逐行分析数据并生成研究迁移建议 {getProcessingTime()}
+                      </Text>
+                    </div>
+                  </div>
+                </Card>
+              )}
 
-          {/* 错误显示 */}
-          {state === ProcessingState.ERROR && (
-            <Result
-              status="error"
-              title="处理失败"
-              subTitle={errorMessage}
-              extra={[
-                <Button key="retry" type="primary" onClick={handleStartProcessing}>
-                  重试
-                </Button>,
-                <Button key="reset" onClick={handleReset}>
-                  重新选择文件
-                </Button>,
-              ]}
-            />
-          )}
+              {/* 错误显示 */}
+              {state === ProcessingState.ERROR && (
+                <Result
+                  status="error"
+                  title="处理失败"
+                  subTitle={errorMessage}
+                  extra={[
+                    <Button key="retry" type="primary" onClick={handleStartProcessing}>
+                      重试
+                    </Button>,
+                    <Button key="reset" onClick={handleReset}>
+                      重新选择文件
+                    </Button>,
+                  ]}
+                />
+              )}
 
-          {/* 成功完成 */}
-          {state === ProcessingState.COMPLETED && (
-            <Result
-              status="success"
-              title="处理完成！"
-              subTitle={`AI已完成分析并生成研究迁移建议 ${getProcessingTime()}`}
-              extra={[
-                <Button
-                  key="download"
-                  type="primary"
-                  icon={<DownloadOutlined />}
-                  onClick={handleDownload}
-                  size="large"
-                >
-                  下载增强文件
-                </Button>,
-                <Button key="reset" onClick={handleReset}>
-                  处理新文件
-                </Button>,
-              ]}
-            />
-          )}
+              {/* 成功完成 */}
+              {state === ProcessingState.COMPLETED && (
+                <Result
+                  status="success"
+                  title="处理完成！"
+                  subTitle={`AI已完成分析并生成研究迁移建议 ${getProcessingTime()}`}
+                  extra={[
+                    <Button
+                      key="download"
+                      type="primary"
+                      icon={<DownloadOutlined />}
+                      onClick={handleDownload}
+                      size="large"
+                    >
+                      下载增强文件
+                    </Button>,
+                    <Button key="reset" onClick={handleReset}>
+                      处理新文件
+                    </Button>,
+                  ]}
+                />
+              )}
 
               {/* 操作按钮 */}
-              {selectedFile && (
+              {selectedFile && state === ProcessingState.IDLE && (
                 <div style={{ textAlign: 'center' }}>
                   <Space>
                     <Button
@@ -332,12 +322,11 @@ const IdeaDiscovery: React.FC = () => {
                       icon={<RobotOutlined />}
                       onClick={handleStartProcessing}
                       style={{ minWidth: '180px' }}
-                      disabled={!aiConfig || !aiConfig.is_connected || !selectedPromptId || state === ProcessingState.PROCESSING}
-                      loading={state === ProcessingState.PROCESSING}
+                      disabled={!aiConfig || !aiConfig.is_connected || !selectedPromptId}
                     >
                       开始AI分析处理
                     </Button>
-                    <Button onClick={handleReset} disabled={state === ProcessingState.PROCESSING}>
+                    <Button onClick={handleReset}>
                       重新选择
                     </Button>
                   </Space>

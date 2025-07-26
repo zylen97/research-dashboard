@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Table,
   Button,
@@ -7,7 +7,6 @@ import {
   Input,
   Select,
   Space,
-  message,
   Popconfirm,
   Card,
   Typography,
@@ -20,8 +19,13 @@ import {
   BulbOutlined,
   SwapOutlined,
 } from '@ant-design/icons';
-import api from '../services/api';
+import { useQuery } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
+
+// 使用优化后的API服务和Hook
+import { simpleIdeasApi } from '../services/apiOptimized';
+import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
+import { withErrorHandler } from '../utils/errorHandlerOptimized';
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
@@ -41,30 +45,57 @@ interface SimpleIdea {
 }
 
 const SimpleIdeasPage: React.FC = () => {
-  const [ideas, setIdeas] = useState<SimpleIdea[]>([]);
-  const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingIdea, setEditingIdea] = useState<SimpleIdea | null>(null);
   const [form] = Form.useForm();
 
-  // 加载Ideas列表
-  const loadIdeas = async () => {
-    setLoading(true);
-    try {
-      // axios interceptor已配置返回data，但TypeScript不知道
-      const response = await api.get('/simple-ideas/');
-      setIdeas(response as unknown as SimpleIdea[]);
-    } catch (error) {
-      message.error('加载Ideas失败');
-      console.error('加载Ideas失败:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // 使用React Query获取数据
+  const { data: ideas = [], isLoading, refetch } = useQuery({
+    queryKey: ['simple-ideas'],
+    queryFn: () => simpleIdeasApi.getList(),
+  });
 
-  useEffect(() => {
-    loadIdeas();
-  }, []);
+  // 使用优化的CRUD Hook
+  const {
+    create,
+    update,
+    delete: deleteIdea,
+    isCreating,
+    isUpdating,
+    isDeleting,
+  } = useTableCRUD(
+    simpleIdeasApi,
+    'simple-ideas',
+    {
+      createSuccessMessage: 'Idea创建成功',
+      updateSuccessMessage: 'Idea更新成功',
+      deleteSuccessMessage: 'Idea删除成功',
+      onCreateSuccess: () => {
+        closeModal();
+        refetch();
+      },
+      onUpdateSuccess: () => {
+        closeModal();
+        refetch();
+      },
+      onDeleteSuccess: () => {
+        refetch();
+      },
+    }
+  );
+
+  // 使用错误处理包装器处理转化功能
+  const handleConvert = withErrorHandler(
+    async (id: number) => {
+      await simpleIdeasApi.post(`/${id}/convert-to-project`);
+      refetch(); // 刷新列表
+    },
+    'convert',
+    {
+      successMessage: '成功转化为研究项目！',
+      errorMessage: '转化失败',
+    }
+  );
 
   // 打开创建/编辑模态框
   const openModal = (idea?: SimpleIdea) => {
@@ -116,43 +147,13 @@ const SimpleIdeasPage: React.FC = () => {
       
       if (editingIdea) {
         // 更新
-        await api.put(`/simple-ideas/${editingIdea.id}`, processedValues);
-        message.success('Idea更新成功');
+        update({ id: editingIdea.id, data: processedValues });
       } else {
         // 创建
-        await api.post('/simple-ideas/', processedValues);
-        message.success('Idea创建成功');
+        create(processedValues);
       }
-      
-      closeModal();
-      loadIdeas();
     } catch (error) {
-      message.error(editingIdea ? 'Idea更新失败' : 'Idea创建失败');
-      console.error('提交失败:', error);
-    }
-  };
-
-  // 删除Idea
-  const handleDelete = async (id: number) => {
-    try {
-      await api.delete(`/simple-ideas/${id}`);
-      message.success('Idea删除成功');
-      loadIdeas();
-    } catch (error) {
-      message.error('Idea删除失败');
-      console.error('删除失败:', error);
-    }
-  };
-
-  // 转化Idea到项目
-  const handleConvert = async (id: number) => {
-    try {
-      await api.post(`/simple-ideas/${id}/convert-to-project`);
-      message.success('成功转化为研究项目！');
-      loadIdeas(); // 刷新列表
-    } catch (error) {
-      message.error('转化失败');
-      console.error('转化失败:', error);
+      // 表单验证失败，不需要额外处理
     }
   };
 
@@ -247,99 +248,114 @@ const SimpleIdeasPage: React.FC = () => {
           >
             编辑
           </Button>
-          <Button
-            type="link"
-            icon={<SwapOutlined />}
-            onClick={() => handleConvert(record.id)}
-            style={{ color: '#52c41a' }}
-            size="small"
-          >
-            转化
-          </Button>
           <Popconfirm
             title="确定要删除这个Idea吗？"
-            onConfirm={() => handleDelete(record.id)}
+            onConfirm={() => deleteIdea(record.id)}
             okText="确定"
             cancelText="取消"
+            disabled={isDeleting}
           >
-            <Button type="link" danger icon={<DeleteOutlined />} size="small">
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+              size="small"
+              loading={isDeleting}
+            >
               删除
             </Button>
           </Popconfirm>
+          {record.maturity === 'mature' && (
+            <Popconfirm
+              title="确定要将这个Idea转化为研究项目吗？"
+              onConfirm={() => handleConvert(record.id)}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button
+                type="link"
+                icon={<SwapOutlined />}
+                size="small"
+                style={{ color: '#52c41a' }}
+              >
+                转化为项目
+              </Button>
+            </Popconfirm>
+          )}
         </Space>
       ),
     },
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      {/* 页面标题 */}
-      <div style={{ marginBottom: '32px' }}>
-        <Title level={3} style={{ margin: 0 }}>
-          <BulbOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-          Ideas管理
-        </Title>
-        <Paragraph type="secondary" style={{ marginTop: '8px', marginBottom: 0 }}>
-          管理研究想法，设置负责人和成熟度评级
-        </Paragraph>
-      </div>
+    <Card>
+      <Space direction="vertical" size="large" style={{ width: '100%' }}>
+        {/* 页面标题和说明 */}
+        <div>
+          <Title level={3}>
+            <BulbOutlined /> Ideas 管理
+          </Title>
+          <Paragraph type="secondary">
+            管理和跟踪研究想法，成熟的想法可以转化为正式的研究项目
+          </Paragraph>
+        </div>
 
-      {/* 操作栏 */}
-      <Card style={{ marginBottom: '16px' }}>
-        <Space>
+        {/* 操作按钮 */}
+        <div>
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => openModal()}
+            loading={isCreating}
           >
-            新增Idea
+            新增 Idea
           </Button>
-        </Space>
-      </Card>
+        </div>
 
-      {/* 表格 */}
-      <Card>
+        {/* Ideas列表 */}
         <Table
           columns={columns}
           dataSource={ideas}
           rowKey="id"
-          loading={loading}
+          loading={isLoading}
           pagination={{
             defaultPageSize: 10,
             showSizeChanger: true,
             showTotal: (total) => `共 ${total} 条`,
           }}
         />
-      </Card>
+      </Space>
 
       {/* 创建/编辑模态框 */}
       <Modal
-        title={editingIdea ? '编辑Idea' : '新增Idea'}
-        visible={modalVisible}
+        title={editingIdea ? '编辑 Idea' : '新增 Idea'}
+        open={modalVisible}
         onOk={handleSubmit}
         onCancel={closeModal}
+        confirmLoading={isCreating || isUpdating}
         width={800}
-        okText="保存"
-        cancelText="取消"
       >
         <Form
           form={form}
           layout="vertical"
-          requiredMark="optional"
+          requiredMark={false}
         >
           <Form.Item
             name="research_question"
             label="项目名称"
             rules={[{ required: true, message: '请输入项目名称' }]}
           >
-            <TextArea rows={2} placeholder="请输入项目名称" />
+            <Input placeholder="简洁明确的项目名称" />
           </Form.Item>
 
           <Form.Item
             name="description"
             label="项目描述"
           >
-            <TextArea rows={3} placeholder="请输入项目描述（可选）" />
+            <TextArea
+              rows={3}
+              placeholder="详细描述这个项目的内容和目标"
+            />
           </Form.Item>
 
           <Form.Item
@@ -347,7 +363,10 @@ const SimpleIdeasPage: React.FC = () => {
             label="研究方法"
             rules={[{ required: true, message: '请输入研究方法' }]}
           >
-            <TextArea rows={2} placeholder="请输入研究方法" />
+            <TextArea
+              rows={2}
+              placeholder="描述计划采用的研究方法"
+            />
           </Form.Item>
 
           <Form.Item
@@ -355,15 +374,18 @@ const SimpleIdeasPage: React.FC = () => {
             label="来源"
             rules={[{ required: true, message: '请输入来源信息' }]}
           >
-            <TextArea rows={2} placeholder="请输入来源信息（如期刊、文献等）" />
+            <TextArea
+              rows={2}
+              placeholder="期刊、文献或其他来源信息"
+            />
           </Form.Item>
 
           <Form.Item
             name="responsible_person"
             label="负责人"
-            rules={[{ required: true, message: '请输入负责人姓名' }]}
+            rules={[{ required: true, message: '请输入负责人' }]}
           >
-            <Input placeholder="请输入负责人姓名" />
+            <Input placeholder="项目负责人姓名" />
           </Form.Item>
 
           <Form.Item
@@ -371,15 +393,14 @@ const SimpleIdeasPage: React.FC = () => {
             label="成熟度"
             rules={[{ required: true, message: '请选择成熟度' }]}
           >
-            <Select placeholder="请选择成熟度">
-              <Option value="mature">成熟</Option>
+            <Select placeholder="选择想法的成熟度">
               <Option value="immature">不成熟</Option>
+              <Option value="mature">成熟</Option>
             </Select>
           </Form.Item>
-
         </Form>
       </Modal>
-    </div>
+    </Card>
   );
 };
 

@@ -1,18 +1,35 @@
-import React from 'react';
-import { message, Typography, Space } from 'antd';
+import React, { useEffect } from 'react';
+import { Typography, Space } from 'antd';
 import { ApiOutlined } from '@ant-design/icons';
 import AIConfigPanel from '../components/system/AIConfigPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
+import { withErrorHandler } from '../utils/errorHandlerOptimized';
 
 const { Title, Text } = Typography;
 
 const SystemSettings: React.FC = () => {
   const { user } = useAuth();
 
+  // 使用错误处理包装器检查权限
+  const checkPermission = withErrorHandler(
+    async () => {
+      if (!user || user.username !== 'zl') {
+        throw new Error('您没有权限访问系统设置');
+      }
+    },
+    'checkPermission' as any,
+    {
+      errorMessage: '权限验证失败',
+    }
+  );
+
+  useEffect(() => {
+    checkPermission();
+  }, [user]);
+
   // 只有管理员（zl用户）可以访问系统设置
   if (!user || user.username !== 'zl') {
-    message.error('您没有权限访问系统设置');
     return <Navigate to="/" replace />;
   }
 

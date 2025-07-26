@@ -72,6 +72,14 @@ export const collaboratorApi = {
     'API.getCollaborators'
   ),
   
+  // 重写delete方法以支持force参数
+  deleteCollaborator: async (id: number, force: boolean = false) => {
+    const response = await api.delete(`/collaborators/${id}`, {
+      params: { force }
+    });
+    return response;
+  },
+  
   // 额外的方法
   getCollaboratorProjects: async (id: number): Promise<ResearchProject[]> => {
     const response = await api.get(`/collaborators/${id}/projects`);
@@ -260,10 +268,24 @@ export const ideasApi = createExtendedCRUDApi<
 );
 
 // Simple Ideas API - 为后续ORM优化准备
-export const simpleIdeasApi = createCRUDApi<any, any, any>(
-  '/simple-ideas',
-  'API.getSimpleIdeas'
-);
+export const simpleIdeasApi = {
+  ...createCRUDApi<any, any, any>(
+    '/simple-ideas',
+    'API.getSimpleIdeas'
+  ),
+  
+  // 转换为项目
+  convertToProject: async (id: number) => {
+    const response = await api.post(`/simple-ideas/${id}/convert-to-project`);
+    return response.data;
+  },
+
+  // 为了兼容性保留post方法
+  post: async (url: string, data?: any) => {
+    const response = await api.post(`/simple-ideas${url}`, data);
+    return response.data;
+  }
+};
 
 // 其他API保持原样...
 export const ideaDiscoveryApi = {

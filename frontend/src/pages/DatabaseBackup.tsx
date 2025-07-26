@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   Table,
@@ -6,7 +6,6 @@ import {
   Space,
   Tag,
   Popconfirm,
-  message,
   Statistic,
   Row,
   Col,
@@ -34,133 +33,155 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
-import api from '../services/api';
-import { BackupStatsResponse, BackupItem } from '../types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { backupApi } from '../services/apiOptimized';
+import { withErrorHandler } from '../utils/errorHandlerOptimized';
+import { BackupItem } from '../types';
+
+type BackupStatsResponse = {
+  total_backups: number;
+  max_backups: number;
+  total_size: number;
+  average_size: number;
+  current_environment: string;
+};
 
 const { Title, Text } = Typography;
 
 const DatabaseBackup: React.FC = () => {
-  const [backups, setBackups] = useState<BackupItem[]>([]);
-  const [stats, setStats] = useState<BackupStatsResponse | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   // 获取备份列表
-  const fetchBackups = async () => {
-    setLoading(true);
-    try {
-      const response: BackupItem[] = await api.get('/api/backup/list');
-      console.log('备份列表响应:', response);
-      setBackups(response);
-    } catch (error) {
-      message.error('获取备份列表失败');
-      console.error(error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: backups = [], isLoading: loadingBackups, refetch: refetchBackups } = useQuery({
+    queryKey: ['backups'],
+    queryFn: async () => {
+      const response = await backupApi.getBackups();
+      return (response as unknown) as BackupItem[];
+    },
+  });
 
   // 获取备份统计
-  const fetchStats = async () => {
-    try {
-      const response: BackupStatsResponse = await api.get('/api/backup/stats');
-      console.log('备份统计响应:', response);
-      setStats(response);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const { data: stats, refetch: refetchStats } = useQuery<BackupStatsResponse>({
+    queryKey: ['backup-stats'],
+    queryFn: () => backupApi.getStats(),
+  });
 
-  useEffect(() => {
-    fetchBackups();
-    fetchStats();
-  }, []);
+  // 创建备份mutation
+  const createBackupMutation = useMutation({
+    mutationFn: async (_reason: string) => {
+      return await backupApi.createBackup();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-stats'] });
+    },
+  });
 
-  // 创建备份
-  const handleCreateBackup = async () => {
-    Modal.confirm({
-      title: '创建备份',
-      content: (
-        <Input 
-          placeholder="请输入备份说明（可选）" 
-          id="backup-reason"
-          defaultValue="手动备份"
-        />
-      ),
-      onOk: async () => {
-        const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
-        setCreating(true);
-        try {
-          await api.post('/api/backup/create', null, {
-            params: { reason }
-          });
-          message.success('备份创建成功');
-          fetchBackups();
-          fetchStats();
-        } catch (error) {
-          message.error('创建备份失败');
-          console.error(error);
-        } finally {
-          setCreating(false);
-        }
-      }
-    });
-  };
-
-  // 恢复备份
-  const handleRestore = async (backupId: string) => {
-    setRestoring(backupId);
-    try {
-      await api.post(`/api/backup/restore/${backupId}`);
-      message.success('数据库恢复成功');
-      // 可能需要刷新整个应用
+  // 恢复备份mutation
+  const restoreBackupMutation = useMutation({
+    mutationFn: async (backupId: string) => {
+      setRestoring(backupId);
+      return await backupApi.restoreBackup(backupId);
+    },
+    onSuccess: () => {
       setTimeout(() => {
         window.location.reload();
       }, 2000);
-    } catch (error) {
-      message.error('恢复备份失败');
-      console.error(error);
-    } finally {
+    },
+    onSettled: () => {
       setRestoring(null);
-    }
-  };
+    },
+  });
 
-  // 删除备份
-  const handleDelete = async (backupId: string) => {
-    try {
-      await api.delete(`/api/backup/${backupId}`);
-      message.success('备份删除成功');
-      fetchBackups();
-      fetchStats();
-    } catch (error) {
-      message.error('删除备份失败');
-      console.error(error);
-    }
-  };
+  // 删除备份mutation
+  const deleteBackupMutation = useMutation({
+    mutationFn: (backupId: string) => backupApi.deleteBackup(backupId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backups'] });
+      queryClient.invalidateQueries({ queryKey: ['backup-stats'] });
+    },
+  });
 
-  // 下载备份
-  const handleDownload = async (backupId: string, backupName: string) => {
-    try {
-      const response = await api.get(`/api/backup/download/${backupId}`, {
-        responseType: 'blob'
+  // 创建备份（使用错误处理包装器）
+  const handleCreateBackup = withErrorHandler(
+    async () => {
+      return new Promise<void>((resolve, reject) => {
+        Modal.confirm({
+          title: '创建备份',
+          content: (
+            <Input 
+              placeholder="请输入备份说明（可选）" 
+              id="backup-reason"
+              defaultValue="手动备份"
+            />
+          ),
+          onOk: async () => {
+            const reason = (document.getElementById('backup-reason') as HTMLInputElement)?.value || '手动备份';
+            try {
+              await createBackupMutation.mutateAsync(reason);
+              resolve();
+            } catch (error) {
+              reject(error);
+            }
+          },
+          onCancel: () => {
+            resolve();
+          }
+        });
       });
+    },
+    'createBackup',
+    {
+      successMessage: '备份创建成功',
+      errorMessage: '创建备份失败',
+    }
+  );
+
+  // 恢复备份（使用错误处理包装器）
+  const handleRestore = withErrorHandler(
+    async (backupId: string) => {
+      await restoreBackupMutation.mutateAsync(backupId);
+    },
+    'restoreBackup',
+    {
+      successMessage: '数据库恢复成功',
+      errorMessage: '恢复备份失败',
+    }
+  );
+
+  // 删除备份（使用错误处理包装器）
+  const handleDelete = withErrorHandler(
+    async (backupId: string) => {
+      await deleteBackupMutation.mutateAsync(backupId);
+    },
+    'deleteBackup',
+    {
+      successMessage: '备份删除成功',
+      errorMessage: '删除备份失败',
+    }
+  );
+
+  // 下载备份（使用错误处理包装器）
+  const handleDownload = withErrorHandler(
+    async (backupId: string, backupName: string) => {
+      const blob = await backupApi.downloadBackup(backupId);
       
-      // 创建下载链接 - 注意：blob响应会返回完整的response对象
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      // 创建下载链接
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `backup_${backupName}.db.gz`);
       document.body.appendChild(link);
       link.click();
       link.remove();
-      
-      message.success('备份下载成功');
-    } catch (error) {
-      message.error('下载备份失败');
-      console.error(error);
+    },
+    'downloadBackup',
+    {
+      successMessage: '备份下载成功',
+      errorMessage: '下载备份失败',
     }
-  };
+  );
 
   // 格式化文件大小
   const formatSize = (size: number): string => {
@@ -332,6 +353,7 @@ const DatabaseBackup: React.FC = () => {
               danger
               size="small"
               icon={<DeleteOutlined />}
+              loading={deleteBackupMutation.isPending}
             >
               删除
             </Button>
@@ -340,6 +362,11 @@ const DatabaseBackup: React.FC = () => {
       ),
     },
   ];
+
+  const handleRefresh = () => {
+    refetchBackups();
+    refetchStats();
+  };
 
   return (
     <div style={{ padding: '24px' }}>
@@ -401,23 +428,20 @@ const DatabaseBackup: React.FC = () => {
               type="primary"
               icon={<CloudUploadOutlined />}
               onClick={handleCreateBackup}
-              loading={creating}
+              loading={createBackupMutation.isPending}
             >
               创建备份
             </Button>
             <Button
               icon={<ReloadOutlined />}
-              onClick={() => {
-                fetchBackups();
-                fetchStats();
-              }}
+              onClick={handleRefresh}
             >
               刷新
             </Button>
           </Space>
         }
       >
-        {loading ? (
+        {loadingBackups ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>
             <Spin size="large" />
           </div>

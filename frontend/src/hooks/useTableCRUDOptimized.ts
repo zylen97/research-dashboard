@@ -4,7 +4,7 @@ import { useErrorHandler } from '../utils/errorHandlerOptimized';
 interface CRUDApi<T, CreateDTO, UpdateDTO> {
   create: (data: CreateDTO) => Promise<T>;
   update: (id: number, data: UpdateDTO) => Promise<T>;
-  delete: (id: number) => Promise<void>;
+  delete: (id: number, permanent?: boolean) => Promise<{ message: string }>;
 }
 
 interface UseTableCRUDOptions<T> {

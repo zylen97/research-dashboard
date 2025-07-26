@@ -3,7 +3,6 @@ import {
   Button,
   Modal,
   Form,
-  message,
   Avatar,
   Typography,
   Tag,
@@ -20,8 +19,10 @@ import {
   EyeOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { collaboratorApi, researchApi } from '../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { collaboratorApi, researchApi } from '../services/apiOptimized';
+import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
+import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { Collaborator, CollaboratorCreate } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
@@ -37,11 +38,10 @@ const CollaboratorManagement: React.FC = () => {
   const [editingCollaborator, setEditingCollaborator] = useState<Collaborator | null>(null);
   const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50); // 默认50条/页
+  const [pageSize, setPageSize] = useState(50);
   const [form] = Form.useForm();
-  const queryClient = useQueryClient();
   
-  // 本地管理小组标记状态（后端支持前的临时方案）
+  // 本地管理小组标记状态
   const [localGroupMarks, setLocalGroupMarks] = useState<Record<number, boolean>>(() => {
     try {
       const saved = localStorage.getItem('collaborator-group-marks');
@@ -58,25 +58,67 @@ const CollaboratorManagement: React.FC = () => {
   
   // 用于跟踪删除类型的ref
   const deleteTypeRef = useRef<'soft' | 'hard'>('soft');
-  
 
   // 获取合作者数据
   const { data: collaboratorsData, isLoading, refetch } = useQuery({
     queryKey: ['collaborators'],
-    queryFn: () => collaboratorApi.getCollaborators(),
+    queryFn: () => collaboratorApi.getList(),
   });
   
   // 确保 collaborators 始终是数组
   const collaborators = handleListResponse<Collaborator>(collaboratorsData, 'CollaboratorManagement.collaborators');
 
+  // 获取研究项目数据
+  const { data: projectsData } = useQuery({
+    queryKey: ['research-projects'],
+    queryFn: () => researchApi.getList(),
+  });
+  
+  const projects = handleListResponse(projectsData, 'CollaboratorManagement.projects');
+
+  // 使用优化的CRUD Hook
+  const {
+    create,
+    update,
+    isCreating,
+    isUpdating,
+  } = useTableCRUD(
+    collaboratorApi,
+    'collaborators',
+    {
+      createSuccessMessage: '合作者创建成功！',
+      updateSuccessMessage: '合作者信息更新成功！',
+      deleteSuccessMessage: '合作者删除成功！',
+      onCreateSuccess: (newCollaborator) => {
+        // 如果新建时选择了小组标记，保存到本地状态
+        if (pendingGroupStatus) {
+          setLocalGroupMarks(prev => ({
+            ...prev,
+            [newCollaborator.id]: true
+          }));
+        }
+        setPendingGroupStatus(false);
+        closeModal();
+        refetch();
+      },
+      onUpdateSuccess: () => {
+        closeModal();
+        refetch();
+      },
+      onDeleteSuccess: () => {
+        refetch();
+      },
+    }
+  );
+
+  // 临时保存新建时的is_group状态
+  const [pendingGroupStatus, setPendingGroupStatus] = useState<boolean>(false);
+
   // 识别小组成员的函数
   const isGroupCollaborator = useCallback((collaborator: Collaborator) => {
-    // 确保 collaborator 存在
-    if (!collaborator) {
-      return false;
-    }
+    if (!collaborator) return false;
     
-    // 1. 优先使用后端的is_group字段（如果存在）
+    // 1. 优先使用后端的is_group字段
     if (collaborator.is_group !== undefined) {
       return collaborator.is_group;
     }
@@ -86,7 +128,7 @@ const CollaboratorManagement: React.FC = () => {
       return localGroupMarks[collaborator.id];
     }
     
-    // 3. 临时逻辑：根据名称和班级信息判断是否为小组
+    // 3. 临时逻辑：根据名称和班级信息判断
     const groupIndicators = [
       '小组', '团队', '大创团队', '创新大赛小组', 
       '周佳祺 庄晶涵 范佳伟', '田超 王昊 李思佳 凌文杰'
@@ -98,11 +140,10 @@ const CollaboratorManagement: React.FC = () => {
     );
   }, [localGroupMarks]);
 
-  // 排序合作者：小组 > 高级合作者 > 女生 > 男生
+  // 排序合作者
   const sortedCollaborators = useMemo(() => {
     const safeCollaborators = handleListResponse<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
     return [...safeCollaborators].sort((a, b) => {
-      // 确保 a 和 b 存在
       if (!a || !b) return 0;
       
       const aIsGroup = isGroupCollaborator(a);
@@ -125,21 +166,9 @@ const CollaboratorManagement: React.FC = () => {
     });
   }, [collaborators, isGroupCollaborator]);
 
-  // 获取研究项目数据用于分析合作者参与状态
-  const { data: projectsData } = useQuery({
-    queryKey: ['research-projects'],
-    queryFn: () => researchApi.getProjects(),
-  });
-  
-  // 确保 projects 始终是数组
-  const projects = handleListResponse(projectsData, 'CollaboratorManagement.projects');
-
-  // 分析合作者参与状态：找出未参与任何项目的合作者
+  // 分析合作者参与状态
   const collaboratorParticipationStatus = useMemo(() => {
     const participatingCollaboratorIds = new Set<number>();
-    
-    // 添加额外的安全检查和日志
-    console.log('[CollaboratorManagement] projects in useMemo:', projects, 'isArray:', Array.isArray(projects));
     
     // 收集所有参与项目的合作者ID
     safeForEach(projects, (project: any) => {
@@ -163,119 +192,9 @@ const CollaboratorManagement: React.FC = () => {
     return statusMap;
   }, [projects, sortedCollaborators]);
 
-  // 统计数据计算已移除（暂未使用）
-
-  // 创建合作者mutation
-  const createCollaboratorMutation = useMutation({
-    mutationFn: collaboratorApi.createCollaborator,
-    onSuccess: (newCollaborator) => {
-      // 如果新建时选择了小组标记，保存到本地状态
-      if (pendingGroupStatus) {
-        setLocalGroupMarks(prev => ({
-          ...prev,
-          [newCollaborator.id]: true
-        }));
-      }
-      
-      // 重置临时状态
-      setPendingGroupStatus(false);
-      
-      message.success('合作者创建成功！');
-      setIsModalVisible(false);
-      form.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-    },
-    onError: (error) => {
-      // 重置临时状态
-      setPendingGroupStatus(false);
-      message.error('创建失败：' + error.message);
-    },
-  });
-
-  // 更新合作者mutation
-  const updateCollaboratorMutation = useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      collaboratorApi.updateCollaborator(id, data),
-    onSuccess: () => {
-      message.success('合作者信息更新成功！');
-      setIsModalVisible(false);
-      setEditingCollaborator(null);
-      form.resetFields();
-      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-    },
-    onError: (error) => {
-      message.error('更新失败：' + error.message);
-    },
-  });
-
-  // 删除合作者mutation
-  const deleteCollaboratorMutation = useMutation({
-    mutationFn: collaboratorApi.deleteCollaborator,
-    onSuccess: () => {
-      message.success('合作者删除成功！');
-      queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-    },
-    onError: (error) => {
-      message.error('删除失败：' + error.message);
-    },
-  });
-
-
-  // 临时保存新建时的is_group状态
-  const [pendingGroupStatus, setPendingGroupStatus] = useState<boolean>(false);
-
-  // 处理表单提交
-  const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean; is_group?: boolean }) => {
-    const apiValues: CollaboratorCreate = {
-      name: values.name,
-      is_senior: values.is_senior || false,
-      is_group: values.is_group || false,
-    };
-    
-    // 只有在字段有值时才添加到apiValues中
-    if (values.gender !== undefined) {
-      apiValues.gender = values.gender;
-    }
-    if (values.class_name !== undefined) {
-      apiValues.class_name = values.class_name;
-    }
-    if (values.future_plan !== undefined) {
-      apiValues.future_plan = values.future_plan;
-    }
-    if (values.background !== undefined) {
-      apiValues.background = values.background;
-    }
-    
-    if (editingCollaborator) {
-      // 更新合作者时，同时更新本地标记状态
-      setLocalGroupMarks(prev => ({
-        ...prev,
-        [editingCollaborator.id]: values.is_group || false
-      }));
-      
-      updateCollaboratorMutation.mutate({ id: editingCollaborator.id, data: apiValues });
-    } else {
-      // 新建时保存is_group状态
-      setPendingGroupStatus(values.is_group || false);
-      createCollaboratorMutation.mutate(apiValues);
-    }
-  };
-
-  // 处理编辑
-  const handleEdit = (collaborator: Collaborator) => {
-    setEditingCollaborator(collaborator);
-    // 设置表单值，包括当前的小组状态和高级合作者状态
-    form.setFieldsValue({
-      ...collaborator,
-      is_group: isGroupCollaborator(collaborator),
-      is_senior: collaborator.is_senior
-    });
-    setIsModalVisible(true);
-  };
-
-  // 处理删除
-  const handleDelete = async (collaborator: Collaborator) => {
-    try {
+  // 处理删除（使用优化的错误处理）
+  const handleDelete = withErrorHandler(
+    async (collaborator: Collaborator) => {
       // 先检查是否有关联的项目
       const projectsResponse = await collaboratorApi.getCollaboratorProjects(collaborator.id);
       const projects = handleListResponse(projectsResponse, 'getCollaboratorProjects');
@@ -288,7 +207,6 @@ const CollaboratorManagement: React.FC = () => {
         completed_projects: completedProjects.length,
       };
       
-      const warnings: string[] = [];
       const can_soft_delete = true;
       const can_hard_delete = activeProjects.length === 0;
       const hasActiveProjects = dependencies.active_projects > 0;
@@ -321,16 +239,6 @@ const CollaboratorManagement: React.FC = () => {
                   )}
                 </ul>
               </>
-            )}
-            
-            {warnings && warnings.length > 0 && (
-              <div style={{ marginTop: 16 }}>
-                {Array.isArray(warnings) && warnings.map((warning: string, index: number) => (
-                  <p key={index} style={{ color: '#faad14' }}>
-                    ⚠️ {warning}
-                  </p>
-                ))}
-              </div>
             )}
             
             <div style={{ 
@@ -366,25 +274,64 @@ const CollaboratorManagement: React.FC = () => {
         okText: '确认删除',
         cancelText: '取消',
         okType: 'primary',
-        onOk: () => {
-          if (deleteTypeRef.current === 'hard') {
-            // 硬删除：添加force参数
-            collaboratorApi.deleteCollaborator(collaborator.id, true).then(() => {
-              message.success('合作者已永久删除！');
-              queryClient.invalidateQueries({ queryKey: ['collaborators'] });
-            }).catch(error => {
-              message.error('删除失败：' + error.message);
-            });
-          } else {
-            // 软删除
-            deleteCollaboratorMutation.mutate(collaborator.id);
-          }
+        onOk: async () => {
+          await collaboratorApi.deleteCollaborator(collaborator.id, deleteTypeRef.current === 'hard');
+          refetch();
         },
       });
-    } catch (error) {
-      message.error('检查合作者依赖关系失败，请稍后重试');
-      console.error('Error checking dependencies:', error);
+    },
+    'deleteCollaborator',
+    {
+      errorMessage: '检查合作者依赖关系失败，请稍后重试',
     }
+  );
+
+  // 处理表单提交
+  const handleSubmit = async (values: CollaboratorCreate & { is_senior?: boolean; is_group?: boolean }) => {
+    const apiValues: CollaboratorCreate = {
+      name: values.name,
+      is_senior: values.is_senior || false,
+      is_group: values.is_group || false,
+    };
+    
+    // 只有在字段有值时才添加到apiValues中
+    if (values.gender !== undefined) {
+      apiValues.gender = values.gender;
+    }
+    if (values.class_name !== undefined) {
+      apiValues.class_name = values.class_name;
+    }
+    if (values.future_plan !== undefined) {
+      apiValues.future_plan = values.future_plan;
+    }
+    if (values.background !== undefined) {
+      apiValues.background = values.background;
+    }
+    
+    if (editingCollaborator) {
+      // 更新合作者时，同时更新本地标记状态
+      setLocalGroupMarks(prev => ({
+        ...prev,
+        [editingCollaborator.id]: values.is_group || false
+      }));
+      
+      update({ id: editingCollaborator.id, data: apiValues });
+    } else {
+      // 新建时保存is_group状态
+      setPendingGroupStatus(values.is_group || false);
+      create(apiValues);
+    }
+  };
+
+  // 处理编辑
+  const handleEdit = (collaborator: Collaborator) => {
+    setEditingCollaborator(collaborator);
+    form.setFieldsValue({
+      ...collaborator,
+      is_group: isGroupCollaborator(collaborator),
+      is_senior: collaborator.is_senior
+    });
+    setIsModalVisible(true);
   };
 
   // 查看详情
@@ -393,6 +340,12 @@ const CollaboratorManagement: React.FC = () => {
     setIsDetailModalVisible(true);
   };
 
+  // 关闭模态框
+  const closeModal = () => {
+    setIsModalVisible(false);
+    setEditingCollaborator(null);
+    form.resetFields();
+  };
 
   // 获取性别标签颜色
   const getGenderColor = (gender?: string) => {
@@ -413,6 +366,7 @@ const CollaboratorManagement: React.FC = () => {
           background-color: #efdbff !important;
         }
       `}</style>
+      
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
         <div>
@@ -478,142 +432,138 @@ const CollaboratorManagement: React.FC = () => {
           rowClassName={(record: Collaborator) => 
             isGroupCollaborator(record) ? 'group-collaborator-row' : ''
           }
-        columns={[
-          {
-            title: '姓名',
-            dataIndex: 'name',
-            key: 'name',
-            width: 150,
-            render: (name: string, record) => {
-              const isParticipating = collaboratorParticipationStatus.get(record.id) || false;
-              const isGroup = isGroupCollaborator(record);
-              return (
-                <Space>
-                  <Avatar 
-                    size={32} 
-                    icon={isGroup ? <TeamOutlined /> : <UserOutlined />}
-                    style={{ 
-                      backgroundColor: isGroup ? '#722ed1' : 
-                        (record.is_senior ? '#faad14' : (record.gender === '男' ? '#1890ff' : '#eb2f96')),
-                    }}
-                  />
-                  <div>
+          columns={[
+            {
+              title: '姓名',
+              dataIndex: 'name',
+              key: 'name',
+              width: 150,
+              render: (name: string, record) => {
+                const isParticipating = collaboratorParticipationStatus.get(record.id) || false;
+                const isGroup = isGroupCollaborator(record);
+                return (
+                  <Space>
+                    <Avatar 
+                      size={32} 
+                      icon={isGroup ? <TeamOutlined /> : <UserOutlined />}
+                      style={{ 
+                        backgroundColor: isGroup ? '#722ed1' : 
+                          (record.is_senior ? '#faad14' : (record.gender === '男' ? '#1890ff' : '#eb2f96')),
+                      }}
+                    />
                     <div>
-                      <Text strong style={{ color: isGroup ? '#722ed1' : 'inherit' }}>
-                        {isGroup && '👥 '}{name}
-                      </Text>
-                      {isGroup && (
-                        <Tag color="purple" style={{ marginLeft: 8 }}>
-                          小组
-                        </Tag>
-                      )}
-                      {record.is_senior && !isGroup && (
-                        <Tag color="gold" style={{ marginLeft: 8 }}>
-                          高级合作者
-                        </Tag>
+                      <div>
+                        <Text strong style={{ color: isGroup ? '#722ed1' : 'inherit' }}>
+                          {isGroup && '👥 '}{name}
+                        </Text>
+                        {isGroup && (
+                          <Tag color="purple" style={{ marginLeft: 8 }}>
+                            小组
+                          </Tag>
+                        )}
+                        {record.is_senior && !isGroup && (
+                          <Tag color="gold" style={{ marginLeft: 8 }}>
+                            高级合作者
+                          </Tag>
+                        )}
+                      </div>
+                      {!isParticipating && (
+                        <div style={{ marginTop: 4 }}>
+                          <Tag color="orange" style={{ fontSize: '12px' }}>
+                            未参与项目
+                          </Tag>
+                        </div>
                       )}
                     </div>
-                    {!isParticipating && (
-                      <div style={{ marginTop: 4 }}>
-                        <Tag color="orange" style={{ fontSize: '12px' }}>
-                          未参与项目
-                        </Tag>
-                      </div>
-                    )}
-                  </div>
-                </Space>
-              );
+                  </Space>
+                );
+              },
             },
-          },
-          {
-            title: '性别',
-            dataIndex: 'gender',
-            key: 'gender',
-            width: 80,
-            render: (gender: string) => 
-              gender ? (
-                <Tag color={getGenderColor(gender)}>{gender}</Tag>
-              ) : '-',
-            filters: [
-              { text: '男', value: '男' },
-              { text: '女', value: '女' },
-            ],
-            onFilter: (value, record) => record.gender === value,
-          },
-          {
-            title: '班级',
-            dataIndex: 'class_name',
-            key: 'class_name',
-            width: 120,
-            render: (className: string) => className || '-',
-          },
-          {
-            title: '未来规划',
-            dataIndex: 'future_plan',
-            key: 'future_plan',
-            width: 200,
-            ellipsis: { showTitle: false },
-            render: (plan: string) => 
-              plan ? (
-                <Text ellipsis={{ tooltip: plan }}>{plan}</Text>
-              ) : '-',
-          },
-          {
-            title: '背景信息',
-            dataIndex: 'background',
-            key: 'background',
-            width: 250,
-            ellipsis: { showTitle: false },
-            render: (background: string) => 
-              background ? (
-                <Text ellipsis={{ tooltip: background }}>{background}</Text>
-              ) : '-',
-          },
-          {
-            title: '操作',
-            key: 'actions',
-            width: 120,
-            fixed: 'right',
-            render: (_, collaborator) => (
-              <Space size="small">
-                <Button
-                  type="text"
-                  icon={<EyeOutlined />}
-                  onClick={() => showDetail(collaborator)}
-                  title="查看详情"
-                />
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEdit(collaborator)}
-                  title="编辑"
-                />
-                <Button
-                  type="text"
-                  icon={<DeleteOutlined />}
-                  danger
-                  title="删除"
-                  onClick={() => handleDelete(collaborator)}
-                />
-              </Space>
-            ),
-          },
-        ]}
-      />
+            {
+              title: '性别',
+              dataIndex: 'gender',
+              key: 'gender',
+              width: 80,
+              render: (gender: string) => 
+                gender ? (
+                  <Tag color={getGenderColor(gender)}>{gender}</Tag>
+                ) : '-',
+              filters: [
+                { text: '男', value: '男' },
+                { text: '女', value: '女' },
+              ],
+              onFilter: (value, record) => record.gender === value,
+            },
+            {
+              title: '班级',
+              dataIndex: 'class_name',
+              key: 'class_name',
+              width: 120,
+              render: (className: string) => className || '-',
+            },
+            {
+              title: '未来规划',
+              dataIndex: 'future_plan',
+              key: 'future_plan',
+              width: 200,
+              ellipsis: { showTitle: false },
+              render: (plan: string) => 
+                plan ? (
+                  <Text ellipsis={{ tooltip: plan }}>{plan}</Text>
+                ) : '-',
+            },
+            {
+              title: '背景信息',
+              dataIndex: 'background',
+              key: 'background',
+              width: 250,
+              ellipsis: { showTitle: false },
+              render: (background: string) => 
+                background ? (
+                  <Text ellipsis={{ tooltip: background }}>{background}</Text>
+                ) : '-',
+            },
+            {
+              title: '操作',
+              key: 'actions',
+              width: 120,
+              fixed: 'right',
+              render: (_, collaborator) => (
+                <Space size="small">
+                  <Button
+                    type="text"
+                    icon={<EyeOutlined />}
+                    onClick={() => showDetail(collaborator)}
+                    title="查看详情"
+                  />
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    onClick={() => handleEdit(collaborator)}
+                    title="编辑"
+                  />
+                  <Button
+                    type="text"
+                    icon={<DeleteOutlined />}
+                    danger
+                    title="删除"
+                    onClick={() => handleDelete(collaborator)}
+                  />
+                </Space>
+              ),
+            },
+          ]}
+        />
       </div>
 
       {/* 创建/编辑合作者模态框 */}
       <CollaboratorFormModal
         visible={isModalVisible}
-        onCancel={() => {
-          setIsModalVisible(false);
-          setEditingCollaborator(null);
-          form.resetFields();
-        }}
+        onCancel={closeModal}
         editingCollaborator={editingCollaborator}
         form={form}
         onSubmit={handleSubmit}
-        confirmLoading={createCollaboratorMutation.isPending || updateCollaboratorMutation.isPending}
+        confirmLoading={isCreating || isUpdating}
       />
 
       {/* 合作者详情模态框 */}
