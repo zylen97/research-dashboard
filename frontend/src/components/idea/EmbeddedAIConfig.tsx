@@ -9,19 +9,16 @@ import {
   Typography,
   Alert,
   Select,
-  Spin,
-  Collapse
+  Spin
 } from 'antd';
 import {
   ApiOutlined,
   CheckCircleOutlined,
-  CloseCircleOutlined,
-  SettingOutlined
+  CloseCircleOutlined
 } from '@ant-design/icons';
 import { settingsApi, APISettings, Model } from '../../services/settingsApi';
 
 const { Text } = Typography;
-const { Panel } = Collapse;
 const { Option } = Select;
 
 interface AIConfig {
@@ -41,7 +38,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const [loading, setLoading] = useState(false);
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'success' | 'error' | null>(null);
-  const [isExpanded, setIsExpanded] = useState(true);
   const [models, setModels] = useState<Model[]>([]);
 
   useEffect(() => {
@@ -278,71 +274,59 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         />
       )}
 
-      {/* 可折叠的配置表单 */}
-      <Collapse 
+      {/* AI配置表单 */}
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
         size="small"
-        activeKey={isExpanded ? ['config'] : []}
-        onChange={(keys) => setIsExpanded(keys.includes('config'))}
       >
-        <Panel 
-          header="AI配置" 
-          key="config"
-          extra={<SettingOutlined />}
+        <Form.Item
+          name="api_key"
+          label="API密钥"
+          rules={[{ required: true, message: '请输入API密钥' }]}
+          tooltip="请输入你的API密钥"
         >
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSubmit}
-            size="small"
-          >
-            <Form.Item
-              name="api_key"
-              label="API密钥"
-              rules={[{ required: true, message: '请输入API密钥' }]}
-              tooltip="请输入你的API密钥"
-            >
-              <Input 
-                placeholder="sk-xxxxxxxxxxxxxxxxxxxx" 
-                autoComplete="off"
-              />
-            </Form.Item>
+          <Input 
+            placeholder="sk-xxxxxxxxxxxxxxxxxxxx" 
+            autoComplete="off"
+          />
+        </Form.Item>
 
-            <Form.Item
-              name="api_url"
-              label="API地址"
-              rules={[{ required: true, message: '请输入API地址' }]}
-              tooltip="API请求地址"
-              initialValue="https://api.chatanywhere.tech/v1"
-            >
-              <Input placeholder="https://api.chatanywhere.tech/v1" />
-            </Form.Item>
+        <Form.Item
+          name="api_url"
+          label="API地址"
+          rules={[{ required: true, message: '请输入API地址' }]}
+          tooltip="API请求地址"
+          initialValue="https://api.chatanywhere.tech/v1"
+        >
+          <Input placeholder="https://api.chatanywhere.tech/v1" />
+        </Form.Item>
 
-            <Form.Item
-              name="model"
-              label="默认模型"
-              rules={[{ required: true, message: '请选择默认模型' }]}
-              initialValue="claude-3-7-sonnet-20250219"
-            >
-              <Select placeholder="选择模型">
-                {models.map(model => (
-                  <Option key={model.id} value={model.id}>{model.id}</Option>
-                ))}
-              </Select>
-            </Form.Item>
+        <Form.Item
+          name="model"
+          label="默认模型"
+          rules={[{ required: true, message: '请选择默认模型' }]}
+          initialValue="claude-3-7-sonnet-20250219"
+        >
+          <Select placeholder="选择模型">
+            {models.map(model => (
+              <Option key={model.id} value={model.id}>{model.id}</Option>
+            ))}
+          </Select>
+        </Form.Item>
 
-            <Form.Item>
-              <Space>
-                <Button type="primary" htmlType="submit" loading={loading} size="small">
-                  保存
-                </Button>
-                <Button onClick={() => testConnection()} loading={testing} disabled={!config} size="small">
-                  测试连接
-                </Button>
-              </Space>
-            </Form.Item>
-          </Form>
-        </Panel>
-      </Collapse>
+        <Form.Item>
+          <Space>
+            <Button type="primary" htmlType="submit" loading={loading} size="small">
+              保存
+            </Button>
+            <Button onClick={() => testConnection()} loading={testing} disabled={!config} size="small">
+              测试连接
+            </Button>
+          </Space>
+        </Form.Item>
+      </Form>
     </Card>
   );
 };
