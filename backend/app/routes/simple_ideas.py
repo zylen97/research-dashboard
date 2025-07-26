@@ -11,7 +11,7 @@ from datetime import datetime
 from pydantic import BaseModel, Field
 
 from ..models import get_db, ResearchProject
-from ..services.audit import log_audit_event
+from ..services.audit import AuditService
 
 router = APIRouter()
 
@@ -241,12 +241,10 @@ async def convert_idea_to_project(
     db.flush()  # 获取新项目的ID
     
     # 记录审计日志
-    log_audit_event(
+    AuditService.log_create(
         db=db,
         table_name="research_projects",
         record_id=new_project.id,
-        action="CREATE",
-        user_id=getattr(request.state, "user_id", None),
         new_values={
             "title": new_project.title,
             "idea_description": new_project.idea_description,
@@ -254,7 +252,8 @@ async def convert_idea_to_project(
             "source": new_project.source,
             "converted_from_idea_id": idea_id
         },
-        request=request
+        user_id=getattr(request.state, "user_id", None),
+        ip_address=request.client.host if request.client else None
     )
     
     # 删除原有的idea
@@ -264,17 +263,16 @@ async def convert_idea_to_project(
     )
     
     # 记录idea删除的审计日志
-    log_audit_event(
+    AuditService.log_delete(
         db=db,
         table_name="ideas",
         record_id=idea_id,
-        action="DELETE",
-        user_id=getattr(request.state, "user_id", None),
         old_values={
             "reason": "Converted to research project",
             "project_id": new_project.id
         },
-        request=request
+        user_id=getattr(request.state, "user_id", None),
+        ip_address=request.client.host if request.client else None
     )
     
     db.commit()
