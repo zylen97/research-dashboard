@@ -24,9 +24,8 @@ const { Option } = Select;
 
 interface AIConfig {
   api_key: string;
-  api_url?: string;
+  api_base?: string;
   model?: string;
-  is_connected?: boolean;
 }
 
 interface ConcurrentConfig {
@@ -70,36 +69,33 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     try {
       console.log('获取AI配置...');
       const apiSettings = await settingsApi.getSettings();
-      console.log('获取到的配置:', { api_key: apiSettings.api_key ? '***已设置***' : '未设置', api_base: apiSettings.api_base, model: apiSettings.model });
+      console.log('获取到的配置:', { 
+        api_key: apiSettings.api_key ? '***已设置***' : '未设置', 
+        api_base: apiSettings.api_base, 
+        model: apiSettings.model 
+      });
       
       const configData: AIConfig = {
         api_key: apiSettings.api_key,
-        api_url: apiSettings.api_base,
+        api_base: apiSettings.api_base,
         model: apiSettings.model,
-        is_connected: !!apiSettings.api_key // 如果有API密钥，认为可以使用（后端会自己验证）
       };
       
       setConfig(configData);
       form.setFieldsValue({
         api_key: apiSettings.api_key,
-        api_url: apiSettings.api_base,
+        api_base: apiSettings.api_base,
         model: apiSettings.model
       });
       
-      // 如果有完整配置，设为可用状态，允许用户使用
-      if (apiSettings.api_key && apiSettings.api_base && apiSettings.model) {
-        setConnectionStatus(null); // 设为null表示未测试但可用
-      } else {
-        setConnectionStatus('error');
-      }
+      setConnectionStatus(null);
     } catch (error) {
       console.error('获取API配置失败:', error);
-      // 设置默认值但不自动填充API密钥
+      // 设置默认值
       const defaultConfig: AIConfig = {
-        api_key: '',
-        api_url: 'https://api.chatanywhere.tech/v1',
+        api_key: 'sk-LrOwl2ZEbKhZxW4s27EyGdjwnpZ1nDwjVRJk546lSspxHymY',
+        api_base: 'https://api.chatanywhere.tech/v1',
         model: 'claude-3-7-sonnet-20250219',
-        is_connected: false
       };
       setConfig(defaultConfig);
       form.setFieldsValue(defaultConfig);
@@ -117,11 +113,15 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       console.error('获取模型列表失败:', error);
       // 设置默认模型列表
       setModels([
-        {
-          id: "claude-3-7-sonnet-20250219",
-          name: "Claude 3.7 Sonnet",
-          description: "高性能多模态模型"
-        }
+        { id: "claude-3-7-sonnet-20250219", name: "Claude 3.7 Sonnet", description: "高性能多模态模型" },
+        { id: "claude-sonnet-4-20250514", name: "Claude Sonnet 4", description: "最新一代智能模型" },
+        { id: "claude-opus-4-20250514-thinking", name: "Claude Opus 4 Thinking", description: "Claude Opus 4思考版本" },
+        { id: "claude-opus-4-20250514", name: "Claude Opus 4", description: "Claude Opus 4标准版本" },
+        { id: "deepseek-v3", name: "DeepSeek V3", description: "DeepSeek第三代模型" },
+        { id: "deepseek-r1", name: "DeepSeek R1", description: "DeepSeek推理模型" },
+        { id: "gpt", name: "GPT", description: "OpenAI GPT模型" },
+        { id: "gpt-4.1", name: "GPT-4.1", description: "OpenAI GPT-4.1" },
+        { id: "gpt-4o", name: "GPT-4o", description: "OpenAI最新多模态模型" }
       ]);
     }
   };
@@ -160,28 +160,35 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
   const handleSubmit = async (values: any) => {
     try {
       setLoading(true);
-      console.log('开始保存AI配置...', { api_key: '***', api_url: values.api_url, model: values.model });
+      console.log('开始保存AI配置...', { 
+        api_key: '***', 
+        api_base: values.api_base, 
+        model: values.model 
+      });
       
       const apiSettings: APISettings = {
         api_key: values.api_key,
-        api_base: values.api_url,
+        api_base: values.api_base,
         model: values.model
       };
       
       const updatedSettings = await settingsApi.updateApiSettings(apiSettings);
-      console.log('配置保存成功:', { api_key: '***', api_base: updatedSettings.api_base, model: updatedSettings.model });
+      console.log('配置保存成功:', { 
+        api_key: '***', 
+        api_base: updatedSettings.api_base, 
+        model: updatedSettings.model 
+      });
       
       // 创建新配置对象
       const newConfig: AIConfig = {
         api_key: updatedSettings.api_key,
-        api_url: updatedSettings.api_base,
+        api_base: updatedSettings.api_base,
         model: updatedSettings.model,
-        is_connected: false // 保存后需要手动测试连接
       };
       
       setConfig(newConfig);
-      setConnectionStatus(null); // 重置连接状态
-      message.success('AI配置保存成功！请点击“测试连接”验证配置');
+      setConnectionStatus(null);
+      message.success('AI配置保存成功！请点击"测试连接"验证配置');
     } catch (error: any) {
       console.error('保存配置失败:', error);
       const errorMessage = error.response?.data?.detail || error.message || '保存配置失败';
@@ -192,9 +199,8 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     }
   };
 
-  const testConnection = async (configToTest?: AIConfig) => {
-    const testConfig = configToTest || config;
-    if (!testConfig?.api_key) {
+  const testConnection = async () => {
+    if (!config?.api_key) {
       message.error('请先填写API密钥');
       setConnectionStatus('error');
       return;
@@ -203,15 +209,15 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     setTesting(true);
     console.log('开始测试AI连接...', { 
       api_key: '***', 
-      api_base: testConfig.api_url || 'https://api.chatanywhere.tech/v1', 
-      model: testConfig.model || 'claude-3-7-sonnet-20250219' 
+      api_base: config.api_base || 'https://api.chatanywhere.tech/v1', 
+      model: config.model || 'claude-3-7-sonnet-20250219' 
     });
     
     try {
       const response = await settingsApi.testConnection({
-        api_key: testConfig.api_key,
-        api_base: testConfig.api_url || 'https://api.chatanywhere.tech/v1',
-        model: testConfig.model || 'claude-3-7-sonnet-20250219'
+        api_key: config.api_key,
+        api_base: config.api_base || 'https://api.chatanywhere.tech/v1',
+        model: config.model || 'claude-3-7-sonnet-20250219'
       });
       
       console.log('连接测试响应:', response);
@@ -219,44 +225,16 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
       if (response.success) {
         message.success('API连接测试成功');
         setConnectionStatus('success');
-        
-        // 更新配置状态，设置为已连接
-        const updatedConfig = { ...testConfig, is_connected: true };
-        setConfig(updatedConfig);
-        console.log('配置状态更新为已连接:', updatedConfig);
-        
-        // 通知父组件配置变化
-        if (onConfigChange) {
-          onConfigChange(updatedConfig);
-        }
-        
-        // 测试成功，配置已更新
       } else {
         const errorMsg = response.message || '连接测试失败';
         message.error(`连接测试失败：${errorMsg}`);
         setConnectionStatus('error');
-        
-        // 确保配置状态设为未连接
-        const updatedConfig = { ...testConfig, is_connected: false };
-        setConfig(updatedConfig);
-        if (onConfigChange) {
-          onConfigChange(updatedConfig);
-        }
       }
     } catch (error: any) {
       console.error('AI连接测试错误:', error);
       const errorMsg = error.response?.data?.detail || error.message || '连接测试失败';
       message.error('连接测试失败：' + errorMsg);
       setConnectionStatus('error');
-      
-      // 确保配置状态设为未连接
-      if (testConfig) {
-        const updatedConfig = { ...testConfig, is_connected: false };
-        setConfig(updatedConfig);
-        if (onConfigChange) {
-          onConfigChange(updatedConfig);
-        }
-      }
     } finally {
       setTesting(false);
     }
@@ -280,11 +258,10 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
     }
     return {
       status: 'info' as const,
-      message: '配置已加载，可以使用（建议测试连接）',
+      message: '配置已加载，建议测试连接',
       icon: <ApiOutlined style={{ color: '#1890ff' }} />
     };
   };
-
 
   if (loading) {
     return (
@@ -308,7 +285,6 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         </Space>
       }
     >
-
       {connectionStatus && (
         <Alert
           message={getConnectionStatus().message}
@@ -338,7 +314,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         </Form.Item>
 
         <Form.Item
-          name="api_url"
+          name="api_base"
           label="API地址"
           rules={[{ required: true, message: '请输入API地址' }]}
           tooltip="API请求地址"
@@ -355,7 +331,9 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
         >
           <Select placeholder="选择模型">
             {models.map(model => (
-              <Option key={model.id} value={model.id}>{model.id}</Option>
+              <Option key={model.id} value={model.id} title={model.description}>
+                {model.name}
+              </Option>
             ))}
           </Select>
         </Form.Item>
@@ -365,7 +343,7 @@ const EmbeddedAIConfig: React.FC<EmbeddedAIConfigProps> = ({ onConfigChange }) =
             <Button type="primary" htmlType="submit" loading={loading} size="small">
               保存
             </Button>
-            <Button onClick={() => testConnection()} loading={testing} disabled={!config} size="small">
+            <Button onClick={testConnection} loading={testing} disabled={!config} size="small">
               测试连接
             </Button>
           </Space>

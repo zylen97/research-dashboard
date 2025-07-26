@@ -87,28 +87,22 @@ async def process_excel_file(
         ai_service = create_ai_service(db)
         
         # 5. 检查AI配置状态
-        logger.info("检查AI配置状态...")
-        main_config = await ai_service.get_main_ai_config()
-        if not main_config:
-            error_msg = "AI未配置，请先在页面左侧的AI配置中填写API密钥并测试连接"
+        logger.info("🔍 检查AI配置状态...")
+        ai_config = await ai_service.get_ai_config()
+        if not ai_config or not ai_config.get('api_key'):
+            error_msg = "AI未配置，请先在页面左侧的AI配置中填写API密钥"
             logger.error(error_msg)
             raise HTTPException(
                 status_code=400,
                 detail=error_msg
             )
         
-        logger.info(f"找到AI配置: model={main_config.get('model')}, api_url={main_config.get('api_url')}, is_connected={main_config.get('is_connected')}")
+        # 明确显示当前使用的模型
+        current_model = ai_config.get('model', 'claude-3-7-sonnet-20250219')
+        logger.info(f"🎯 Excel处理将使用的AI模型: {current_model}")
+        logger.info(f"📋 AI配置详情: model={current_model}, api_base={ai_config.get('api_base')}")
         
-        # 检查连接状态
-        if not main_config.get('is_connected', False):
-            error_msg = "AI配置存在但尚未测试连接，请先在页面左侧的AI配置中点击'测试连接'按钮"
-            logger.error(error_msg)
-            raise HTTPException(
-                status_code=400,
-                detail=error_msg
-            )
-        
-        logger.info("AI配置有效且已连接")
+        logger.info("AI配置检查完成")
         
         # 6. 确定使用哪个prompt
         default_prompt = """请将给定的研究内容优化和精炼，使其更加清晰、专业，并强调其创新性和研究价值。
@@ -300,8 +294,10 @@ async def process_excel_file(
                 '成功处理': processed_count,
                 '处理失败': error_count,
                 '跳过行数': total_rows - processed_count - error_count,
-                'AI模型': main_config.get('model', 'unknown'),
-                'Prompt来源': 'prompt' if prompt_id else ('自定义' if custom_prompt else '默认')
+                '实际使用的AI模型': current_model,
+                'API地址': ai_config.get('api_base', 'unknown'),
+                'Prompt来源': 'prompt' if prompt_id else ('自定义' if custom_prompt else '默认'),
+                '处理完成时间': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }])
             stats_df.to_excel(writer, sheet_name='处理统计', index=False)
         

@@ -40,9 +40,9 @@ export interface ChatResponse {
   message?: string;
 }
 
-// Settings API 服务
+// Settings API 服务 - 简化版
 export const settingsApi = {
-  // 获取当前用户的API设置
+  // 获取当前API设置
   getSettings: (): Promise<APISettings> => 
     api.get('/settings/'),
 
