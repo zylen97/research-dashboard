@@ -241,10 +241,25 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             borderRadius: mobileView ? '4px' : '8px',
             boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02)',
             overflow: 'auto',
+            position: 'relative',
           }}
         >
           <div className="content-wrapper" style={{ width: '100%', maxWidth: 'none' }}>
             {children}
+          </div>
+          
+          {/* 版权信息 */}
+          <div style={{
+            position: 'absolute',
+            bottom: '8px',
+            right: '12px',
+            fontSize: '10px',
+            color: '#bfbfbf',
+            opacity: 0.6,
+            pointerEvents: 'none',
+            userSelect: 'none'
+          }}>
+            Zylen Copyright
           </div>
         </Content>
       </Layout>
