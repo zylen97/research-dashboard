@@ -125,7 +125,7 @@ export const createProjectColumns = ({
     title: '研究方法',
     dataIndex: 'research_method',
     key: 'research_method',
-    width: 150,
+    width: 120,
     ellipsis: { showTitle: false },
     render: (method: string) => (
       <Text
