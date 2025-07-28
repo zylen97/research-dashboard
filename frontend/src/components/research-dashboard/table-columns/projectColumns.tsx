@@ -130,14 +130,19 @@ export const createProjectColumns = ({
     dataIndex: 'source',
     key: 'source',
     width: 150,
-    ellipsis: { showTitle: false },
     render: (source: string) => (
-      <Text
-        ellipsis={{ tooltip: source }}
-        style={{ color: '#666', fontSize: '12px' }}
+      <div
+        style={{ 
+          color: '#666', 
+          fontSize: '12px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          lineHeight: '1.4'
+        }}
+        title={source}
       >
         {source || '-'}
-      </Text>
+      </div>
     ),
   }]),
   {

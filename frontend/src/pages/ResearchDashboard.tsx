@@ -273,7 +273,8 @@ const ResearchDashboard: React.FC = () => {
             name="source"
             label="来源"
           >
-            <Input 
+            <TextArea 
+              rows={2}
               placeholder="请输入来源信息（可选）"
             />
           </Form.Item>
