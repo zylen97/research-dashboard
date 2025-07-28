@@ -132,6 +132,30 @@ class SecurityValidator:
                 errors.append("项目描述包含不安全的内容")
             sanitized_data['idea_description'] = cls.sanitize_string(description, max_length=2000)
         
+        # 验证和清理研究方法
+        research_method = data.get('research_method', '')
+        if research_method:
+            if cls.check_sql_injection(research_method):
+                errors.append("研究方法包含不安全的内容")
+            else:
+                sanitized_data['research_method'] = cls.sanitize_string(research_method, max_length=2000)
+        
+        # 验证和清理来源
+        source = data.get('source', '')
+        if source:
+            if cls.check_sql_injection(source):
+                errors.append("来源包含不安全的内容")
+            else:
+                sanitized_data['source'] = cls.sanitize_string(source, max_length=2000)
+        
+        # 验证和清理目标期刊
+        target_journal = data.get('target_journal', '')
+        if target_journal:
+            if cls.check_sql_injection(target_journal):
+                errors.append("目标期刊包含不安全的内容")
+            else:
+                sanitized_data['target_journal'] = cls.sanitize_string(target_journal, max_length=200)
+        
         # 验证状态
         status = data.get('status', 'active')
         if status not in ['active', 'paused', 'completed']:
@@ -160,6 +184,25 @@ class SecurityValidator:
                     errors.append("预计完成时间格式无效，应为YYYY-MM-DD")
             elif isinstance(expected_completion, (date, datetime)):
                 sanitized_data['expected_completion'] = expected_completion
+        
+        # 验证开始日期
+        start_date = data.get('start_date')
+        if start_date:
+            if isinstance(start_date, str):
+                try:
+                    # 处理ISO格式的日期时间字符串
+                    if 'T' in start_date:
+                        parsed_date = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+                    else:
+                        parsed_date = datetime.strptime(start_date, '%Y-%m-%d')
+                    sanitized_data['start_date'] = parsed_date
+                except ValueError:
+                    errors.append("开始时间格式无效")
+            elif isinstance(start_date, (date, datetime)):
+                sanitized_data['start_date'] = start_date
+        else:
+            # 如果没有提供start_date，明确设置为None
+            sanitized_data['start_date'] = None
         
         # 验证合作者IDs
         collaborator_ids = data.get('collaborator_ids', [])
