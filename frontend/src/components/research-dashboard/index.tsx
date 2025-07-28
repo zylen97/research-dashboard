@@ -1,5 +1,6 @@
 // 导出所有research-dashboard相关组件
 export { default as StatisticsCards } from './StatisticsCards';
+export { default as ResizableTitle } from './ResizableTitle';
 export { createProjectColumns } from './table-columns/projectColumns';
 export type { ProjectTableActions, ProjectColumnProps } from './table-columns/projectColumns';
 

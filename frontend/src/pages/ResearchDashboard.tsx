@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Button,
   Modal,
@@ -19,13 +19,26 @@ import {
   StatisticsCards, 
   createProjectColumns,
   useProjectData, 
-  useProjectActions 
+  useProjectActions,
+  ResizableTitle 
 } from '../components/research-dashboard';
 import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
 
 const { Title } = Typography;
 const { TextArea } = Input;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  index: 50,
+  title: 180,
+  research_method: 60,
+  source: 200,
+  status: 70,
+  collaborators: 180,
+  communication_progress: 200,
+  actions: 150,
+};
 
 const ResearchDashboard: React.FC = () => {
   // 表单和模态框状态
@@ -40,6 +53,11 @@ const ResearchDashboard: React.FC = () => {
     // 从localStorage读取用户偏好
     const saved = localStorage.getItem('showArchivedProjects');
     return saved === 'true';
+  });
+  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
+    // 从localStorage读取保存的列宽
+    const saved = localStorage.getItem('research-table-columns');
+    return saved ? JSON.parse(saved) : DEFAULT_COLUMN_WIDTHS;
   });
   const [form] = Form.useForm();
 
@@ -123,8 +141,18 @@ const ResearchDashboard: React.FC = () => {
     localStorage.setItem('showArchivedProjects', checked.toString());
   };
 
+  // 处理列宽调整
+  const handleResize = useCallback((key: string) => (_e: any, { size }: any) => {
+    setColumnWidths((prev) => {
+      const newWidths = { ...prev, [key]: size.width };
+      // 保存到localStorage
+      localStorage.setItem('research-table-columns', JSON.stringify(newWidths));
+      return newWidths;
+    });
+  }, []);
+
   // 表格列配置
-  const columns = createProjectColumns({
+  const baseColumns = createProjectColumns({
     actions: {
       onEdit: handleEdit,
       onDelete: handleDeleteProject,
@@ -137,9 +165,25 @@ const ResearchDashboard: React.FC = () => {
     pageSize,
   });
 
+  // 为列添加可调整宽度的功能
+  const columns = baseColumns.map((col: any) => {
+    const key = col.key || col.dataIndex;
+    if (!columnWidths[key]) {
+      return col;
+    }
+    return {
+      ...col,
+      width: columnWidths[key],
+      onHeaderCell: () => ({
+        width: columnWidths[key],
+        onResize: handleResize(key),
+      }),
+    };
+  });
+
   return (
     <div style={{ padding: '24px' }}>
-      {/* 待办项目行样式 */}
+      {/* 待办项目行样式和可调整列宽样式 */}
       <style>{`
         .todo-project-row {
           background-color: #fffbf0 !important;
@@ -147,6 +191,26 @@ const ResearchDashboard: React.FC = () => {
         }
         .todo-project-row:hover {
           background-color: #fff7e6 !important;
+        }
+        
+        .resizable-table .react-resizable {
+          position: relative;
+          background-clip: padding-box;
+        }
+        
+        .resizable-table .react-resizable-handle {
+          position: absolute;
+          inset-inline-end: -5px;
+          bottom: 0;
+          z-index: 1;
+          width: 10px;
+          height: 100%;
+          cursor: col-resize;
+        }
+        
+        .resizable-table .react-resizable-handle:hover {
+          background-color: #1890ff;
+          opacity: 0.3;
         }
       `}</style>
 
@@ -196,13 +260,18 @@ const ResearchDashboard: React.FC = () => {
       />
 
       {/* 项目列表 */}
-      <div className="table-container">
+      <div className="table-container resizable-table">
         <Table
           size="small"
           dataSource={filteredProjects}
           columns={columns}
           rowKey="id"
           loading={isLoading}
+          components={{
+            header: {
+              cell: ResizableTitle,
+            },
+          }}
           onChange={(pagination) => {
             setCurrentPage(pagination.current || 1);
             setPageSize(pagination.pageSize || 50);

@@ -99,14 +99,21 @@ export const createProjectColumns = ({
     dataIndex: 'title',
     key: 'title',
     width: 180,
-    ellipsis: true,
     render: (title: string, project: ResearchProject) => {
       const todoStatus = getProjectTodoStatus(project);
       return (
-        <Text strong style={{ fontSize: '14px' }}>
+        <div 
+          style={{ 
+            fontSize: '14px',
+            fontWeight: 'bold',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: '1.5'
+          }}
+        >
           {todoStatus.is_todo && '🚩 '}
           {title}
-        </Text>
+        </div>
       );
     },
   },
@@ -115,21 +122,26 @@ export const createProjectColumns = ({
     dataIndex: 'research_method',
     key: 'research_method',
     width: 60,
-    ellipsis: { showTitle: false },
     render: (method: string) => (
-      <Text
-        ellipsis={{ tooltip: method }}
-        style={{ color: '#666' }}
+      <div
+        style={{ 
+          color: '#666',
+          fontSize: '13px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          lineHeight: '1.4'
+        }}
+        title={method}
       >
         {method || '-'}
-      </Text>
+      </div>
     ),
   }]),
   ...(isMobile ? [] : [{
     title: '来源',
     dataIndex: 'source',
     key: 'source',
-    width: 150,
+    width: 200,
     render: (source: string) => (
       <div
         style={{ 
@@ -197,7 +209,7 @@ export const createProjectColumns = ({
   ...(isMobile ? [] : [{
     title: '交流进度',
     key: 'communication_progress',
-    width: 250,
+    width: 200,
     render: (record: ResearchProject) => {
       // 使用communication_logs数组，正确排序获取最新记录
       const logs = record.communication_logs || [];
@@ -225,10 +237,18 @@ export const createProjectColumns = ({
         }).replace(/\//g, '-');
         const displayText = `${dateStr}: ${latestLog.title}`;
         return (
-          <Text ellipsis={{ tooltip: `${displayText} (共${logs.length}条记录)` }} style={{ fontSize: '13px' }}>
+          <div 
+            style={{ 
+              fontSize: '13px',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              lineHeight: '1.4'
+            }}
+            title={`${displayText} (共${logs.length}条记录)`}
+          >
             <MessageOutlined style={{ marginRight: 4, color: '#1890ff' }} />
             {displayText}
-          </Text>
+          </div>
         );
       }
       return (
