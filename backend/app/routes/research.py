@@ -26,6 +26,7 @@ async def get_research_projects(
     """获取研究项目列表（数据共享，包含交流记录）"""
     # 基础查询 + 安全的关联加载
     query = db.query(ResearchProject).options(
+        joinedload(ResearchProject.collaborators),
         joinedload(ResearchProject.communication_logs)
     )
     if status_filter:
