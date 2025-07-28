@@ -144,7 +144,7 @@ export const createProjectColumns = ({
     title: '状态',
     dataIndex: 'status',
     key: 'status',
-    width: 100,
+    width: 70,
     render: (status: string) => (
       <Tag color={getStatusColor(status)}>
         {status === 'active' ? '撰写中' :
