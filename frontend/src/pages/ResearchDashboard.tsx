@@ -395,7 +395,8 @@ const ResearchDashboard: React.FC = () => {
           setSelectedProject(null);
         }}
         onUpdate={() => {
-          // 可以在这里刷新项目列表以更新最新交流进度
+          // 刷新项目列表以更新最新交流进度
+          refetch();
         }}
       />
 
