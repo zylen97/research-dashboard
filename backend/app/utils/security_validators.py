@@ -158,7 +158,7 @@ class SecurityValidator:
         
         # 验证状态
         status = data.get('status', 'active')
-        if status not in ['active', 'paused', 'completed']:
+        if status not in ['active', 'paused', 'completed', 'reviewing', 'revising']:
             errors.append("无效的项目状态")
         sanitized_data['status'] = status
         
