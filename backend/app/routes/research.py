@@ -108,6 +108,19 @@ async def create_research_project(
     # Create project without collaborators first, using sanitized data
     sanitized_data = security_result["sanitized_data"]
     project_data = {k: v for k, v in sanitized_data.items() if k != 'collaborator_ids'}
+    
+    # 处理start_date字段
+    if 'start_date' in project_data:
+        # 如果用户提供了start_date，使用它
+        if project_data['start_date'] is not None:
+            project_data['start_date'] = project_data['start_date']
+        else:
+            # 如果为None，使用当前时间
+            project_data['start_date'] = datetime.utcnow()
+    else:
+        # 如果没有提供，使用当前时间
+        project_data['start_date'] = datetime.utcnow()
+    
     db_project = ResearchProject(**project_data)
     db.add(db_project)
     db.flush()  # Get the project ID

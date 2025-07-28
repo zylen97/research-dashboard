@@ -8,12 +8,14 @@ import {
   Typography,
   Table,
   Switch,
+  DatePicker,
 } from 'antd';
 import {
   PlusOutlined,
   ProjectOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import { 
   StatisticsCards, 
@@ -90,6 +92,8 @@ const ResearchDashboard: React.FC = () => {
   const handleSubmit = async (values: any) => {
     const projectData: ResearchProjectCreate = {
       ...values,
+      // 处理日期格式：如果选择了日期，转换为ISO字符串；否则为null
+      start_date: values.start_date ? values.start_date.toISOString() : null,
     };
 
     if (editingProject) {
@@ -110,6 +114,7 @@ const ResearchDashboard: React.FC = () => {
     form.setFieldsValue({
       ...project,
       collaborator_ids: Array.isArray(project.collaborators) ? project.collaborators.map(c => c.id) : [],
+      start_date: project.start_date ? dayjs(project.start_date) : null,
     });
     setIsModalVisible(true);
   };
@@ -345,6 +350,18 @@ const ResearchDashboard: React.FC = () => {
             <TextArea 
               rows={2}
               placeholder="请输入来源信息（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="start_date"
+            label="开始时间"
+            rules={[{ required: false, message: '请选择项目开始时间' }]}
+          >
+            <DatePicker 
+              style={{ width: '100%' }}
+              placeholder="选择项目开始时间（留空则使用当前时间）"
+              format="YYYY-MM-DD"
             />
           </Form.Item>
 

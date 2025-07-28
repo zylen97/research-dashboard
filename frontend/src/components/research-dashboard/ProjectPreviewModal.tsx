@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Descriptions, Tag, Space, Typography, Divider } from 'antd';
+import { Modal, Descriptions, Tag, Space, Typography } from 'antd';
 import { ResearchProject } from '../../types';
 import { 
   TeamOutlined, 
@@ -180,22 +180,6 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         </Space>
       </div>
 
-      <Divider />
-
-      {/* 时间信息 */}
-      <Space direction="vertical" size="small" style={{ width: '100%' }}>
-        <Text type="secondary">
-          创建时间：{new Date(project.created_at).toLocaleString('zh-CN')}
-        </Text>
-        <Text type="secondary">
-          更新时间：{new Date(project.updated_at).toLocaleString('zh-CN')}
-        </Text>
-        {project.todo_marked_at && (
-          <Text type="secondary">
-            标记待办：{new Date(project.todo_marked_at).toLocaleString('zh-CN')}
-          </Text>
-        )}
-      </Space>
     </Modal>
   );
 };

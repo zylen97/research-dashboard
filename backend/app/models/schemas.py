@@ -48,6 +48,7 @@ class ResearchProjectBase(BaseModel):
 class ResearchProjectCreate(ResearchProjectBase):
     collaborator_ids: List[int] = []
     is_todo: Optional[bool] = Field(default=False)
+    start_date: Optional[datetime] = Field(None, description="项目开始时间")
 
 class ResearchProjectUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
@@ -59,6 +60,7 @@ class ResearchProjectUpdate(BaseModel):
     expected_completion: Optional[datetime] = None
     collaborator_ids: Optional[List[int]] = None
     is_todo: Optional[bool] = None
+    start_date: Optional[datetime] = Field(None, description="项目开始时间")
 
 class ResearchProject(ResearchProjectBase):
     id: int

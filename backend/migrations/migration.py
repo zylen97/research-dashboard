@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 研究项目状态更新
-MIGRATION_VERSION = "v1.36_research_status_update"
+# 迁移版本号 - 用户自定义项目开始时间
+MIGRATION_VERSION = "v1.37_user_defined_start_date"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,97 +85,61 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.36迁移任务：研究项目状态更新
-        # 变更：添加新的项目状态支持（审稿中、返修中）
+        # 🔧 v1.37迁移任务：用户自定义项目开始时间
+        # 变更：允许用户在创建和编辑项目时设置开始时间
         # 说明：
-        # - 现有状态保持不变：active（撰写中）、paused（暂停）、completed（存档）
-        # - 新增状态：reviewing（审稿中）、revising（返修中）
-        # - 数据库结构无需修改，status字段已支持字符串类型
-        # - 主要更新验证逻辑和前端显示
+        # - start_date字段已存在，无需修改表结构
+        # - 更新API以支持用户输入start_date
+        # - 前端添加日期选择器
+        # - 删除预览中的时间信息显示
         # ===========================================
         
-        logger.info("🔧 开始v1.36迁移：研究项目状态更新...")
-        logger.info("🎯 目标：添加新的项目状态（审稿中、返修中），优化状态管理")
+        logger.info("🔧 开始v1.37迁移：用户自定义项目开始时间...")
+        logger.info("🎯 目标：允许用户设置项目开始时间，优化时间管理")
         
-        # 第一步：检查research_projects表的status字段
-        logger.info("📋 检查research_projects表的status字段...")
+        # 第一步：检查research_projects表的start_date字段
+        logger.info("📋 检查research_projects表的start_date字段...")
         
         if table_exists(cursor, 'research_projects'):
             cursor.execute("PRAGMA table_info(research_projects)")
             columns = cursor.fetchall()
-            status_column = None
+            start_date_column = None
             for col in columns:
-                if col[1] == 'status':
-                    status_column = col
+                if col[1] == 'start_date':
+                    start_date_column = col
                     break
             
-            if status_column:
-                logger.info(f"✅ status字段存在，类型: {status_column[2]}")
+            if start_date_column:
+                logger.info(f"✅ start_date字段存在，类型: {start_date_column[2]}")
                 
-                # 检查现有状态值分布
+                # 检查现有start_date的数据情况
                 cursor.execute("""
-                    SELECT status, COUNT(*) as count 
-                    FROM research_projects 
-                    GROUP BY status
+                    SELECT COUNT(*) as total,
+                           COUNT(CASE WHEN start_date = created_at THEN 1 END) as same_as_created
+                    FROM research_projects
                 """)
-                status_distribution = cursor.fetchall()
-                logger.info("📊 现有状态分布:")
-                for status, count in status_distribution:
-                    logger.info(f"  - {status}: {count} 个项目")
+                result = cursor.fetchone()
+                total_count = result[0]
+                same_count = result[1]
+                
+                logger.info(f"📊 现有数据分析:")
+                logger.info(f"  - 总项目数: {total_count}")
+                logger.info(f"  - start_date等于created_at的项目数: {same_count}")
+                logger.info(f"  - 已自定义start_date的项目数: {total_count - same_count}")
             else:
-                logger.error("❌ research_projects表中没有status字段")
+                logger.error("❌ research_projects表中没有start_date字段")
                 return False
         else:
             logger.error("❌ research_projects表不存在")
             return False
         
         # 第二步：记录迁移说明
-        logger.info("📋 状态映射说明:")
-        logger.info("  - active → 撰写中")
-        logger.info("  - paused → 暂停")
-        logger.info("  - completed → 存档")
-        logger.info("  - reviewing → 审稿中（新增）")
-        logger.info("  - revising → 返修中（新增）")
-        
-        # 第三步：创建状态验证表（用于记录允许的状态值）
-        logger.info("📋 创建状态验证表...")
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS project_status_types (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                status_code VARCHAR(50) UNIQUE NOT NULL,
-                status_name_cn VARCHAR(50) NOT NULL,
-                display_order INTEGER DEFAULT 0,
-                color_tag VARCHAR(20),
-                is_active BOOLEAN DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # 插入状态定义
-        status_definitions = [
-            ('active', '撰写中', 1, 'processing', 1),
-            ('paused', '暂停', 2, 'warning', 1),
-            ('reviewing', '审稿中', 3, 'purple', 1),
-            ('revising', '返修中', 4, 'error', 1),
-            ('completed', '存档', 5, 'default', 1)
-        ]
-        
-        for status_code, name_cn, order, color, is_active in status_definitions:
-            cursor.execute("""
-                INSERT OR IGNORE INTO project_status_types 
-                (status_code, status_name_cn, display_order, color_tag, is_active) 
-                VALUES (?, ?, ?, ?, ?)
-            """, (status_code, name_cn, order, color, is_active))
-        
-        logger.info("✅ 状态定义表创建成功")
-        
-        # 最终验证
-        logger.info("🔍 最终验证...")
-        cursor.execute("SELECT * FROM project_status_types ORDER BY display_order")
-        statuses = cursor.fetchall()
-        logger.info("✅ 支持的状态类型:")
-        for status in statuses:
-            logger.info(f"  - {status[1]} ({status[2]}): 颜色={status[4]}, 顺序={status[3]}")
+        logger.info("📋 功能更新说明:")
+        logger.info("  - 用户可在创建项目时设置开始时间")
+        logger.info("  - 用户可在编辑项目时修改开始时间")
+        logger.info("  - 如不设置，默认使用当前时间")
+        logger.info("  - 预览页面不再显示时间戳信息")
+        logger.info("  - 列表页面不显示开始时间")
         
         # 提交更改并标记完成
         conn.commit()
@@ -184,11 +148,10 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("======================================================================")
-        logger.info("🎉 v1.36 研究项目状态更新完成！")
-        logger.info("✅ 新增状态支持：审稿中(reviewing)、返修中(revising)")
-        logger.info("✅ 状态中文映射：撰写中、暂停、审稿中、返修中、存档")
-        logger.info("✅ 创建了状态类型定义表")
-        logger.info("✅ 数据库结构保持兼容，仅需更新验证逻辑")
+        logger.info("🎉 v1.37 用户自定义项目开始时间完成！")
+        logger.info("✅ start_date字段已存在，无需修改表结构")
+        logger.info("✅ 用户可以自定义项目开始时间")
+        logger.info("✅ 数据库结构保持兼容")
         logger.info("======================================================================")
         
         
