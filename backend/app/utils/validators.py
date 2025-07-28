@@ -53,7 +53,7 @@ class DataValidator:
         
         # 检查参与的项目
         projects = collaborator.projects
-        active_projects = [p for p in projects if p.status == "active"]
+        active_projects = [p for p in projects if p.status in ["active", "reviewing", "revising"]]
         
         # 检查交流日志
         communication_logs = db.query(CommunicationLog).filter(

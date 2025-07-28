@@ -3,7 +3,8 @@ import {
   EditOutlined, 
   DeleteOutlined, 
   MessageOutlined, 
-  FlagOutlined 
+  FlagOutlined,
+  EyeOutlined 
 } from '@ant-design/icons';
 import { ResearchProject } from '../../../types';
 
@@ -14,6 +15,7 @@ export interface ProjectTableActions {
   onDelete: (project: ResearchProject) => void;
   onViewLogs: (project: ResearchProject) => void;
   onToggleTodo: (project: ResearchProject) => void;
+  onPreview: (project: ResearchProject) => void;
 }
 
 export interface ProjectColumnProps {
@@ -31,9 +33,11 @@ export interface ProjectColumnProps {
 // 状态颜色映射
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
-    active: 'processing',
-    completed: 'success',
-    paused: 'warning',
+    active: 'processing',      // 撰写中 - 蓝色
+    completed: 'default',      // 存档 - 灰色
+    paused: 'warning',         // 暂停 - 黄色
+    reviewing: 'purple',       // 审稿中 - 紫色
+    revising: 'error',         // 返修中 - 红色
   };
   return colors[status] || 'default';
 };
@@ -107,21 +111,6 @@ export const createProjectColumns = ({
     },
   },
   ...(isMobile ? [] : [{
-    title: '项目描述',
-    dataIndex: 'idea_description',
-    key: 'idea_description',
-    width: 250,
-    ellipsis: { showTitle: false },
-    render: (description: string) => (
-      <Text
-        ellipsis={{ tooltip: description }}
-        style={{ color: '#666' }}
-      >
-        {description}
-      </Text>
-    ),
-  }]),
-  ...(isMobile ? [] : [{
     title: '研究方法',
     dataIndex: 'research_method',
     key: 'research_method',
@@ -158,15 +147,19 @@ export const createProjectColumns = ({
     width: 100,
     render: (status: string) => (
       <Tag color={getStatusColor(status)}>
-        {status === 'active' ? '进行中' :
-         status === 'completed' ? '已完成' :
-         status === 'paused' ? '暂停' : status}
+        {status === 'active' ? '撰写中' :
+         status === 'completed' ? '存档' :
+         status === 'paused' ? '暂停' :
+         status === 'reviewing' ? '审稿中' :
+         status === 'revising' ? '返修中' : status}
       </Tag>
     ),
     filters: [
-      { text: '进行中', value: 'active' },
-      { text: '已完成', value: 'completed' },
+      { text: '撰写中', value: 'active' },
       { text: '暂停', value: 'paused' },
+      { text: '审稿中', value: 'reviewing' },
+      { text: '返修中', value: 'revising' },
+      { text: '存档', value: 'completed' },
     ],
     onFilter: (value: any, record: ResearchProject) => record.status === value,
   },
@@ -257,6 +250,12 @@ export const createProjectColumns = ({
       const todoStatus = getProjectTodoStatus(project);
       return (
         <Space size="small">
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => actions.onPreview(project)}
+            title="预览详情"
+          />
           <Button
             type="text"
             icon={<FlagOutlined />}

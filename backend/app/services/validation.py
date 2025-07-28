@@ -53,7 +53,7 @@ class ValidationService:
             return {"valid": False, "error": "Collaborator not found"}
         
         # 检查参与的项目
-        active_projects = [p for p in collaborator.projects if p.status == "active"]
+        active_projects = [p for p in collaborator.projects if p.status in ["active", "reviewing", "revising"]]
         completed_projects = [p for p in collaborator.projects if p.status == "completed"]
         
         # 检查交流日志
@@ -101,7 +101,7 @@ class ValidationService:
             errors.append("项目进度必须在0-100之间")
         
         # 状态验证
-        valid_statuses = ["active", "completed", "paused"]
+        valid_statuses = ["active", "completed", "paused", "reviewing", "revising"]
         status = project_data.get("status", "active")
         if status not in valid_statuses:
             errors.append(f"项目状态必须是以下之一: {', '.join(valid_statuses)}")

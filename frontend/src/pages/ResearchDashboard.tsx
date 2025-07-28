@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Button,
   Modal,
@@ -7,6 +7,7 @@ import {
   Select,
   Typography,
   Table,
+  Switch,
 } from 'antd';
 import {
   PlusOutlined,
@@ -21,6 +22,7 @@ import {
   useProjectActions 
 } from '../components/research-dashboard';
 import CommunicationLogModal from '../components/CommunicationLogModal';
+import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -30,9 +32,15 @@ const ResearchDashboard: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingProject, setEditingProject] = useState<ResearchProject | null>(null);
   const [isCommunicationModalVisible, setIsCommunicationModalVisible] = useState(false);
+  const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ResearchProject | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [showArchived, setShowArchived] = useState(() => {
+    // 从localStorage读取用户偏好
+    const saved = localStorage.getItem('showArchivedProjects');
+    return saved === 'true';
+  });
   const [form] = Form.useForm();
 
   // 使用自定义钩子管理数据和操作
@@ -94,6 +102,27 @@ const ResearchDashboard: React.FC = () => {
     setIsCommunicationModalVisible(true);
   };
 
+  // 处理项目预览
+  const handlePreview = (project: ResearchProject) => {
+    setSelectedProject(project);
+    setIsPreviewModalVisible(true);
+  };
+
+  // 过滤项目数据
+  const filteredProjects = useMemo(() => {
+    if (showArchived) {
+      return sortedProjects;
+    }
+    // 默认过滤掉存档（completed）状态的项目
+    return sortedProjects.filter(project => project.status !== 'completed');
+  }, [sortedProjects, showArchived]);
+
+  // 处理显示存档开关变化
+  const handleShowArchivedChange = (checked: boolean) => {
+    setShowArchived(checked);
+    localStorage.setItem('showArchivedProjects', checked.toString());
+  };
+
   // 表格列配置
   const columns = createProjectColumns({
     actions: {
@@ -101,6 +130,7 @@ const ResearchDashboard: React.FC = () => {
       onDelete: handleDeleteProject,
       onViewLogs: handleViewLogs,
       onToggleTodo: handleToggleTodo,
+      onPreview: handlePreview,
     },
     getProjectTodoStatus,
     currentPage,
@@ -122,10 +152,20 @@ const ResearchDashboard: React.FC = () => {
 
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
-        <Title level={3} style={{ margin: 0 }}>
-          <ProjectOutlined style={{ marginRight: 8 }} />
-          研究看板
-        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+          <Title level={3} style={{ margin: 0 }}>
+            <ProjectOutlined style={{ marginRight: 8 }} />
+            研究看板
+          </Title>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>显示存档项目</span>
+            <Switch 
+              checked={showArchived} 
+              onChange={handleShowArchivedChange}
+              size="small"
+            />
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button 
             icon={<ReloadOutlined />}
@@ -159,7 +199,7 @@ const ResearchDashboard: React.FC = () => {
       <div className="table-container">
         <Table
           size="small"
-          dataSource={sortedProjects}
+          dataSource={filteredProjects}
           columns={columns}
           rowKey="id"
           loading={isLoading}
@@ -244,9 +284,11 @@ const ResearchDashboard: React.FC = () => {
             initialValue="active"
           >
             <Select>
-              <Select.Option value="active">进行中</Select.Option>
+              <Select.Option value="active">撰写中</Select.Option>
               <Select.Option value="paused">暂停</Select.Option>
-              <Select.Option value="completed">已完成</Select.Option>
+              <Select.Option value="reviewing">审稿中</Select.Option>
+              <Select.Option value="revising">返修中</Select.Option>
+              <Select.Option value="completed">存档</Select.Option>
             </Select>
           </Form.Item>
 
@@ -284,6 +326,16 @@ const ResearchDashboard: React.FC = () => {
         }}
         onUpdate={() => {
           // 可以在这里刷新项目列表以更新最新交流进度
+        }}
+      />
+
+      {/* 项目预览模态框 */}
+      <ProjectPreviewModal
+        visible={isPreviewModalVisible}
+        project={selectedProject}
+        onClose={() => {
+          setIsPreviewModalVisible(false);
+          setSelectedProject(null);
         }}
       />
     </div>
