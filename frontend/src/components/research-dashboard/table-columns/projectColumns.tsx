@@ -178,31 +178,39 @@ export const createProjectColumns = ({
     key: 'collaborators',
     width: 180,
     render: (collaborators: any[]) => {
+      const sortedCollaborators = collaborators.sort((a, b) => {
+        // 小组优先，然后高级合作者
+        const aIsGroup = isGroupCollaborator(a);
+        const bIsGroup = isGroupCollaborator(b);
+        if (aIsGroup && !bIsGroup) return -1;
+        if (!aIsGroup && bIsGroup) return 1;
+        return (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0);
+      });
+      
       return (
-        <Space wrap>
-          {collaborators
-            .sort((a, b) => {
-              // 小组优先，然后高级合作者
-              const aIsGroup = isGroupCollaborator(a);
-              const bIsGroup = isGroupCollaborator(b);
-              if (aIsGroup && !bIsGroup) return -1;
-              if (!aIsGroup && bIsGroup) return 1;
-              return (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0);
-            })
-            .map((collaborator) => {
-              const isGroup = isGroupCollaborator(collaborator);
-              return (
-                <Tag 
-                  key={collaborator.id} 
-                  color={isGroup ? 'purple' : (collaborator.is_senior ? 'gold' : 'default')}
-                  style={{ margin: '2px' }}
-                >
-                  {isGroup && '👥 '}{collaborator.name}
-                  {collaborator.is_senior && !isGroup && ' ⭐'}
-                </Tag>
-              );
-            })}
-        </Space>
+        <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
+          {sortedCollaborators.map((collaborator, index) => {
+            const isGroup = isGroupCollaborator(collaborator);
+            let color = '#666'; // 默认颜色
+            let prefix = '';
+            
+            if (isGroup) {
+              color = '#722ed1'; // 紫色
+              prefix = '👥 ';
+            } else if (collaborator.is_senior) {
+              color = '#1890ff'; // 深蓝色
+            }
+            
+            return (
+              <span key={collaborator.id}>
+                <span style={{ color }}>
+                  {prefix}{collaborator.name}
+                </span>
+                {index < sortedCollaborators.length - 1 && ', '}
+              </span>
+            );
+          })}
+        </div>
       );
     },
   }]),
