@@ -154,14 +154,6 @@ export const createProjectColumns = ({
          status === 'revising' ? '返修中' : status}
       </Tag>
     ),
-    filters: [
-      { text: '撰写中', value: 'active' },
-      { text: '暂停', value: 'paused' },
-      { text: '审稿中', value: 'reviewing' },
-      { text: '返修中', value: 'revising' },
-      { text: '存档', value: 'completed' },
-    ],
-    onFilter: (value: any, record: ResearchProject) => record.status === value,
   },
   ...(isMobile ? [] : [{
     title: '合作者',

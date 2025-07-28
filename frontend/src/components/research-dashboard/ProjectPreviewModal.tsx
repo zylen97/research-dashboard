@@ -8,7 +8,6 @@ import {
   FileTextOutlined,
   BulbOutlined,
   LinkOutlined,
-  MessageOutlined,
   FlagOutlined
 } from '@ant-design/icons';
 
@@ -84,22 +83,6 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
     return null;
   }
 
-  // 获取最新交流记录
-  const getLatestCommunication = () => {
-    const logs = project.communication_logs || [];
-    if (logs.length === 0) return null;
-    
-    const sortedLogs = [...logs].sort((a, b) => {
-      const dateA = new Date(a.communication_date || a.created_at);
-      const dateB = new Date(b.communication_date || b.created_at);
-      return dateB.getTime() - dateA.getTime();
-    });
-    
-    return sortedLogs[0];
-  };
-
-  const latestLog = getLatestCommunication();
-
   return (
     <Modal
       title={
@@ -127,24 +110,11 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
             {getStatusText(project.status)}
           </Tag>
         </Descriptions.Item>
-        <Descriptions.Item label="进度" span={1}>
-          <Text>{project.progress}%</Text>
-        </Descriptions.Item>
         <Descriptions.Item label="开始时间" span={1}>
           <Space>
             <CalendarOutlined />
             {new Date(project.start_date).toLocaleDateString('zh-CN')}
           </Space>
-        </Descriptions.Item>
-        <Descriptions.Item label="预计完成" span={1}>
-          {project.expected_completion ? (
-            <Space>
-              <CalendarOutlined />
-              {new Date(project.expected_completion).toLocaleDateString('zh-CN')}
-            </Space>
-          ) : (
-            <Text type="secondary">未设置</Text>
-          )}
         </Descriptions.Item>
       </Descriptions>
 
@@ -208,33 +178,6 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
               );
             })}
         </Space>
-      </div>
-
-      {/* 最新交流进度 */}
-      <div>
-        <Title level={5}>
-          <MessageOutlined /> 最新交流进度
-        </Title>
-        {latestLog ? (
-          <div style={{ 
-            padding: '12px', 
-            background: '#f5f5f5', 
-            borderRadius: '4px',
-            marginBottom: 8
-          }}>
-            <Text strong>
-              {new Date(latestLog.communication_date).toLocaleDateString('zh-CN')}
-              {' - '}
-              {latestLog.title}
-            </Text>
-            <br />
-            <Text type="secondary">
-              共 {project.communication_logs.length} 条交流记录
-            </Text>
-          </div>
-        ) : (
-          <Text type="secondary">暂无交流记录</Text>
-        )}
       </div>
 
       <Divider />
