@@ -40,6 +40,7 @@ class ResearchProjectBase(BaseModel):
     idea_description: str
     research_method: Optional[str] = Field(None, description="研究方法")
     source: Optional[str] = Field(None, description="来源")
+    target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
     status: str = Field(default="active", max_length=50)
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
@@ -55,6 +56,7 @@ class ResearchProjectUpdate(BaseModel):
     idea_description: Optional[str] = None
     research_method: Optional[str] = None
     source: Optional[str] = None
+    target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
     status: Optional[str] = Field(None, max_length=50)
     progress: Optional[float] = Field(None, ge=0, le=100)
     expected_completion: Optional[datetime] = None

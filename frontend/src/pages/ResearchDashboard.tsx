@@ -354,6 +354,15 @@ const ResearchDashboard: React.FC = () => {
           </Form.Item>
 
           <Form.Item
+            name="target_journal"
+            label="(拟)投稿期刊"
+          >
+            <Input 
+              placeholder="请输入目标投稿期刊（可选）"
+            />
+          </Form.Item>
+
+          <Form.Item
             name="start_date"
             label="开始时间"
             rules={[{ required: false, message: '请选择项目开始时间' }]}

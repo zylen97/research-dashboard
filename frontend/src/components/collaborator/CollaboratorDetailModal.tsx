@@ -46,11 +46,6 @@ export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = (
         <Descriptions.Item label="姓名">{collaborator.name}</Descriptions.Item>
         <Descriptions.Item label="性别">{collaborator.gender}</Descriptions.Item>
         <Descriptions.Item label="班级">{collaborator.class_name}</Descriptions.Item>
-        <Descriptions.Item label="学号">{collaborator.student_id}</Descriptions.Item>
-        <Descriptions.Item label="电话">{collaborator.phone || '-'}</Descriptions.Item>
-        <Descriptions.Item label="邮箱">{collaborator.email || '-'}</Descriptions.Item>
-        <Descriptions.Item label="QQ">{collaborator.qq || '-'}</Descriptions.Item>
-        <Descriptions.Item label="微信">{collaborator.wechat || '-'}</Descriptions.Item>
         
         <Descriptions.Item label="状态">
           <Tag color={collaborator.is_senior ? 'gold' : 'green'}>

@@ -150,6 +150,16 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         </div>
       )}
 
+      {/* (拟)投稿期刊 */}
+      {project.target_journal && (
+        <div style={{ marginBottom: 24 }}>
+          <Title level={5}>
+            <FileTextOutlined /> (拟)投稿期刊
+          </Title>
+          <Text>{project.target_journal}</Text>
+        </div>
+      )}
+
       {/* 合作者 */}
       <div style={{ marginBottom: 24 }}>
         <Title level={5}>

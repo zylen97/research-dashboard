@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 用户自定义项目开始时间
-MIGRATION_VERSION = "v1.37_user_defined_start_date"
+# 迁移版本号 - 添加目标投稿期刊字段
+MIGRATION_VERSION = "v1.38_add_target_journal"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,61 +85,55 @@ def run_migration():
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
         
         # ===========================================
-        # 🔧 v1.37迁移任务：用户自定义项目开始时间
-        # 变更：允许用户在创建和编辑项目时设置开始时间
+        # 🔧 v1.38迁移任务：添加目标投稿期刊字段
+        # 变更：为研究项目添加目标投稿期刊字段
         # 说明：
-        # - start_date字段已存在，无需修改表结构
-        # - 更新API以支持用户输入start_date
-        # - 前端添加日期选择器
-        # - 删除预览中的时间信息显示
+        # - 新增target_journal字段存储期刊信息
+        # - 支持在创建和编辑时填写
+        # - 仅在预览中显示，不在列表中显示
         # ===========================================
         
-        logger.info("🔧 开始v1.37迁移：用户自定义项目开始时间...")
-        logger.info("🎯 目标：允许用户设置项目开始时间，优化时间管理")
+        logger.info("🔧 开始v1.38迁移：添加目标投稿期刊字段...")
+        logger.info("🎯 目标：为研究项目添加(拟)投稿期刊信息")
         
-        # 第一步：检查research_projects表的start_date字段
-        logger.info("📋 检查research_projects表的start_date字段...")
+        # 第一步：检查research_projects表
+        logger.info("📋 检查research_projects表...")
         
         if table_exists(cursor, 'research_projects'):
+            # 检查是否已有target_journal字段
             cursor.execute("PRAGMA table_info(research_projects)")
             columns = cursor.fetchall()
-            start_date_column = None
+            has_target_journal = False
+            
             for col in columns:
-                if col[1] == 'start_date':
-                    start_date_column = col
+                if col[1] == 'target_journal':
+                    has_target_journal = True
+                    logger.info(f"✅ target_journal字段已存在，类型: {col[2]}")
                     break
             
-            if start_date_column:
-                logger.info(f"✅ start_date字段存在，类型: {start_date_column[2]}")
-                
-                # 检查现有start_date的数据情况
+            if not has_target_journal:
+                # 添加target_journal字段
+                logger.info("📋 添加target_journal字段...")
                 cursor.execute("""
-                    SELECT COUNT(*) as total,
-                           COUNT(CASE WHEN start_date = created_at THEN 1 END) as same_as_created
-                    FROM research_projects
+                    ALTER TABLE research_projects 
+                    ADD COLUMN target_journal TEXT
                 """)
-                result = cursor.fetchone()
-                total_count = result[0]
-                same_count = result[1]
+                logger.info("✅ target_journal字段添加成功")
                 
-                logger.info(f"📊 现有数据分析:")
-                logger.info(f"  - 总项目数: {total_count}")
-                logger.info(f"  - start_date等于created_at的项目数: {same_count}")
-                logger.info(f"  - 已自定义start_date的项目数: {total_count - same_count}")
-            else:
-                logger.error("❌ research_projects表中没有start_date字段")
-                return False
+                # 统计项目数量
+                cursor.execute("SELECT COUNT(*) FROM research_projects")
+                project_count = cursor.fetchone()[0]
+                logger.info(f"📊 现有项目总数: {project_count}")
         else:
             logger.error("❌ research_projects表不存在")
             return False
         
         # 第二步：记录迁移说明
         logger.info("📋 功能更新说明:")
-        logger.info("  - 用户可在创建项目时设置开始时间")
-        logger.info("  - 用户可在编辑项目时修改开始时间")
-        logger.info("  - 如不设置，默认使用当前时间")
-        logger.info("  - 预览页面不再显示时间戳信息")
-        logger.info("  - 列表页面不显示开始时间")
+        logger.info("  - 添加(拟)投稿期刊字段")
+        logger.info("  - 用户可在创建和编辑项目时填写目标期刊")
+        logger.info("  - 期刊信息仅在预览页面显示")
+        logger.info("  - 列表页面不显示期刊信息")
         
         # 提交更改并标记完成
         conn.commit()
@@ -148,10 +142,10 @@ def run_migration():
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
         
         logger.info("======================================================================")
-        logger.info("🎉 v1.37 用户自定义项目开始时间完成！")
-        logger.info("✅ start_date字段已存在，无需修改表结构")
-        logger.info("✅ 用户可以自定义项目开始时间")
-        logger.info("✅ 数据库结构保持兼容")
+        logger.info("🎉 v1.38 添加目标投稿期刊字段完成！")
+        logger.info("✅ 成功添加target_journal字段")
+        logger.info("✅ 支持填写(拟)投稿期刊信息")
+        logger.info("✅ 数据库结构更新完成")
         logger.info("======================================================================")
         
         

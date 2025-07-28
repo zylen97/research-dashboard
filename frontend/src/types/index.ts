@@ -69,6 +69,7 @@ export interface ResearchProject {
   idea_description: string;
   research_method?: string; // 研究方法（从Ideas转化而来）
   source?: string; // 来源（从Ideas转化而来）
+  target_journal?: string; // (拟)投稿期刊
   status: string;
   progress: number;
   start_date: string;
@@ -88,11 +89,13 @@ export interface ResearchProjectCreate {
   idea_description: string;
   research_method?: string;
   source?: string;
+  target_journal?: string; // (拟)投稿期刊
   status?: string;
   progress?: number;
   expected_completion?: string;
   collaborator_ids?: number[];
   is_todo?: boolean; // 是否标记为待办事项
+  start_date?: string; // 项目开始时间
 }
 
 export interface ResearchProjectUpdate {
@@ -100,11 +103,13 @@ export interface ResearchProjectUpdate {
   idea_description?: string;
   research_method?: string;
   source?: string;
+  target_journal?: string; // (拟)投稿期刊
   status?: string;
   progress?: number;
   expected_completion?: string;
   collaborator_ids?: number[];
   is_todo?: boolean; // 是否标记为待办事项
+  start_date?: string; // 项目开始时间
 }
 
 
