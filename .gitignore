@@ -194,3 +194,7 @@ OPTIMIZATION_*.md
 *_temp_*.py
 migration_backup_*
 security_emergency_*
+
+# OneDrive 不兼容的文件名
+**/~
+**/~/**
