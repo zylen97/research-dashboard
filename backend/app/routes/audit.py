@@ -21,17 +21,6 @@ async def get_record_history(
     """获取记录的变更历史"""
     return AuditService.get_record_history(db, table_name, record_id, limit)
 
-@router.get("/user/{user_id}/activities")
-async def get_user_activities(
-    user_id: str,
-    start_date: Optional[datetime] = None,
-    end_date: Optional[datetime] = None,
-    limit: int = Query(100, ge=1, le=500),
-    db: Session = Depends(get_db)
-) -> List[Dict[str, Any]]:
-    """获取用户的操作历史"""
-    return AuditService.get_user_activities(db, user_id, start_date, end_date, limit)
-
 @router.get("/recent")
 async def get_recent_activities(
     limit: int = Query(50, ge=1, le=200),
@@ -58,17 +47,16 @@ async def get_recent_activities(
             "table_name": log.table_name,
             "record_id": log.record_id,
             "action": log.action,
-            "user_id": log.user_id,
             "ip_address": log.ip_address,
             "created_at": log.created_at.isoformat()
         }
-        
+
         if log.changes:
             import json
             activity["changes_summary"] = json.loads(log.changes)
-        
+
         activities.append(activity)
-    
+
     return activities
 
 @router.get("/statistics")

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import research, collaborators, validation, audit, backup, config
 from app.routes import ideas
-from app.utils.db_init import init_database, create_sample_data
+from app.models.database import init_db
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
 from app.middleware.error_handler import setup_exception_handlers
 from app.core.config import settings
@@ -21,11 +21,9 @@ async def lifespan(app: FastAPI):
     # Ultra Think测试：真正的后端代码修改应该触发智能重启
     logger.info(f"📁 数据库路径: {settings.DATABASE_URL}")
     logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
-    
-    init_database()
-    # init_users()  # 已移除用户系统
-    # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
-    
+
+    init_db()  # 初始化数据库表
+
     logger.info(f"✅ 应用启动成功！监听地址: {settings.HOST}:{settings.PORT}")
     
     yield  # 应用运行期间

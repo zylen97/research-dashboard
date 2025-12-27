@@ -8,10 +8,8 @@ from .database import (
     ResearchProject,
     CommunicationLog,
     AuditLog,
-    User,
     SystemConfig,
     Idea,
-    UserProjectTodo,
     project_collaborators
 )
 
@@ -34,16 +32,6 @@ from .schemas import (
     CommunicationLogCreate,
     CommunicationLogUpdate,
     CommunicationLog as CommunicationLogSchema,
-
-    # User schemas
-    UserBase,
-    UserCreate,
-    UserUpdate,
-    UserLogin,
-    User as UserSchema,
-
-    # Auth schemas
-    Token,
 
     # Utility schemas
     FileUploadResponse,
@@ -69,13 +57,11 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "User", "SystemConfig", "Idea", "UserProjectTodo",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea",
     "project_collaborators",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",
-    "UserBase", "UserCreate", "UserUpdate", "UserLogin", "UserSchema",
-    "Token",
     "FileUploadResponse",
     "SystemConfigBase", "SystemConfigCreate", "SystemConfigUpdate", "SystemConfigSchema",
     "AIProviderConfig", "AITestRequest", "AITestResponse",

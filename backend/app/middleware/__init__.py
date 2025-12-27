@@ -1,8 +1,7 @@
-from .security import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
+from .security import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
 
 __all__ = [
     "RateLimitMiddleware",
-    "SecurityHeadersMiddleware", 
-    "RequestValidationMiddleware",
-    "AuthMiddleware"
+    "SecurityHeadersMiddleware",
+    "RequestValidationMiddleware"
 ]

@@ -69,20 +69,16 @@ class ResearchProject(Base):
 class AuditLog(Base):
     """审计日志模型"""
     __tablename__ = "audit_logs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     table_name = Column(String(50), nullable=False)
     record_id = Column(Integer, nullable=False)
     action = Column(String(20), nullable=False)  # CREATE, UPDATE, DELETE, RESTORE
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=True)  # 改为外键关联
     ip_address = Column(String(45))
     old_values = Column(Text)  # JSON格式
     new_values = Column(Text)  # JSON格式
     changes = Column(Text)  # JSON格式
     created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User")
 
 class CommunicationLog(Base):
     """交流日志模型"""
@@ -107,28 +103,10 @@ class CommunicationLog(Base):
     project = relationship("ResearchProject", back_populates="communication_logs")
     collaborator = relationship("Collaborator")
 
-class User(Base):
-    """用户模型"""
-    __tablename__ = "users"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    username = Column(String(50), unique=True, nullable=False, index=True)
-    email = Column(String(100), unique=True, nullable=False, index=True)
-    password_hash = Column(String(255), nullable=False)
-    display_name = Column(String(100), nullable=False)
-    avatar_url = Column(String(500))
-    is_active = Column(Boolean, default=True)
-    
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    last_login = Column(DateTime)
-    
-    # 关系定义
-
 class SystemConfig(Base):
     """系统配置模型 - 存储系统设置和AI配置信息"""
     __tablename__ = "system_configs"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     key = Column(String(100), unique=True, nullable=False, index=True)
     value = Column(Text, nullable=False)
@@ -136,16 +114,10 @@ class SystemConfig(Base):
     description = Column(String(500))
     is_encrypted = Column(Boolean, default=False, index=True)  # 加密状态索引
     is_active = Column(Boolean, default=True, index=True)  # 启用状态索引
-    
+
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    created_by_id = Column(Integer, ForeignKey('users.id'), index=True)
-    updated_by_id = Column(Integer, ForeignKey('users.id'), index=True)
-    
-    # Relationships
-    created_by = relationship("User", foreign_keys=[created_by_id], backref="created_configs")
-    updated_by = relationship("User", foreign_keys=[updated_by_id], backref="updated_configs")
-    
+
     # 复合索引优化配置查询
     __table_args__ = (
         Index('idx_config_category_active', 'category', 'is_active'),
@@ -173,43 +145,6 @@ class Idea(Base):
         Index('idx_ideas_responsible_person', 'responsible_person'),
         Index('idx_ideas_created_at', 'created_at'),
     )
-
-
-class UserProjectTodo(Base):
-    """用户项目待办关联模型"""
-    __tablename__ = "user_project_todos"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    project_id = Column(Integer, ForeignKey('research_projects.id', ondelete='CASCADE'), nullable=False)
-    marked_at = Column(DateTime, default=datetime.utcnow)
-    priority = Column(Integer, default=0)  # 优先级
-    notes = Column(Text)  # 备注
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", backref="project_todos")
-    project = relationship("ResearchProject", backref="user_todos")
-    
-    # 唯一约束
-    __table_args__ = (
-        UniqueConstraint('user_id', 'project_id', name='_user_project_uc'),
-    )
-
-
-class UserApiSettings(Base):
-    """用户API设置模型"""
-    __tablename__ = "user_api_settings"
-    
-    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), primary_key=True)
-    api_key = Column(String(500))
-    api_base = Column(String(500))
-    model = Column(String(100))
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    user = relationship("User", backref="api_settings")
 
 
 # Create database tables

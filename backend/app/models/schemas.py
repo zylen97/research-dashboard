@@ -166,43 +166,6 @@ class FileUploadResponse(BaseModel):
     errors: List[str] = []
 
 
-# User schemas
-class UserBase(BaseModel):
-    username: str = Field(..., max_length=50)
-    email: EmailStr
-    display_name: str = Field(..., max_length=100)
-    avatar_url: Optional[str] = Field(None, max_length=500)
-
-class UserCreate(UserBase):
-    password: str = Field(..., min_length=6, max_length=50)
-
-class UserUpdate(BaseModel):
-    display_name: Optional[str] = Field(None, max_length=100)
-    avatar_url: Optional[str] = Field(None, max_length=500)
-    is_active: Optional[bool] = None
-
-class UserLogin(BaseModel):
-    username: str
-    password: str
-
-class User(UserBase):
-    id: int
-    is_active: bool
-    created_at: datetime
-    updated_at: datetime
-    last_login: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True
-
-
-# Auth response schemas
-class Token(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
-    expires_in: int
-    user: User
-
 # System Config schemas
 class SystemConfigBase(BaseModel):
     key: str = Field(..., max_length=100)
@@ -224,9 +187,7 @@ class SystemConfig(SystemConfigBase):
     id: int
     created_at: datetime
     updated_at: datetime
-    created_by_id: Optional[int] = None
-    updated_by_id: Optional[int] = None
-    
+
     class Config:
         from_attributes = True
 
