@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, validation, audit, auth, backup, config
+from app.routes import research, collaborators, validation, audit, backup, config
 from app.routes import idea_discovery
 from app.routes import settings as settings_routes
 from app.routes import ideas, prompts
-from app.utils.db_init import init_database, init_users, create_sample_data
-from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware, AuthMiddleware
+from app.utils.db_init import init_database, create_sample_data
+from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
 from app.middleware.error_handler import setup_exception_handlers
 from app.core.config import settings
 import logging
@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
     
     init_database()
-    init_users()  # 初始化用户账号
+    # init_users()  # 已移除用户系统
     # create_sample_data()  # 暂时禁用示例数据，避免多租户约束问题
     
     logger.info(f"✅ 应用启动成功！监听地址: {settings.HOST}:{settings.PORT}")
@@ -64,7 +64,7 @@ app.add_middleware(
 
 # 安全中间件 - 注意：最后添加的中间件最先执行
 # 顺序：AuthMiddleware -> RateLimitMiddleware -> RequestValidationMiddleware -> SecurityHeadersMiddleware -> CORSMiddleware
-app.add_middleware(AuthMiddleware)  # 认证中间件放在最后添加，这样它会在CORS之后执行
+# app.add_middleware(AuthMiddleware)  # 已移除认证系统
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
@@ -73,7 +73,7 @@ app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次
 setup_exception_handlers(app)
 
 # Include routers
-app.include_router(auth.router, prefix="/auth", tags=["authentication"])
+# app.include_router(auth.router, prefix="/auth", tags=["authentication"])  # 已移除认证
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/collaborators", tags=["collaborators"])
 app.include_router(idea_discovery.router, prefix="/ideas", tags=["idea-discovery"])

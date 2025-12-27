@@ -6,7 +6,7 @@ import {
   Collaborator, CollaboratorCreate, CollaboratorUpdate,
   ResearchProject, ResearchProjectCreate, ResearchProjectUpdate,
   CommunicationLog, CommunicationLogCreate, CommunicationLogUpdate,
-  FileUploadResponse, User, UserLogin, AuthToken,
+  FileUploadResponse,
   SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse,
   BackupStats, BackupListResponse, BackupCreateResponse,
@@ -32,11 +32,8 @@ api.interceptors.request.use(
     if (config.url && !config.url.startsWith(ENV.API_PREFIX) && !config.url.startsWith('http')) {
       config.url = ENV.API_PREFIX + config.url;
     }
-    
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+
+    // 已移除认证系统 - 不再添加Authorization头
     return config;
   },
   (error) => Promise.reject(error)
@@ -174,30 +171,7 @@ export const researchApi = createExtendedCRUDApi<
   })
 );
 
-// 认证API - 不适合使用CRUD工厂
-export const authApi = {
-  login: (credentials: UserLogin): Promise<AuthToken> =>
-    api.post('/auth/login', credentials),
-
-  getCurrentUser: (): Promise<User> =>
-    api.get('/auth/me'),
-
-  logout: (): void => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    window.location.href = '/auth';
-  },
-
-  isAuthenticated: (): boolean => {
-    const token = localStorage.getItem('auth_token');
-    return !!token;
-  },
-
-  getLocalUser: (): User | null => {
-    const userStr = localStorage.getItem('auth_user');
-    return userStr ? JSON.parse(userStr) : null;
-  },
-};
+// 已移除认证系统 - authApi 已删除
 
 // 系统配置API
 export const configApi = createExtendedCRUDApi<

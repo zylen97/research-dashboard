@@ -22,11 +22,11 @@ const ENV_CONFIGS: Record<Environment, EnvironmentConfig> = {
     LOG_LEVEL: 'debug',
   },
   production: {
-    API_BASE_URL: 'http://45.149.156.216:3001', // 修复：指向正确的后端端口
+    API_BASE_URL: 'http://localhost:8080', // 本地化：指向本地后端
     API_PREFIX: '/api',
     API_TIMEOUT: 120000,  // 增加到120秒，支持并发Excel处理
     USE_MOCK: false,
-    LOG_LEVEL: 'error',
+    LOG_LEVEL: 'info',
   },
   test: {
     API_BASE_URL: 'http://localhost:8080',

@@ -10,8 +10,6 @@ from typing import List
 from datetime import datetime
 
 from app.models.database import get_db, Prompt
-from app.utils.auth import get_current_user
-from app.models.schemas import User
 from app.utils.crud_base import CRUDBase
 
 router = APIRouter()
@@ -40,7 +38,6 @@ prompt_crud = CRUDBase[Prompt, PromptCreate, PromptUpdate](Prompt)
 
 @router.get("/", response_model=List[PromptResponse])
 async def get_prompts(
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取所有prompts列表"""
@@ -54,7 +51,6 @@ async def get_prompts(
 @router.post("/", response_model=PromptResponse)
 async def create_prompt(
     prompt: PromptCreate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """创建新prompt"""
@@ -78,7 +74,6 @@ async def create_prompt(
 async def update_prompt(
     prompt_id: int,
     prompt: PromptUpdate,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """更新prompt"""
@@ -110,7 +105,6 @@ async def update_prompt(
 @router.delete("/{prompt_id}")
 async def delete_prompt(
     prompt_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """删除prompt"""
@@ -140,7 +134,6 @@ async def delete_prompt(
 @router.get("/{prompt_id}", response_model=PromptResponse)
 async def get_prompt(
     prompt_id: int,
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """获取单个prompt详情"""

@@ -161,45 +161,7 @@ export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as cons
 export const PROJECT_STATUSES = ['active', 'completed', 'paused', 'reviewing', 'revising'] as const;
 
 
-// 导出API相关类型
-
-// 用户类型
-export interface User {
-  id: number;
-  username: string;
-  email: string;
-  display_name: string;
-  avatar_url?: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  last_login?: string;
-}
-
-
-
-export interface UserLogin {
-  username: string;
-  password: string;
-}
-
-
-// 认证令牌响应 - 与后端Token模型匹配
-export interface AuthToken {
-  access_token: string;
-  token_type: string;  // 默认"bearer"
-  expires_in: number;
-  user: User;
-}
-
-export interface AuthContextType {
-  user: User | null;
-  token: string | null;
-  login: (credentials: UserLogin) => Promise<AuthToken>;
-  logout: () => void;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-}
+// 已移除认证系统 - User, UserLogin, AuthToken, AuthContextType 已删除
 
 // 系统配置类型
 export interface SystemConfig {

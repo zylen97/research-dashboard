@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Avatar, Dropdown, Button, theme, Space, Drawer } from 'antd';
+import { Layout, Menu, Typography, Avatar, Button, theme, Space, Drawer } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -8,11 +8,9 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   UserOutlined,
-  LogoutOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
 
 const { Header, Sider, Content } = Layout;
 const { Title } = Typography;
@@ -26,7 +24,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const [mobileView, setMobileView] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
   const {
     token: { colorBgContainer },
   } = theme.useToken();
@@ -80,22 +77,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
     ];
   };
 
-  // 用户菜单
-  const userMenuItems = [
-    {
-      key: 'profile',
-      icon: <UserOutlined />,
-      label: '个人资料',
-    },
-    {
-      type: 'divider' as const,
-    },
-    {
-      key: 'logout',
-      icon: <LogoutOutlined />,
-      label: '退出登录',
-    },
-  ];
 
   // 获取当前选中的菜单项
   const getSelectedKey = () => {
@@ -199,35 +180,9 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             }}
           />
 
-          {/* 工具栏和用户信息 */}
+          {/* 工具栏 */}
           <Space size="middle">
-            {/* 用户信息 */}
-            <Dropdown
-              menu={{ 
-                items: userMenuItems,
-                onClick: ({ key }) => {
-                  if (key === 'logout') {
-                    logout();
-                  }
-                }
-              }}
-              placement="bottomRight"
-              arrow
-            >
-              <div style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                cursor: 'pointer',
-                padding: mobileView ? '8px' : '8px 12px',
-                borderRadius: '8px',
-                transition: 'all 0.3s ease',
-              }}>
-                <Avatar icon={<UserOutlined />} style={{ marginRight: mobileView ? 0 : 8 }} />
-                {!mobileView && (
-                  <span style={{ fontSize: '14px', fontWeight: 500, marginLeft: 8 }}>{user?.display_name}</span>
-                )}
-              </div>
-            </Dropdown>
+            <Avatar icon={<UserOutlined />} />
           </Space>
         </Header>
 

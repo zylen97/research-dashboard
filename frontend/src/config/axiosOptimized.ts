@@ -69,13 +69,9 @@ export function createOptimizedAxiosInstance(): AxiosInstance {
       if (config.url && !config.url.startsWith(ENV.API_PREFIX) && !config.url.startsWith('http')) {
         config.url = ENV.API_PREFIX + config.url;
       }
-      
-      // 添加认证token
-      const token = localStorage.getItem('auth_token');
-      if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-      
+
+      // 已移除认证系统 - 不再添加Authorization头
+
       // 开发环境日志
       if (ENV.LOG_LEVEL === 'debug') {
         console.log('[API Request]', {

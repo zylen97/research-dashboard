@@ -1,9 +1,9 @@
 # 🎓 USTS Research Dashboard
 
-科研项目管理系统
+科研项目管理系统（本地化版本）
 
-[![部署状态](https://img.shields.io/badge/部署-生产环境-brightgreen)](http://45.149.156.216:3001)
 [![技术栈](https://img.shields.io/badge/技术栈-React+FastAPI-blue)](#-技术架构)
+[![运行环境](https://img.shields.io/badge/运行环境-本地-orange)](#-本地运行)
 
 ---
 
@@ -88,19 +88,48 @@ USTS Research Dashboard 是一个科研项目管理平台，提供项目进度�
 - SQLAlchemy 2.x ORM
 - Pydantic v2 数据验证
 - SQLite 数据库
-- JWT 认证
-
-### 部署架构
-- Nginx 反向代理
-- Systemd 服务管理
-- 自动化部署脚本
 
 ---
 
-## 🌐 访问地址
+## 🏠 本地运行
 
-- **主站**: http://45.149.156.216:3001
-- **API文档**: http://45.149.156.216:8080/docs
+### 快速启动
+```bash
+# 一键启动前后端
+./start-local.sh
+
+# 停止服务
+./stop-local.sh
+```
+
+### 手动启动
+```bash
+# 后端
+cd backend
+source venv/bin/activate  # 如果有虚拟环境
+python -m uvicorn main:app --host 127.0.0.1 --port 8080 --reload
+
+# 前端（新终端）
+cd frontend
+PORT=3001 npm start
+```
+
+### 访问地址
+- **前端**: http://localhost:3001
+- **后端API文档**: http://localhost:8080/docs
+- **健康检查**: http://localhost:8080/health
+
+### 首次运行
+1. 确保Python 3.8+和Node.js已安装
+2. 后端依赖：`cd backend && pip install -r requirements.txt`
+3. 前端依赖：`cd frontend && npm install`
+4. 启动服务：`./start-local.sh`
+
+---
+
+## 🌐 项目说明
+
+本项目已本地化运行，无需VPS部署。单用户模式，直接访问即可使用。
 
 ---
 

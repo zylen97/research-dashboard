@@ -16,29 +16,15 @@ import httpx
 
 router = APIRouter()
 
-# 管理员检查装饰器
-def require_admin(request: Request):
-    """确保只有管理员可以访问配置"""
-    current_user = request.state.current_user
-    # 这里简单地检查是否是特定用户，实际应该有角色管理
-    if current_user.username not in ['zl', 'admin']:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only administrators can access system configuration"
-        )
-    return current_user
+# 已移除认证系统 - 单用户模式，无需管理员检查
 
 @router.get("/", response_model=List[SystemConfigSchema])
 async def get_configs(
-    request: Request,
     category: Optional[str] = None,
     is_active: Optional[bool] = True,
     db: Session = Depends(get_db)
 ):
     """获取系统配置列表"""
-    # 允许所有登录用户访问配置列表
-    current_user = request.state.current_user
-    
     query = db.query(SystemConfig)
     if category:
         query = query.filter(SystemConfig.category == category)
@@ -59,14 +45,10 @@ async def get_configs(
 
 @router.get("/{config_id}", response_model=SystemConfigSchema)
 async def get_config(
-    request: Request,
     config_id: int,
     db: Session = Depends(get_db)
 ):
     """获取单个配置"""
-    # 允许所有登录用户访问
-    current_user = request.state.current_user
-    
     config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not config:
         raise HTTPException(
@@ -84,14 +66,10 @@ async def get_config(
 
 @router.post("/", response_model=SystemConfigSchema)
 async def create_config(
-    request: Request,
     config: SystemConfigCreate,
     db: Session = Depends(get_db)
 ):
     """创建新配置"""
-    # 允许所有登录用户创建配置
-    current_user = request.state.current_user
-    
     # 检查key是否已存在
     existing = db.query(SystemConfig).filter(SystemConfig.key == config.key).first()
     if existing:
@@ -99,10 +77,9 @@ async def create_config(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Configuration with key '{config.key}' already exists"
         )
-    
+
     db_config = SystemConfig(**config.model_dump())
-    db_config.created_by_id = current_user.id
-    db_config.updated_by_id = current_user.id
+    # 已移除用户系统 - created_by_id 和 updated_by_id 保持为 NULL
     
     # 如果是敏感信息，加密存储
     if config.is_encrypted:
@@ -120,32 +97,28 @@ async def create_config(
 
 @router.put("/{config_id}", response_model=SystemConfigSchema)
 async def update_config(
-    request: Request,
     config_id: int,
     config_update: SystemConfigUpdate,
     db: Session = Depends(get_db)
 ):
     """更新配置"""
-    # 允许所有登录用户更新配置
-    current_user = request.state.current_user
-    
     db_config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not db_config:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Configuration not found"
         )
-    
+
     update_data = config_update.model_dump(exclude_unset=True)
-    
+
     # 如果更新值且是加密的，需要加密新值
     if 'value' in update_data and db_config.is_encrypted:
         update_data['value'] = encryption_util.encrypt(update_data['value'])
-    
+
     for field, value in update_data.items():
         setattr(db_config, field, value)
-    
-    db_config.updated_by_id = current_user.id
+
+    # 已移除用户系统 - updated_by_id 保持不变
     
     db.commit()
     db.refresh(db_config)
@@ -159,14 +132,10 @@ async def update_config(
 
 @router.delete("/{config_id}")
 async def delete_config(
-    request: Request,
     config_id: int,
     db: Session = Depends(get_db)
 ):
     """删除配置"""
-    # 允许所有登录用户删除配置
-    current_user = request.state.current_user
-    
     db_config = db.query(SystemConfig).filter(SystemConfig.id == config_id).first()
     if not db_config:
         raise HTTPException(
@@ -181,13 +150,9 @@ async def delete_config(
 
 @router.post("/ai/test", response_model=AITestResponse)
 async def test_ai_connection(
-    request: Request,
     test_request: AITestRequest
 ):
     """测试AI API连接"""
-    # 不需要管理员权限，所有已登录用户都可以测试AI连接
-    current_user = request.state.current_user
-    
     try:
         # 统一使用OpenAI兼容接口
         base_url = test_request.api_url or "https://api.chatanywhere.tech/v1"

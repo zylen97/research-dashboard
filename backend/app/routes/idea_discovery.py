@@ -10,8 +10,6 @@ from datetime import datetime
 
 from app.models.database import get_db, Prompt
 from app.utils.response import success_response
-from app.utils.auth import get_current_user
-from app.models.schemas import User
 from app.services.ai_service import create_ai_service
 import logging
 
@@ -38,7 +36,6 @@ async def process_excel_file(
     prompt_id: Optional[int] = Form(None),
     custom_prompt: Optional[str] = Form(None),
     max_concurrent: Optional[int] = Form(50),
-    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """

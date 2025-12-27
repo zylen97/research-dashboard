@@ -5,7 +5,7 @@ import {
   CommunicationLog, CommunicationLogCreate, CommunicationLogUpdate,
   FileUploadResponse,
   PaginationParams,
-  User, UserLogin, AuthToken, SystemConfig, SystemConfigCreate, SystemConfigUpdate,
+  SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse,
   Prompt, PromptCreate, PromptUpdate
@@ -35,12 +35,8 @@ api.interceptors.request.use(
       }
       config.url = ENV.API_PREFIX + config.url;
     }
-    
-    // 从localStorage获取token
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+
+    // 已移除认证系统 - 不再添加Authorization头
     return config;
   },
   (error) => {
@@ -254,38 +250,7 @@ export const researchApi = {
   }> =>
     api.get(`/research/${id}/check-dependencies`),
 };
-
-
-
-// 认证API
-export const authApi = {
-  // 用户登录
-  login: (credentials: UserLogin): Promise<AuthToken> =>
-    api.post('/auth/login', credentials),
-
-  // 获取当前用户信息
-  getCurrentUser: (): Promise<User> =>
-    api.get('/auth/me'),
-
-  // 用户登出（本地操作）
-  logout: (): void => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    window.location.href = '/auth';
-  },
-
-  // 检查登录状态
-  isAuthenticated: (): boolean => {
-    const token = localStorage.getItem('auth_token');
-    return !!token;
-  },
-
-  // 获取本地缓存的用户信息
-  getLocalUser: (): User | null => {
-    const userStr = localStorage.getItem('auth_user');
-    return userStr ? JSON.parse(userStr) : null;
-  },
-};
+// 已移除认证系统 - authApi 已删除
 
 // 系统配置 API
 export const configApi = {

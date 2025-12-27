@@ -10,14 +10,12 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from ..utils.backup_manager import BackupManager
-from ..models.database import get_db, User
-from ..utils.auth import get_current_user
-from ..models.schemas import User as UserSchema
+from ..models.database import get_db
 
 router = APIRouter()
 
 @router.get("/stats")
-async def get_backup_stats(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def get_backup_stats() -> Dict[str, Any]:
     """获取备份统计信息"""
     try:
         manager = BackupManager()
@@ -30,7 +28,7 @@ async def get_backup_stats(current_user: User = Depends(get_current_user)) -> Di
         raise HTTPException(status_code=500, detail=f"获取备份统计失败: {str(e)}")
 
 @router.get("/list")
-async def list_backups(current_user: User = Depends(get_current_user)) -> Dict[str, Any]:
+async def list_backups() -> Dict[str, Any]:
     """列出所有备份"""
     try:
         manager = BackupManager()
@@ -64,13 +62,12 @@ async def list_backups(current_user: User = Depends(get_current_user)) -> Dict[s
 
 @router.post("/create")
 async def create_backup(
-    reason: str = "手动备份",
-    current_user: User = Depends(get_current_user)
+    reason: str = "手动备份"
 ) -> Dict[str, Any]:
     """创建新备份"""
     try:
         manager = BackupManager()
-        backup_path = manager.create_backup(f"{reason} (by {current_user.username})")
+        backup_path = manager.create_backup(reason)
         
         if backup_path:
             # 获取新备份信息
@@ -97,8 +94,7 @@ async def create_backup(
 
 @router.post("/restore/{backup_id}")
 async def restore_backup(
-    backup_id: str,
-    current_user: User = Depends(get_current_user)
+    backup_id: str
 ) -> Dict[str, Any]:
     """恢复指定备份"""
     try:
@@ -129,8 +125,7 @@ async def restore_backup(
 
 @router.delete("/{backup_id}")
 async def delete_backup(
-    backup_id: str,
-    current_user: User = Depends(get_current_user)
+    backup_id: str
 ) -> Dict[str, Any]:
     """删除指定备份"""
     try:
@@ -155,8 +150,7 @@ async def delete_backup(
 
 @router.get("/download/{backup_id}")
 async def download_backup(
-    backup_id: str,
-    current_user: User = Depends(get_current_user)
+    backup_id: str
 ) -> Response:
     """下载备份文件"""
     try:
