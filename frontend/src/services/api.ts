@@ -8,7 +8,8 @@ import {
   SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse, BackupStats,
   BackupListResponse, BackupCreateResponse,
-  Prompt, PromptCreate, PromptUpdate
+  Prompt, PromptCreate, PromptUpdate,
+  Idea, IdeaCreate, IdeaUpdate, ConvertToProjectResponse
 } from '../types';
 import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
@@ -452,6 +453,40 @@ export const promptsApi = {
   // 删除prompt
   deletePrompt: (id: number): Promise<{ success: boolean; message: string }> =>
     api.delete(`/prompts/${id}`),
+};
+
+// Ideas管理 API
+export const ideaApi = {
+  // 获取Ideas列表
+  getIdeas: async (params?: {
+    skip?: number;
+    limit?: number;
+    maturity?: 'mature' | 'immature';
+    responsible_person?: string;
+  }): Promise<Idea[]> => {
+    const response = await api.get('/ideas/', { params });
+    return handleListResponse<Idea>(response, 'API.getIdeas');
+  },
+
+  // 获取单个Idea
+  getIdea: (id: number): Promise<Idea> =>
+    api.get(`/ideas/${id}`),
+
+  // 创建Idea
+  createIdea: (data: IdeaCreate): Promise<Idea> =>
+    api.post('/ideas/', data),
+
+  // 更新Idea
+  updateIdea: (id: number, data: IdeaUpdate): Promise<Idea> =>
+    api.put(`/ideas/${id}`, data),
+
+  // 删除Idea
+  deleteIdea: (id: number): Promise<{ message: string }> =>
+    api.delete(`/ideas/${id}`),
+
+  // 转换为研究项目
+  convertToProject: (id: number, collaboratorIds?: number[]): Promise<ConvertToProjectResponse> =>
+    api.post(`/ideas/${id}/convert-to-project`, { collaborator_ids: collaboratorIds }),
 };
 
 export default api;

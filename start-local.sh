@@ -62,7 +62,8 @@ if [ ! -d "node_modules" ]; then
 fi
 
 # 启动前端（开发模式）
-PORT=3001 npm start > ../logs/frontend.log 2>&1 &
+# 设置 NODE_OPTIONS 解决 Node.js v25 兼容性问题
+NODE_OPTIONS='--no-experimental-webstorage' PORT=3001 npm start > ../logs/frontend.log 2>&1 &
 FRONTEND_PID=$!
 echo $FRONTEND_PID > ../pids/frontend.pid
 echo -e "${GREEN}✓ 前端已启动 (PID: $FRONTEND_PID)${NC}"

@@ -1,5 +1,7 @@
 // 导出api.ts中的所有类型
 export * from './api';
+// 导出Ideas相关类型
+export * from './ideas';
 
 // API响应类型 - 统一后端响应格式
 export interface ApiResponse<T> {
