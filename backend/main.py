@@ -72,13 +72,13 @@ setup_exception_handlers(app)
 
 # Include routers
 # app.include_router(auth.router, prefix="/auth", tags=["authentication"])  # 已移除认证
-app.include_router(research.router, prefix="/research", tags=["research"])
-app.include_router(collaborators.router, prefix="/collaborators", tags=["collaborators"])
-app.include_router(validation.router, prefix="/validation", tags=["validation"])
-app.include_router(audit.router, prefix="/audit", tags=["audit"])
-app.include_router(backup.router, prefix="/backup", tags=["backup"])
-app.include_router(config.router, prefix="/config", tags=["configuration"])
-app.include_router(ideas.router, prefix="/ideas", tags=["ideas"])
+app.include_router(research.router, prefix="/api/research", tags=["research"])
+app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
+app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
+app.include_router(audit.router, prefix="/api/audit", tags=["audit"])
+app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
+app.include_router(config.router, prefix="/api/config", tags=["configuration"])
+app.include_router(ideas.router, prefix="/api/ideas", tags=["ideas"])
 
 @app.get("/")
 async def root():
