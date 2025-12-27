@@ -6,31 +6,20 @@ from typing import List, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 
-# 根据环境变量加载对应的 .env 文件
-env = os.getenv("ENVIRONMENT", "development")
-env_file = f".env.{env}"
-if Path(env_file).exists():
-    load_dotenv(env_file)
-else:
-    load_dotenv()  # 加载默认的 .env 文件
+# 加载配置文件
+load_dotenv()
 
 
 class Settings:
     """应用配置类"""
 
-    # 环境配置
-    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
-    IS_PRODUCTION: bool = ENVIRONMENT == "production"
-    IS_DEVELOPMENT: bool = ENVIRONMENT == "development"
-
-    # 安全配置
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "default-secret-key-change-in-production")
+    # 安全配置（已移除认证系统，保留兼容性）
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "deprecated-not-used")
     ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
 
     # 数据库配置
-    DATABASE_URL: str = os.getenv("DATABASE_URL", 
-                                  f"sqlite:///./data/research_dashboard_{'prod' if os.getenv('ENVIRONMENT') == 'production' else 'dev'}.db")
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/research_dashboard.db")
 
     # CORS配置
     CORS_ORIGINS: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3001").split(",")
@@ -58,10 +47,6 @@ class Settings:
         self.DATA_DIR.mkdir(exist_ok=True)
         self.LOGS_DIR.mkdir(exist_ok=True)
         Path(self.UPLOAD_DIR).mkdir(parents=True, exist_ok=True)
-
-        # 生产环境检查
-        if self.IS_PRODUCTION and self.SECRET_KEY == "default-secret-key-change-in-production":
-            raise ValueError("请在生产环境中设置 SECRET_KEY 环境变量！")
 
     def get_database_url(self) -> str:
         """获取数据库URL"""

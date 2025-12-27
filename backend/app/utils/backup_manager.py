@@ -39,11 +39,8 @@ class BackupManager:
             # 非SQLite数据库，使用默认路径
             self.db_path = self.backend_dir / "research_dashboard.db"
         
-        # 设置备份目录
-        if settings.IS_PRODUCTION:
-            self.backup_dir = self.backend_dir / "backups" / "production"
-        else:
-            self.backup_dir = self.backend_dir / "backups" / "dev"
+        # 设置备份目录（统一使用单一目录）
+        self.backup_dir = self.backend_dir / "backups"
         
         self.max_backups = 7  # 保留最近7个备份
         
@@ -230,8 +227,7 @@ class BackupManager:
             "oldest_backup": backups[-1] if backups else None,
             "newest_backup": backups[0] if backups else None,
             "average_size": total_size // len(backups) if backups else 0,
-            "max_backups": self.max_backups,
-            "current_environment": settings.ENVIRONMENT
+            "max_backups": self.max_backups
         }
 
 

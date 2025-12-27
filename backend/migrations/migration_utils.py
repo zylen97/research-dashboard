@@ -42,52 +42,56 @@ def setup_migration_logging():
 
 def find_database_path(environment: Optional[str] = None) -> Optional[str]:
     """
-    查找数据库文件路径
-    
+    查找数据库文件路径（简化版 - 单一数据库）
+
     Args:
-        environment: 环境类型 ('development' 或 'production')
-        
+        environment: 保留参数用于兼容性，实际不使用
+
     Returns:
         数据库文件路径，如果找不到返回None
     """
     base_dir = os.path.dirname(os.path.dirname(__file__))
     data_dir = os.path.join(base_dir, 'data')
-    
-    # 根据环境变量确定优先级
-    env = environment or os.environ.get('ENVIRONMENT', 'production')
+    db_path = os.path.join(data_dir, 'research_dashboard.db')
 
-    if env in ['local', 'development']:
-        db_paths = [
-            os.path.join(data_dir, 'research_dashboard.db'),
-            os.path.join(data_dir, 'research_dashboard_dev.db'),
-            os.path.join(data_dir, 'research_dashboard_prod.db')
-        ]
-    else:
-        db_paths = [
-            os.path.join(data_dir, 'research_dashboard_prod.db'),
-            os.path.join(data_dir, 'research_dashboard_dev.db'),
-            os.path.join(data_dir, 'research_dashboard.db')
-        ]
-    
-    for path in db_paths:
-        if os.path.exists(path):
-            return path
-    
+    if os.path.exists(db_path):
+        return db_path
+
     return None
 
-def backup_database(db_path: str) -> str:
+def backup_database(db_path: str, backup_dir: str = None) -> str:
     """
-    创建数据库备份
-    
+    创建数据库备份到统一备份目录
+
     Args:
         db_path: 数据库文件路径
-        
+        backup_dir: 备份目录（默认使用 backups/）
+
     Returns:
         备份文件路径
     """
-    backup_path = f"{db_path}.backup.{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+    if backup_dir is None:
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        backup_dir = os.path.join(base_dir, 'backups')
+
+    os.makedirs(backup_dir, exist_ok=True)
+
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    backup_folder = os.path.join(backup_dir, timestamp)
+    os.makedirs(backup_folder, exist_ok=True)
+
+    backup_path = os.path.join(backup_folder, os.path.basename(db_path))
+
     import shutil
     shutil.copy2(db_path, backup_path)
+
+    # 创建备份信息文件
+    info_file = os.path.join(backup_folder, 'backup_info.txt')
+    with open(info_file, 'w') as f:
+        f.write(f"Backup created at: {datetime.now()}\n")
+        f.write(f"Source: {db_path}\n")
+        f.write(f"Database size: {os.path.getsize(db_path)} bytes\n")
+
     return backup_path
 
 def get_table_columns(cursor: sqlite3.Cursor, table_name: str) -> List[str]:

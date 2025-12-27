@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
-    logger.info(f"🚀 正在启动研究看板 API - 环境: {settings.ENVIRONMENT}")
+    logger.info("🚀 正在启动研究看板 API")
     # Ultra Think测试：真正的后端代码修改应该触发智能重启
     logger.info(f"📁 数据库路径: {settings.DATABASE_URL}")
     logger.info(f"🌐 CORS 允许的源: {', '.join(settings.CORS_ORIGINS)}")
@@ -34,10 +34,10 @@ async def lifespan(app: FastAPI):
     logger.info("👋 正在关闭应用...")
 
 app = FastAPI(
-    title="Research Dashboard API", 
+    title="Research Dashboard API",
     version="1.0.0",
-    docs_url="/docs" if settings.IS_DEVELOPMENT else None,  # 生产环境隐藏文档
-    redoc_url="/redoc" if settings.IS_DEVELOPMENT else None,
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan
 )
 
@@ -93,7 +93,6 @@ async def global_health_check():
         "service": "research-dashboard-api",
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
-        "environment": settings.ENVIRONMENT,
         "deployment_test": "2025-07-25 10:30 - 测试部署功能",
         "endpoints": {
             "ideas_management": "/ideas-management/health",

@@ -40,7 +40,7 @@ fi
 
 # 检查并运行数据库迁移
 echo -e "${CYAN}检查数据库迁移...${NC}"
-ENVIRONMENT=local python migrations/migration.py
+python migrations/migration.py
 
 # 后台启动后端
 nohup python -m uvicorn main:app --host 127.0.0.1 --port 8080 --reload > ../logs/backend.log 2>&1 &

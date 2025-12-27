@@ -21,23 +21,14 @@ echo -e "${BLUE}=== Research Dashboard 数据库初始化 ===${NC}"
 # 进入后端目录
 cd "$BACKEND_DIR"
 
-# 检查环境变量，默认为development
-ENV="${ENVIRONMENT:-development}"
-echo -e "${YELLOW}当前环境: $ENV${NC}"
-
-# 根据环境设置数据库路径
-if [ "$ENV" = "production" ]; then
-    DB_FILE="data/research_dashboard_prod.db"
-    ENV_FILE=".env.production"
-else
-    DB_FILE="data/research_dashboard_dev.db"
-    ENV_FILE=".env.development"
-fi
+# 统一使用单一数据库
+DB_FILE="data/research_dashboard.db"
+ENV_FILE=".env"
 
 echo -e "${YELLOW}数据库文件: $DB_FILE${NC}"
 
 # 创建必要的目录
-mkdir -p data logs uploads/"${ENV}" backups/local
+mkdir -p data logs uploads backups
 
 # 检查数据库是否已存在
 if [ -f "$DB_FILE" ]; then
@@ -51,8 +42,8 @@ if [ -f "$DB_FILE" ]; then
     
     # 备份现有数据库
     BACKUP_NAME="backup_before_reinit_$(date +%Y%m%d_%H%M%S).db"
-    cp "$DB_FILE" "backups/local/$BACKUP_NAME"
-    echo -e "${GREEN}✅ 已备份现有数据库到: backups/local/$BACKUP_NAME${NC}"
+    cp "$DB_FILE" "backups/$BACKUP_NAME"
+    echo -e "${GREEN}✅ 已备份现有数据库到: backups/$BACKUP_NAME${NC}"
     
     # 删除现有数据库
     rm -f "$DB_FILE"
@@ -70,9 +61,6 @@ echo -e "${YELLOW}正在初始化数据库...${NC}"
 python3 << EOF
 import sys
 import os
-
-# 设置环境变量
-os.environ['ENVIRONMENT'] = '$ENV'
 
 # 添加当前目录到Python路径
 sys.path.insert(0, '.')

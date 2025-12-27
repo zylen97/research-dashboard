@@ -6,6 +6,26 @@
 ./stop-local.sh           # 停止所有服务
 ```
 
+## 📂 数据库架构
+- **主数据库**: `backend/data/research_dashboard.db`
+- **备份目录**: `backend/backups/` （按时间戳组织，保留最近7个）
+- **归档目录**: `backend/data/archive/` （冗余文件60天观察期）
+
+**重要**:
+- 已移除环境概念（development/production/local）
+- 统一使用单一数据库 `research_dashboard.db`
+- 所有备份统一存放在 `backups/` 根目录
+
+## 🔄 备份管理
+```bash
+# 创建备份
+cd backend
+python -c "from app.utils.backup_manager import BackupManager; BackupManager().create_backup('manual')"
+
+# 列出备份
+python -c "from app.utils.backup_manager import BackupManager; [print(b['name']) for b in BackupManager().list_backups()[:5]]"
+```
+
 ## 📦 数据库修改
 ```python
 # backend/migrations/migration.py
