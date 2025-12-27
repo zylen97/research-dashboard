@@ -133,27 +133,6 @@ PORT=3001 npm start
 
 ---
 
-## 🚀 部署指南
-
-### 快速部署
-```bash
-# 自动检测并部署修改的部分
-./deploy-scripts/deploy.sh
-
-# 指定部署内容
-./deploy-scripts/deploy.sh --frontend   # 仅前端
-./deploy-scripts/deploy.sh --backend    # 仅后端
-./deploy-scripts/deploy.sh --dry-run    # 预览模式
-```
-
-### 系统要求
-- Python 3.8+
-- Node.js 16+
-- 2GB+ 内存
-- 10GB+ 存储空间
-
----
-
 ## 🛠️ 开发指南
 
 ### 本地开发
@@ -189,10 +168,6 @@ cd backend && python migrations/migration.py
 ---
 
 ## 📖 API接口
-
-### 认证
-- `POST /api/auth/login` - 用户登录
-- `GET /api/auth/me` - 获取当前用户信息
 
 ### 项目管理
 - `GET /api/research/` - 获取项目列表
@@ -267,8 +242,8 @@ kill -9 <PID>
 
 2. **服务状态检查**
 ```bash
-systemctl status research-backend
-journalctl -u research-backend -f
+ps aux | grep uvicorn
+tail -f logs/backend.log
 ```
 
 3. **AI配置问题**

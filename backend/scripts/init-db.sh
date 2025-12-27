@@ -113,26 +113,11 @@ EOF
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}✅ 数据库初始化完成！${NC}"
     echo -e "${BLUE}数据库位置: $BACKEND_DIR/$DB_FILE${NC}"
-    
-    # 设置权限（在生产环境）
-    if [ "$ENV" = "production" ] && [ -f "$DB_FILE" ]; then
-        # 如果是root用户运行，设置www-data权限
-        if [ "$EUID" -eq 0 ]; then
-            chown www-data:www-data "$DB_FILE"
-            chown -R www-data:www-data data logs uploads
-            echo -e "${GREEN}✅ 已设置生产环境权限${NC}"
-        fi
-    fi
-    
+
     echo ""
     echo -e "${BLUE}下一步：${NC}"
-    if [ "$ENV" = "production" ]; then
-        echo "1. 重启后端服务: systemctl restart research-backend"
-        echo "2. 设置自动备份: cd deployment && ./setup-backup.sh"
-    else
-        echo "1. 启动开发服务器: cd .. && ./start-dev.sh"
-        echo "2. 访问应用: http://localhost:3001"
-    fi
+    echo "1. 启动服务: cd .. && ./start-local.sh"
+    echo "2. 访问应用: http://localhost:3001"
 else
     echo -e "${RED}❌ 数据库初始化失败${NC}"
     exit 1

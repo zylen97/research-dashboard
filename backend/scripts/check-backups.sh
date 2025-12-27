@@ -25,7 +25,7 @@ cd /var/www/research-dashboard/backend
 
 # 查找所有备份文件
 echo -e "${YELLOW}📂 查找备份文件...${NC}"
-BACKUP_DIR="backups/production"
+BACKUP_DIR="backups"
 if [ ! -d "$BACKUP_DIR" ]; then
     echo -e "${RED}错误: 备份目录 $BACKUP_DIR 不存在${NC}"
     exit 1
