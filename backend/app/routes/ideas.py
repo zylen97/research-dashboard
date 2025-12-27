@@ -89,8 +89,7 @@ async def create_idea(
                 table_name="ideas",
                 action="CREATE",
                 record_id=new_idea.id,
-                new_values=idea.model_dump(),
-                user_id=getattr(request.state, "user_id", None)
+                new_values=idea.model_dump()
             )
         except Exception as audit_error:
             # 审计日志失败不应该影响数据创建
@@ -148,8 +147,7 @@ async def update_idea(
                 action="UPDATE",
                 record_id=idea_id,
                 old_values=old_values,
-                new_values=idea_update.model_dump(exclude_unset=True),
-                user_id=getattr(request.state, "user_id", None)
+                new_values=idea_update.model_dump(exclude_unset=True)
             )
         except Exception as audit_error:
             print(f"审计日志记录失败: {audit_error}")
@@ -194,8 +192,7 @@ async def delete_idea(
                 table_name="ideas",
                 action="DELETE",
                 record_id=idea_id,
-                old_values=old_values,
-                user_id=getattr(request.state, "user_id", None)
+                old_values=old_values
             )
         except Exception as audit_error:
             print(f"审计日志记录失败: {audit_error}")
@@ -250,8 +247,7 @@ async def convert_to_project(
                 new_values={
                     "converted_to_project_id": new_project.id,
                     "project_title": new_project.title
-                },
-                user_id=getattr(request.state, "user_id", None)
+                }
             )
         except Exception as audit_error:
             print(f"审计日志记录失败: {audit_error}")

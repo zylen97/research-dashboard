@@ -59,8 +59,7 @@ app.add_middleware(
 )
 
 # 安全中间件 - 注意：最后添加的中间件最先执行
-# 顺序：AuthMiddleware -> RateLimitMiddleware -> RequestValidationMiddleware -> SecurityHeadersMiddleware -> CORSMiddleware
-# app.add_middleware(AuthMiddleware)  # 已移除认证系统
+# 顺序：RateLimitMiddleware -> RequestValidationMiddleware -> SecurityHeadersMiddleware -> CORSMiddleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestValidationMiddleware, max_content_length=2 * 1024 * 1024)  # 2MB
 app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次请求
@@ -69,7 +68,6 @@ app.add_middleware(RateLimitMiddleware, calls=120, period=60)  # 每分钟120次
 setup_exception_handlers(app)
 
 # Include routers
-# app.include_router(auth.router, prefix="/auth", tags=["authentication"])  # 已移除认证
 app.include_router(research.router, prefix="/api/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
 app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
@@ -84,18 +82,14 @@ async def root():
 
 @app.get("/health")
 async def global_health_check():
-    """全局健康检查 - 不需要认证"""
+    """全局健康检查"""
     from datetime import datetime
     return {
         "status": "healthy",
         "service": "research-dashboard-api",
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
-        "deployment_test": "2025-07-25 10:30 - 测试部署功能",
-        "endpoints": {
-            "ideas_management": "/ideas-management/health",
-            "auth": "/auth/login"
-        }
+        "deployment_test": "2025-07-25 10:30 - 测试部署功能"
     }
 
 if __name__ == "__main__":

@@ -18,7 +18,6 @@ class AuditService:
         table_name: str,
         record_id: int,
         new_values: Dict[str, Any],
-        user_id: Optional[str] = None,
         ip_address: Optional[str] = None
     ) -> AuditLog:
         """记录创建操作"""
@@ -26,7 +25,6 @@ class AuditService:
             table_name=table_name,
             record_id=record_id,
             action="CREATE",
-            user_id=user_id,
             ip_address=ip_address,
             new_values=json.dumps(new_values, ensure_ascii=False, default=str),
             old_values=None,
@@ -43,7 +41,6 @@ class AuditService:
         record_id: int,
         old_values: Dict[str, Any],
         new_values: Dict[str, Any],
-        user_id: Optional[str] = None,
         ip_address: Optional[str] = None
     ) -> Optional[AuditLog]:
         """记录更新操作"""
@@ -56,16 +53,15 @@ class AuditService:
                     "old": old_value,
                     "new": new_value
                 }
-        
+
         # 如果没有变更，不记录
         if not changes:
             return None
-        
+
         audit_log = AuditLog(
             table_name=table_name,
             record_id=record_id,
             action="UPDATE",
-            user_id=user_id,
             ip_address=ip_address,
             old_values=json.dumps(old_values, ensure_ascii=False, default=str),
             new_values=json.dumps(new_values, ensure_ascii=False, default=str),
@@ -82,17 +78,15 @@ class AuditService:
         record_id: int,
         old_values: Dict[str, Any],
         is_soft_delete: bool = False,
-        user_id: Optional[str] = None,
         ip_address: Optional[str] = None
     ) -> AuditLog:
         """记录删除操作"""
         action = "SOFT_DELETE" if is_soft_delete else "DELETE"
-        
+
         audit_log = AuditLog(
             table_name=table_name,
             record_id=record_id,
             action=action,
-            user_id=user_id,
             ip_address=ip_address,
             old_values=json.dumps(old_values, ensure_ascii=False, default=str),
             new_values=None,
@@ -108,7 +102,6 @@ class AuditService:
         table_name: str,
         record_id: int,
         restored_values: Dict[str, Any],
-        user_id: Optional[str] = None,
         ip_address: Optional[str] = None
     ) -> AuditLog:
         """记录恢复操作"""
@@ -116,7 +109,6 @@ class AuditService:
             table_name=table_name,
             record_id=record_id,
             action="RESTORE",
-            user_id=user_id,
             ip_address=ip_address,
             old_values=None,
             new_values=json.dumps(restored_values, ensure_ascii=False, default=str),
@@ -145,7 +137,6 @@ class AuditService:
                 "id": log.id,
                 "action": log.action,
                 "created_at": log.created_at.isoformat(),
-                "user_id": log.user_id,
                 "ip_address": log.ip_address
             }
             
@@ -168,42 +159,7 @@ class AuditService:
             history.append(history_entry)
         
         return history
-    
-    @staticmethod
-    def get_user_activities(
-        db: Session,
-        user_id: str,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
-        limit: int = 100
-    ) -> List[Dict[str, Any]]:
-        """获取用户的操作历史"""
-        query = db.query(AuditLog).filter(AuditLog.user_id == user_id)
-        
-        if start_date:
-            query = query.filter(AuditLog.created_at >= start_date)
-        if end_date:
-            query = query.filter(AuditLog.created_at <= end_date)
-        
-        logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
-        
-        activities = []
-        for log in logs:
-            activity = {
-                "id": log.id,
-                "table_name": log.table_name,
-                "record_id": log.record_id,
-                "action": log.action,
-                "created_at": log.created_at.isoformat()
-            }
-            
-            if log.changes:
-                activity["changes"] = json.loads(log.changes)
-            
-            activities.append(activity)
-        
-        return activities
-    
+
     @staticmethod
     def serialize_model_instance(instance) -> Dict[str, Any]:
         """将 SQLAlchemy 模型实例序列化为字典"""

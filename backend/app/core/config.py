@@ -13,11 +13,6 @@ load_dotenv()
 class Settings:
     """应用配置类"""
 
-    # 安全配置（已移除认证系统，保留兼容性）
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "deprecated-not-used")
-    ALGORITHM: str = os.getenv("ALGORITHM", "HS256")
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "10080"))
-
     # 数据库配置
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./data/research_dashboard.db")
 

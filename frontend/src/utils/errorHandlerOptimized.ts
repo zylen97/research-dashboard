@@ -12,8 +12,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   
   // HTTP状态码
   '400': '请求参数错误',
-  '401': '未登录或登录已过期',
-  '403': '没有权限访问此资源',
   '404': '请求的资源不存在',
   '409': '数据冲突，请刷新后重试',
   '500': '服务器内部错误',
@@ -104,25 +102,13 @@ function extractErrorMessage(error: any): string {
  * 统一的错误拦截器
  */
 export const errorInterceptorOptimized = (error: AxiosError) => {
-  // 如果是401错误，跳转到登录页
-  if (error.response?.status === 401) {
-    // 避免重复跳转
-    if (!window.location.pathname.includes('/auth')) {
-      message.error('登录已过期，请重新登录');
-      localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user');
-      window.location.href = '/auth';
-    }
-    return Promise.reject(error);
-  }
-  
-  // 对于其他错误，提取错误消息但不直接显示
+  // 提取错误消息但不直接显示
   // 让各个组件根据需要决定是否显示错误
   const errorMessage = extractErrorMessage(error);
-  
+
   // 将格式化后的错误消息附加到error对象上
   (error as any).formattedMessage = errorMessage;
-  
+
   // 开发环境下打印详细错误信息
   if (process.env['NODE_ENV'] === 'development') {
     console.error('[API Error]', {
@@ -133,7 +119,7 @@ export const errorInterceptorOptimized = (error: AxiosError) => {
       message: errorMessage,
     });
   }
-  
+
   return Promise.reject(error);
 };
 

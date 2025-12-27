@@ -9,8 +9,6 @@ import { AxiosError } from 'axios';
 export enum ErrorType {
   NETWORK_ERROR = 'NETWORK_ERROR',
   VALIDATION_ERROR = 'VALIDATION_ERROR',
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  AUTHORIZATION_ERROR = 'AUTHORIZATION_ERROR',
   NOT_FOUND_ERROR = 'NOT_FOUND_ERROR',
   SERVER_ERROR = 'SERVER_ERROR',
   RATE_LIMIT_ERROR = 'RATE_LIMIT_ERROR',
@@ -30,8 +28,6 @@ export interface ApiError {
 // 错误消息映射
 const ERROR_MESSAGES: Record<number, string> = {
   400: '请求参数有误',
-  401: '未登录或登录已过期，请重新登录',
-  403: '没有权限执行此操作',
   404: '请求的资源不存在',
   422: '数据验证失败',
   429: '请求过于频繁，请稍后再试',
@@ -43,8 +39,6 @@ const ERROR_MESSAGES: Record<number, string> = {
 // 将HTTP状态码映射到错误类型
 const STATUS_TO_ERROR_TYPE: Record<number, ErrorType> = {
   400: ErrorType.VALIDATION_ERROR,
-  401: ErrorType.AUTHENTICATION_ERROR,
-  403: ErrorType.AUTHORIZATION_ERROR,
   404: ErrorType.NOT_FOUND_ERROR,
   422: ErrorType.VALIDATION_ERROR,
   429: ErrorType.RATE_LIMIT_ERROR,
@@ -139,19 +133,7 @@ export const showError = (error: ApiError | any): void => {
  */
 export const errorInterceptor = (error: any): Promise<never> => {
   const apiError = parseError(error);
-  
-  // 特殊处理认证错误
-  if (apiError.type === ErrorType.AUTHENTICATION_ERROR) {
-    // 清除本地认证信息
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    
-    // 只在非登录页面时跳转
-    if (!window.location.pathname.includes('/auth')) {
-      window.location.href = '/';
-    }
-  }
-  
+
   // 开发环境打印详细错误信息
   if (process.env['NODE_ENV'] === 'development') {
     console.error('[API Error]', {
@@ -162,7 +144,7 @@ export const errorInterceptor = (error: any): Promise<never> => {
       timestamp: apiError.timestamp,
     });
   }
-  
+
   return Promise.reject(apiError);
 };
 

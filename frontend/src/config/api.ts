@@ -17,11 +17,6 @@ export const buildApiUrl = buildUrl;
 
 // API端点常量
 export const API_ENDPOINTS = {
-  // 认证相关
-  AUTH: {
-    LOGIN: '/auth/login',
-    ME: '/auth/me',
-  },
   // 研究项目
   RESEARCH: {
     LIST: '/research',

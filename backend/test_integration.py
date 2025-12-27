@@ -18,8 +18,7 @@ sys.path.append(os.path.dirname(__file__))
 from app.models.database import Base, engine, get_db
 from sqlalchemy import text
 from app.models.schemas import *
-from app.routes import auth, research, collaborators, config, backup
-from app.routes import idea_discovery
+from app.routes import research, collaborators, config, backup, ideas
 
 # 配置日志
 logging.basicConfig(
@@ -45,16 +44,14 @@ class IntegrationValidator:
         
         # 检查各个路由模块的端点
         modules = {
-            'auth': auth.router,
             'research': research.router,
             'collaborators': collaborators.router,
-            'idea_discovery': idea_discovery.router,
+            'ideas': ideas.router,
             'config': config.router,
             'backup': backup.router,
         }
-        
+
         expected_endpoints = {
-            'auth': ['POST /login', 'GET /me'],
             'research': [
                 'GET /', 'POST /', 'PUT /{project_id}', 'DELETE /{project_id}',
                 'GET /{project_id}/logs', 'POST /{project_id}/logs'
@@ -63,9 +60,9 @@ class IntegrationValidator:
                 'GET /', 'POST /', 'PUT /{collaborator_id}', 'DELETE /{collaborator_id}',
                 'POST /upload', 'POST /create-batch'
             ],
-            'idea_discovery': [
-                'POST /upload', 'POST /process', 'GET /status/{processing_id}',
-                'GET /download/{result_file_id}', 'DELETE /cleanup/{file_id}'
+            'ideas': [
+                'GET /', 'POST /', 'PUT /{idea_id}', 'DELETE /{idea_id}',
+                'POST /{idea_id}/convert-to-project'
             ],
             'config': [
                 'GET /', 'POST /', 'PUT /{config_id}', 'DELETE /{config_id}',
@@ -97,7 +94,7 @@ class IntegrationValidator:
             
             # 验证关键表存在
             required_tables = [
-                'users', 'collaborators', 'research_projects', 
+                'collaborators', 'research_projects', 'ideas',
                 'communication_logs', 'system_configs', 'audit_logs'
             ]
             
@@ -149,10 +146,10 @@ class IntegrationValidator:
         
         # 验证关键模型是否存在
         models_to_check = [
-            ('User', User),
             ('Collaborator', Collaborator),
             ('ResearchProject', ResearchProject),
             ('SystemConfig', SystemConfig),
+            ('Idea', Idea),
         ]
         
         for model_name, model_class in models_to_check:
