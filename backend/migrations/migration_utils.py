@@ -55,18 +55,18 @@ def find_database_path(environment: Optional[str] = None) -> Optional[str]:
     
     # 根据环境变量确定优先级
     env = environment or os.environ.get('ENVIRONMENT', 'production')
-    
-    if env == 'development':
+
+    if env in ['local', 'development']:
         db_paths = [
+            os.path.join(data_dir, 'research_dashboard.db'),
             os.path.join(data_dir, 'research_dashboard_dev.db'),
-            os.path.join(data_dir, 'research_dashboard_prod.db'),
-            os.path.join(base_dir, 'research_dashboard.db')
+            os.path.join(data_dir, 'research_dashboard_prod.db')
         ]
     else:
         db_paths = [
             os.path.join(data_dir, 'research_dashboard_prod.db'),
             os.path.join(data_dir, 'research_dashboard_dev.db'),
-            os.path.join(base_dir, 'research_dashboard.db')
+            os.path.join(data_dir, 'research_dashboard.db')
         ]
     
     for path in db_paths:

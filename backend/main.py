@@ -2,9 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import research, collaborators, validation, audit, backup, config
-from app.routes import idea_discovery
-from app.routes import settings as settings_routes
-from app.routes import ideas, prompts
+from app.routes import ideas
 from app.utils.db_init import init_database, create_sample_data
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
 from app.middleware.error_handler import setup_exception_handlers
@@ -76,14 +74,11 @@ setup_exception_handlers(app)
 # app.include_router(auth.router, prefix="/auth", tags=["authentication"])  # 已移除认证
 app.include_router(research.router, prefix="/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/collaborators", tags=["collaborators"])
-app.include_router(idea_discovery.router, prefix="/ideas", tags=["idea-discovery"])
 app.include_router(validation.router, prefix="/validation", tags=["validation"])
 app.include_router(audit.router, prefix="/audit", tags=["audit"])
 app.include_router(backup.router, prefix="/backup", tags=["backup"])
 app.include_router(config.router, prefix="/config", tags=["configuration"])
-app.include_router(settings_routes.router, prefix="/settings", tags=["settings"])
 app.include_router(ideas.router, prefix="/ideas", tags=["ideas"])
-app.include_router(prompts.router, prefix="/prompts", tags=["prompts"])
 
 @app.get("/")
 async def root():

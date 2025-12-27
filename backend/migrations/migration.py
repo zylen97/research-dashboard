@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 添加目标投稿期刊字段
-MIGRATION_VERSION = "v1.38_add_target_journal"
+# 迁移版本号 - 删除Idea发掘与AI配置相关表
+MIGRATION_VERSION = "v1.39_remove_idea_discovery_and_prompts"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -83,69 +83,70 @@ def run_migration():
         cursor = conn.cursor()
         
         logger.info(f"开始执行迁移: {MIGRATION_VERSION}")
-        
+
         # ===========================================
-        # 🔧 v1.38迁移任务：添加目标投稿期刊字段
-        # 变更：为研究项目添加目标投稿期刊字段
+        # 🔧 v1.39迁移任务：删除Idea发掘与AI配置相关表
+        # 变更：删除prompts表，保留ideas表
         # 说明：
-        # - 新增target_journal字段存储期刊信息
-        # - 支持在创建和编辑时填写
-        # - 仅在预览中显示，不在列表中显示
+        # - 删除prompts表及其所有数据
+        # - 保留ideas表和Ideas管理功能
+        # - 保留Idea转化为项目功能
         # ===========================================
-        
-        logger.info("🔧 开始v1.38迁移：添加目标投稿期刊字段...")
-        logger.info("🎯 目标：为研究项目添加(拟)投稿期刊信息")
-        
-        # 第一步：检查research_projects表
-        logger.info("📋 检查research_projects表...")
-        
-        if table_exists(cursor, 'research_projects'):
-            # 检查是否已有target_journal字段
-            cursor.execute("PRAGMA table_info(research_projects)")
-            columns = cursor.fetchall()
-            has_target_journal = False
-            
-            for col in columns:
-                if col[1] == 'target_journal':
-                    has_target_journal = True
-                    logger.info(f"✅ target_journal字段已存在，类型: {col[2]}")
-                    break
-            
-            if not has_target_journal:
-                # 添加target_journal字段
-                logger.info("📋 添加target_journal字段...")
-                cursor.execute("""
-                    ALTER TABLE research_projects 
-                    ADD COLUMN target_journal TEXT
-                """)
-                logger.info("✅ target_journal字段添加成功")
-                
-                # 统计项目数量
-                cursor.execute("SELECT COUNT(*) FROM research_projects")
-                project_count = cursor.fetchone()[0]
-                logger.info(f"📊 现有项目总数: {project_count}")
+
+        logger.info("🔧 开始v1.39迁移：删除Idea发掘与AI配置相关表...")
+        logger.info("🎯 目标：删除prompts表，保留ideas表和所有其他功能")
+
+        # 第一步：检查prompts表是否存在
+        logger.info("📋 检查prompts表...")
+
+        if table_exists(cursor, 'prompts'):
+            # 统计数据
+            cursor.execute("SELECT COUNT(*) FROM prompts")
+            prompt_count = cursor.fetchone()[0]
+            logger.info(f"📊 prompts表中有 {prompt_count} 条记录")
+
+            # 删除prompts表
+            logger.info("🗑️ 删除prompts表...")
+            cursor.execute("DROP TABLE IF EXISTS prompts")
+            logger.info("✅ prompts表删除成功")
         else:
-            logger.error("❌ research_projects表不存在")
+            logger.info("ℹ️ prompts表不存在，跳过删除")
+
+        # 第二步：确认ideas表仍然存在（安全检查）
+        logger.info("🔍 确认ideas表完整性...")
+        if table_exists(cursor, 'ideas'):
+            cursor.execute("SELECT COUNT(*) FROM ideas")
+            idea_count = cursor.fetchone()[0]
+            logger.info(f"✅ ideas表完好，包含 {idea_count} 条记录")
+        else:
+            logger.error("❌ 错误：ideas表不存在！")
+            conn.rollback()
+            conn.close()
             return False
-        
-        # 第二步：记录迁移说明
-        logger.info("📋 功能更新说明:")
-        logger.info("  - 添加(拟)投稿期刊字段")
-        logger.info("  - 用户可在创建和编辑项目时填写目标期刊")
-        logger.info("  - 期刊信息仅在预览页面显示")
-        logger.info("  - 列表页面不显示期刊信息")
-        
+
+        # 第三步：验证其他核心表
+        logger.info("🔍 验证核心表完整性...")
+        required_tables = ['research_projects', 'collaborators', 'audit_logs']
+        for table in required_tables:
+            if not table_exists(cursor, table):
+                logger.error(f"❌ 错误：{table}表不存在！")
+                conn.rollback()
+                conn.close()
+                return False
+        logger.info("✅ 所有核心表完好")
+
         # 提交更改并标记完成
         conn.commit()
         mark_migration_completed(db_path)
-        
+
         logger.info(f"迁移 {MIGRATION_VERSION} 执行成功")
-        
+
         logger.info("======================================================================")
-        logger.info("🎉 v1.38 添加目标投稿期刊字段完成！")
-        logger.info("✅ 成功添加target_journal字段")
-        logger.info("✅ 支持填写(拟)投稿期刊信息")
-        logger.info("✅ 数据库结构更新完成")
+        logger.info("🎉 v1.39 删除Idea发掘与AI配置完成！")
+        logger.info("✅ prompts表已删除")
+        logger.info("✅ ideas表和Ideas管理功能保持完好")
+        logger.info("✅ 研究项目管理功能不受影响")
+        logger.info("✅ 合作者管理功能不受影响")
         logger.info("======================================================================")
         
         

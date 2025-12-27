@@ -57,12 +57,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClick: () => navigate('/collaborators'),
       },
       {
-        key: '/ideas',
-        icon: <BulbOutlined />,
-        label: 'Idea发掘与AI配置',
-        onClick: () => navigate('/ideas'),
-      },
-      {
         key: '/ideas-management',
         icon: <UnorderedListOutlined />,
         label: 'Idea面板',

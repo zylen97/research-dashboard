@@ -9,8 +9,7 @@ import {
   FileUploadResponse,
   SystemConfig, SystemConfigCreate, SystemConfigUpdate,
   AIProvider, AIProviderCreate, AITestResponse,
-  BackupStats, BackupListResponse, BackupCreateResponse,
-  Prompt, PromptCreate, PromptUpdate
+  BackupStats, BackupListResponse, BackupCreateResponse
 } from '../types';
 import { Idea, IdeaCreate, IdeaUpdate, ConvertToProjectResponse } from '../types/ideas';
 import { handleListResponse } from '../utils/dataFormatters';
@@ -214,12 +213,6 @@ export const backupApi = {
     api.get(`/backup/download/${backupId}`, { responseType: 'blob' }),
 };
 
-// Prompts管理API - 使用CRUD工厂
-export const promptsApi = createCRUDApi<Prompt, PromptCreate, PromptUpdate>(
-  '/prompts',
-  'API.getPrompts'
-);
-
 // Ideas管理API - 使用扩展CRUD工厂，包含转化功能和增强错误处理
 export const ideasApi = createExtendedCRUDApi<
   Idea,
@@ -314,26 +307,6 @@ export const ideasApi = createExtendedCRUDApi<
 
 
 // 其他API保持原样...
-export const ideaDiscoveryApi = {
-  processExcel: async (file: File, promptId?: number, customPrompt?: string, maxConcurrent?: number): Promise<Blob> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (promptId) formData.append('prompt_id', promptId.toString());
-    if (customPrompt) formData.append('custom_prompt', customPrompt);
-    if (maxConcurrent !== undefined) formData.append('max_concurrent', maxConcurrent.toString());
-    
-    const response = await api.post('/ideas/process-excel', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-      responseType: 'blob',
-      timeout: 600000  // 增加到10分钟，支持处理大量数据
-    });
-    return response.data;
-  },
-
-  healthCheck: (): Promise<{ status: string; service: string }> =>
-    api.get('/ideas/health'),
-};
-
 export const validationApi = {
   getProjectDependencies: (id: number) =>
     api.get(`/validation/project/${id}/dependencies`),
