@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 删除action_items字段
-MIGRATION_VERSION = "v2.3_remove_action_items"
+# 迁移版本号 - 重建Ideas表以对齐模型定义
+MIGRATION_VERSION = "v2.4_rebuild_ideas_table"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -84,153 +84,135 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info("🎯 目标: 从communication_logs表删除action_items字段")
+        logger.info("🎯 目标: 重建 Ideas 表以对齐模型定义")
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v2.3迁移任务：删除action_items字段
+        # 🔧 v2.4迁移任务：重建Ideas表
         # 变更：
-        # 1. 从 communication_logs 表删除 action_items 字段
-        # 2. 保留其他所有字段
+        # 1. 删除旧的 ideas 表（字段：research_question, source_literature等）
+        # 2. 创建新的 ideas 表（字段：project_name, project_description等）
         # 说明：
-        # - SQLite不支持DROP COLUMN，需要重建表
-        # - 必须明确列出字段映射，防止数据错位（教训：2025-07-24）
+        # - Ideas表当前为空，可以安全重建
+        # - 新表结构对齐 database.py 中的 Idea 模型定义
+        # - 教训：2025-07-24 数据库表结构必须与模型定义一致
         # ===========================================
 
         # ============================
-        # Step 1: 获取迁移前的统计数据
+        # Step 1: 验证 Ideas 表为空（安全检查）
         # ============================
-        logger.info("\n📋 Step 1: 获取迁移前统计数据")
+        logger.info("\n📋 Step 1: 验证 Ideas 表为空")
 
-        cursor.execute("SELECT COUNT(*) FROM communication_logs")
-        original_log_count = cursor.fetchone()[0]
-        logger.info(f"   交流日志总数: {original_log_count}")
+        cursor.execute("SELECT COUNT(*) FROM ideas")
+        ideas_count = cursor.fetchone()[0]
+        logger.info(f"   Ideas 表当前记录数: {ideas_count}")
+
+        if ideas_count > 0:
+            logger.error(f"   ❌ Ideas 表有 {ideas_count} 条数据，迁移中止！")
+            logger.error("   ⚠️  有数据时不能重建表，会导致数据丢失")
+            conn.rollback()
+            return False
+
+        logger.info("   ✅ Ideas 表为空，可以安全重建")
 
         # ============================
-        # Step 2: 重建 communication_logs 表（删除action_items）
+        # Step 2: 删除旧 Ideas 表
         # ============================
-        logger.info("\n📋 Step 2: 重建 communication_logs 表，删除 action_items 字段")
+        logger.info("\n📋 Step 2: 删除旧 Ideas 表")
 
-        # 2.1 创建新表（不包含action_items字段）
-        logger.info("   创建新表 communication_logs_new...")
+        # 获取旧表结构信息（用于记录）
+        old_columns = get_table_columns(cursor, 'ideas')
+        logger.info(f"   旧表字段: {', '.join(old_columns)}")
+
+        cursor.execute("DROP TABLE IF EXISTS ideas")
+        logger.info("   ✅ 旧表已删除")
+
+        # ============================
+        # Step 3: 创建新 Ideas 表（对齐模型定义）
+        # ============================
+        logger.info("\n📋 Step 3: 创建新 Ideas 表（对齐 database.py 模型）")
+
         cursor.execute("""
-            CREATE TABLE communication_logs_new (
+            CREATE TABLE ideas (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                project_id INTEGER NOT NULL,
-                collaborator_id INTEGER,
-                communication_type VARCHAR(50),
-                title VARCHAR(200) NOT NULL,
-                content TEXT NOT NULL,
-                outcomes TEXT,
-                communication_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                project_name TEXT NOT NULL,
+                project_description TEXT,
+                research_method TEXT NOT NULL,
+                source TEXT,
+                responsible_person VARCHAR(100) NOT NULL,
+                maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (project_id) REFERENCES research_projects(id) ON DELETE CASCADE,
-                FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
-
-        # 2.2 复制数据（明确字段映射，跳过action_items字段）
-        logger.info("   复制数据到新表（明确字段映射，跳过action_items字段）...")
-        cursor.execute("""
-            INSERT INTO communication_logs_new (
-                id, project_id, collaborator_id, communication_type,
-                title, content, outcomes,
-                communication_date, created_at, updated_at
-            )
-            SELECT
-                id, project_id, collaborator_id, communication_type,
-                title, content, outcomes,
-                communication_date, created_at, updated_at
-            FROM communication_logs
-        """)
-
-        copied_log_count = cursor.rowcount
-        logger.info(f"   ✅ 已复制 {copied_log_count} 条交流日志记录")
-
-        # 2.3 删除旧表
-        logger.info("   删除旧表...")
-        cursor.execute("DROP TABLE communication_logs")
-
-        # 2.4 重命名新表
-        logger.info("   重命名新表...")
-        cursor.execute("ALTER TABLE communication_logs_new RENAME TO communication_logs")
-
-        # 2.5 重建索引
-        logger.info("   重建索引...")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_logs_id ON communication_logs(id)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_logs_project ON communication_logs(project_id)")
-
-        logger.info("   ✅ communication_logs 表重建完成")
-        logger.info("   ✅ 已删除字段: action_items")
+        logger.info("   ✅ 新表已创建")
 
         # ============================
-        # Step 3: 验证数据完整性
+        # Step 4: 创建索引
         # ============================
-        logger.info("\n📋 Step 3: 验证数据完整性")
+        logger.info("\n📋 Step 4: 创建索引")
 
-        # 验证记录数量
-        cursor.execute("SELECT COUNT(*) FROM communication_logs")
-        new_log_count = cursor.fetchone()[0]
-        logger.info(f"   迁移后日志总数: {new_log_count}")
+        cursor.execute("CREATE INDEX idx_ideas_maturity ON ideas(maturity)")
+        logger.info("   ✅ 索引 idx_ideas_maturity 已创建")
 
-        if new_log_count != original_log_count:
-            logger.error(f"   ❌ 记录数不匹配！迁移前: {original_log_count}, 迁移后: {new_log_count}")
-            conn.rollback()
-            return False
-        else:
-            logger.info(f"   ✅ 记录数一致: {new_log_count}")
+        cursor.execute("CREATE INDEX idx_ideas_responsible_person ON ideas(responsible_person)")
+        logger.info("   ✅ 索引 idx_ideas_responsible_person 已创建")
 
-        # 验证表字段
-        log_columns = get_table_columns(cursor, 'communication_logs')
+        cursor.execute("CREATE INDEX idx_ideas_created_at ON ideas(created_at)")
+        logger.info("   ✅ 索引 idx_ideas_created_at 已创建")
 
-        # 验证action_items字段已删除
-        if 'action_items' not in log_columns:
-            logger.info("   ✅ action_items 字段已成功删除")
-        else:
-            logger.error("   ❌ action_items 字段仍然存在！")
-            conn.rollback()
-            return False
+        # ============================
+        # Step 5: 验证表结构
+        # ============================
+        logger.info("\n📋 Step 5: 验证表结构")
 
-        # 验证必需字段存在
-        required_fields = ['id', 'project_id', 'title', 'content', 'outcomes', 'communication_date']
+        # 获取新表字段
+        new_columns = get_table_columns(cursor, 'ideas')
+        logger.info(f"   新表字段: {', '.join(new_columns)}")
+
+        # 验证所有必需字段
+        required_fields = {
+            'id': 'INTEGER',
+            'project_name': 'TEXT',
+            'project_description': 'TEXT',
+            'research_method': 'TEXT',
+            'source': 'TEXT',
+            'responsible_person': 'VARCHAR(100)',
+            'maturity': 'VARCHAR(20)',
+            'created_at': 'DATETIME',
+            'updated_at': 'DATETIME'
+        }
+
+        all_fields_ok = True
         for field in required_fields:
-            if field in log_columns:
-                logger.info(f"   ✅ {field} 字段已保留")
+            if field in new_columns:
+                logger.info(f"   ✅ {field} 字段已创建")
             else:
-                logger.error(f"   ❌ {field} 字段丢失！")
-                conn.rollback()
-                return False
+                logger.error(f"   ❌ {field} 字段缺失！")
+                all_fields_ok = False
 
-        # 显示字段列表
-        logger.info(f"\n   Communication_logs表最终字段: {', '.join(log_columns)}")
+        if not all_fields_ok:
+            logger.error("   ❌ 表结构验证失败！")
+            conn.rollback()
+            return False
 
-        # 显示示例数据（防止字段错位）
-        logger.info("\n   前3条交流日志记录示例:")
-        cursor.execute("""
-            SELECT id, project_id, title, content, outcomes, communication_date
-            FROM communication_logs
-            LIMIT 3
-        """)
-        for row in cursor.fetchall():
-            title = row[2][:30] + '...' if len(row[2]) > 30 else row[2]
-            content_preview = (row[3][:30] + '...') if row[3] and len(row[3]) > 30 else (row[3] or '-')
-            outcomes_preview = (row[4][:30] + '...') if row[4] and len(row[4]) > 30 else (row[4] or '-')
-            logger.info(f"     ID={row[0]}, ProjectID={row[1]}")
-            logger.info(f"       Title={title}")
-            logger.info(f"       Content={content_preview}")
-            logger.info(f"       Outcomes={outcomes_preview}")
-            logger.info(f"       Date={row[5]}")
+        logger.info("   ✅ 表结构验证通过")
+
+        # 验证索引
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='ideas'")
+        indexes = [row[0] for row in cursor.fetchall()]
+        logger.info(f"   创建的索引: {', '.join(indexes)}")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v2.3 交流日志系统简化完成！")
-        logger.info("✅ 已删除: action_items 字段（从 communication_logs）")
-        logger.info(f"✅ 共处理: {new_log_count} 条交流日志")
-        logger.info("⚠️  重要: 项目级 is_todo 功能未受影响，继续保留")
+        logger.info("🎉 v2.4 Ideas 表重建完成！")
+        logger.info("✅ 旧表字段: research_question, source_literature, collaborator_id 等")
+        logger.info("✅ 新表字段: project_name, project_description, responsible_person 等")
+        logger.info("✅ 表结构已对齐 database.py Idea 模型定义")
+        logger.info("⚠️  重要: Ideas 表现在可以正常使用，不会出现字段错位问题")
         logger.info("=" * 70)
 
         conn.close()
