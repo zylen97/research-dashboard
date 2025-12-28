@@ -1,14 +1,15 @@
 import React from 'react';
 import { Modal, Descriptions, Tag, Space, Typography } from 'antd';
 import { ResearchProject } from '../../types';
-import { 
-  TeamOutlined, 
-  CalendarOutlined, 
+import {
+  TeamOutlined,
+  CalendarOutlined,
   ProjectOutlined,
   FileTextOutlined,
   BulbOutlined,
   LinkOutlined,
-  FlagOutlined
+  FlagOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -43,36 +44,6 @@ const getStatusText = (status: string) => {
   return statusMap[status] || status;
 };
 
-// 判断是否为小组
-const isGroupCollaborator = (collaborator: any) => {
-  const getLocalGroupMarks = () => {
-    try {
-      const saved = localStorage.getItem('collaborator-group-marks');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  };
-  
-  const localMarks = getLocalGroupMarks();
-  
-  if (localMarks[collaborator.id] !== undefined) {
-    return localMarks[collaborator.id];
-  }
-  
-  if (collaborator.is_group !== undefined) {
-    return collaborator.is_group;
-  }
-  
-  const groupIndicators = [
-    '小组', '团队', '大创团队', '创新大赛小组', 
-    '周佳祺 庄晶涵 范佳伟', '田超 王昊 李思佳 凌文杰'
-  ];
-  return groupIndicators.some(indicator => 
-    collaborator.name.includes(indicator) || 
-    (collaborator.class_name && collaborator.class_name.includes(indicator))
-  );
-};
 
 const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({ 
   visible, 
@@ -160,6 +131,27 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         </div>
       )}
 
+      {/* 🆕 我的身份 */}
+      <div style={{ marginBottom: 24 }}>
+        <Title level={5}>
+          <UserOutlined /> 我的身份
+        </Title>
+        {(() => {
+          const roleConfig = {
+            first_author: { text: '第一作者', color: 'red', icon: '🥇' },
+            corresponding_author: { text: '通讯作者', color: 'blue', icon: '✉️' },
+            other_author: { text: '其他作者', color: 'default', icon: '👥' },
+          };
+          const config = roleConfig[project.my_role as keyof typeof roleConfig] || roleConfig.other_author;
+
+          return (
+            <Tag color={config.color} style={{ fontSize: '14px', padding: '4px 12px' }}>
+              {config.icon} {config.text}
+            </Tag>
+          );
+        })()}
+      </div>
+
       {/* 合作者 */}
       <div style={{ marginBottom: 24 }}>
         <Title level={5}>
@@ -167,26 +159,17 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         </Title>
         <Space wrap>
           {project.collaborators
-            .sort((a, b) => {
-              const aIsGroup = isGroupCollaborator(a);
-              const bIsGroup = isGroupCollaborator(b);
-              if (aIsGroup && !bIsGroup) return -1;
-              if (!aIsGroup && bIsGroup) return 1;
-              return (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0);
-            })
-            .map((collaborator) => {
-              const isGroup = isGroupCollaborator(collaborator);
-              return (
-                <Tag 
-                  key={collaborator.id} 
-                  color={isGroup ? 'purple' : (collaborator.is_senior ? 'gold' : 'default')}
-                  style={{ margin: '2px' }}
-                >
-                  {isGroup && '👥 '}{collaborator.name}
-                  {collaborator.is_senior && !isGroup && ' ⭐'}
-                </Tag>
-              );
-            })}
+            .sort((a, b) => (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0))
+            .map((collaborator) => (
+              <Tag
+                key={collaborator.id}
+                color={collaborator.is_senior ? 'gold' : 'default'}
+                style={{ margin: '2px' }}
+              >
+                {collaborator.name}
+                {collaborator.is_senior && ' ⭐'}
+              </Tag>
+            ))}
         </Space>
       </div>
 

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func, desc
 from typing import List, Optional
 from datetime import datetime
+import json
 from ..models import (
     get_db, ResearchProject, Collaborator, CommunicationLog,
     ResearchProjectSchema, ResearchProjectCreate, ResearchProjectUpdate,
@@ -88,7 +89,7 @@ async def create_research_project(
     # Create project without collaborators first, using sanitized data
     sanitized_data = security_result["sanitized_data"]
     project_data = {k: v for k, v in sanitized_data.items() if k != 'collaborator_ids'}
-    
+
     # 处理start_date字段
     if 'start_date' in project_data:
         # 如果用户提供了start_date，使用它
@@ -133,7 +134,7 @@ async def update_research_project(
         )
     
     update_data = project_update.model_dump(exclude_unset=True, exclude={'collaborator_ids'})
-    
+
     # 特殊处理is_todo字段
     if 'is_todo' in update_data:
         from datetime import datetime
@@ -145,7 +146,7 @@ async def update_research_project(
             # 取消待办标记时清除时间
             db_project.todo_marked_at = None
         update_data.pop('is_todo')  # 从 update_data 中移除，已单独处理
-    
+
     # 处理其他字段
     for field, value in update_data.items():
         setattr(db_project, field, value)

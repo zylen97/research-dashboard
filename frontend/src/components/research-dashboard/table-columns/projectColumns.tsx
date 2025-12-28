@@ -42,39 +42,6 @@ const getStatusColor = (status: string) => {
   return colors[status] || 'default';
 };
 
-// 临时识别小组的函数
-const isGroupCollaborator = (collaborator: any) => {
-  const getLocalGroupMarks = () => {
-    try {
-      const saved = localStorage.getItem('collaborator-group-marks');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  };
-  
-  const localMarks = getLocalGroupMarks();
-  
-  // 1. 优先使用本地标记状态
-  if (localMarks[collaborator.id] !== undefined) {
-    return localMarks[collaborator.id];
-  }
-  
-  // 2. 后端支持is_group字段时直接返回
-  if (collaborator.is_group !== undefined) {
-    return collaborator.is_group;
-  }
-  
-  // 3. 临时逻辑：根据名称和班级信息判断是否为小组
-  const groupIndicators = [
-    '小组', '团队', '大创团队', '创新大赛小组', 
-    '周佳祺 庄晶涵 范佳伟', '田超 王昊 李思佳 凌文杰'
-  ];
-  return groupIndicators.some(indicator => 
-    collaborator.name.includes(indicator) || 
-    (collaborator.class_name && collaborator.class_name.includes(indicator))
-  );
-};
 
 export const createProjectColumns = ({
   actions,
@@ -172,39 +139,48 @@ export const createProjectColumns = ({
       </Tag>
     ),
   },
+  // 🆕 我的身份列
+  {
+    title: '我的身份',
+    dataIndex: 'my_role',
+    key: 'my_role',
+    width: 100,
+    render: (my_role: string) => {
+      const roleConfig = {
+        first_author: { text: '第一作者', color: 'red', icon: '🥇' },
+        corresponding_author: { text: '通讯作者', color: 'blue', icon: '✉️' },
+        other_author: { text: '其他作者', color: 'default', icon: '👥' },
+      };
+      const config = roleConfig[my_role as keyof typeof roleConfig] || roleConfig.other_author;
+
+      return (
+        <Tag color={config.color} style={{ fontWeight: 'bold', fontSize: '12px' }}>
+          {config.icon} {config.text}
+        </Tag>
+      );
+    },
+  },
   ...(isMobile ? [] : [{
     title: '合作者',
     dataIndex: 'collaborators',
     key: 'collaborators',
     width: 180,
     render: (collaborators: any[]) => {
-      const sortedCollaborators = collaborators.sort((a, b) => {
-        // 小组优先，然后高级合作者
-        const aIsGroup = isGroupCollaborator(a);
-        const bIsGroup = isGroupCollaborator(b);
-        if (aIsGroup && !bIsGroup) return -1;
-        if (!aIsGroup && bIsGroup) return 1;
-        return (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0);
-      });
-      
+      // 只按is_senior排序
+      const sortedCollaborators = collaborators.sort((a, b) =>
+        (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0)
+      );
+
       return (
         <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
           {sortedCollaborators.map((collaborator, index) => {
-            const isGroup = isGroupCollaborator(collaborator);
-            let color = '#666'; // 默认颜色
-            let prefix = '';
-            
-            if (isGroup) {
-              color = '#722ed1'; // 紫色
-              prefix = '👥 ';
-            } else if (collaborator.is_senior) {
-              color = '#1890ff'; // 深蓝色
-            }
-            
+            const color = collaborator.is_senior ? '#1890ff' : '#666';
+
             return (
               <span key={collaborator.id}>
                 <span style={{ color }}>
-                  {prefix}{collaborator.name}
+                  {collaborator.name}
+                  {collaborator.is_senior && ' ⭐'}
                 </span>
                 {index < sortedCollaborators.length - 1 && ', '}
               </span>

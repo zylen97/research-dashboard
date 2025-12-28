@@ -115,6 +115,7 @@ const ResearchDashboard: React.FC = () => {
       ...project,
       collaborator_ids: Array.isArray(project.collaborators) ? project.collaborators.map(c => c.id) : [],
       start_date: project.start_date ? dayjs(project.start_date) : null,
+      my_role: project.my_role || 'other_author',
     });
     setIsModalVisible(true);
   };
@@ -388,6 +389,25 @@ const ResearchDashboard: React.FC = () => {
             </Select>
           </Form.Item>
 
+          {/* 🆕 我的身份选择器 */}
+          <Form.Item
+            name="my_role"
+            label="我的身份"
+            rules={[{ required: true, message: '请选择您在此项目中的身份' }]}
+            initialValue="other_author"
+          >
+            <Select placeholder="选择您的身份">
+              <Select.Option value="first_author">
+                <span style={{ fontWeight: 'bold', color: '#ff4d4f' }}>🥇 第一作者</span>
+              </Select.Option>
+              <Select.Option value="corresponding_author">
+                <span style={{ fontWeight: 'bold', color: '#1890ff' }}>✉️ 通讯作者</span>
+              </Select.Option>
+              <Select.Option value="other_author">
+                <span style={{ color: '#8c8c8c' }}>👥 其他作者</span>
+              </Select.Option>
+            </Select>
+          </Form.Item>
 
           <Form.Item
             name="collaborator_ids"

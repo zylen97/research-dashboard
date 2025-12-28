@@ -1,11 +1,10 @@
 import React from 'react';
-import { Table, Button, Space, Tag, Avatar, Checkbox, Input } from 'antd';
+import { Table, Button, Space, Tag, Avatar, Input } from 'antd';
 import {
   EditOutlined,
   DeleteOutlined,
   EyeOutlined,
   UserOutlined,
-  TeamOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
 import { ColumnType } from 'antd/es/table';
@@ -20,16 +19,18 @@ interface CollaboratorTableProps {
   total: number;
   searchText: string;
   searchedColumn: string;
-  localGroupMarks: Record<number, boolean>;
   onPageChange: (page: number, pageSize?: number) => void;
   onEdit: (collaborator: Collaborator) => void;
   onDelete: (collaborator: Collaborator) => void;
   onView: (collaborator: Collaborator) => void;
-  onGroupToggle: (collaboratorId: number) => void;
   onSearch: (selectedKeys: string[], confirm: () => void, dataIndex: string) => void;
   onReset: (clearFilters: () => void) => void;
 }
 
+/**
+ * 合作者表格组件（简化版）
+ * 只显示：姓名、背景、联系方式、项目数、状态、操作
+ */
 export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
   data,
   loading,
@@ -38,12 +39,10 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
   total,
   searchText,
   searchedColumn,
-  localGroupMarks,
   onPageChange,
   onEdit,
   onDelete,
   onView,
-  onGroupToggle,
   onSearch,
   onReset,
 }) => {
@@ -107,7 +106,7 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       title: '姓名',
       dataIndex: 'name',
       key: 'name',
-      width: 120,
+      width: 150,
       fixed: 'left',
       ...getColumnSearchProps('name'),
       render: (text, record) => (
@@ -122,64 +121,16 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
           <span style={{ fontWeight: record.is_senior ? 'bold' : 'normal' }}>
             {text}
           </span>
-          {localGroupMarks[record.id] && (
-            <TeamOutlined style={{ color: '#1890ff' }} />
-          )}
         </Space>
       ),
     },
     {
-      title: '性别',
-      dataIndex: 'gender',
-      key: 'gender',
-      width: 80,
-      filters: [
-        { text: '男', value: '男' },
-        { text: '女', value: '女' },
-      ],
-      onFilter: (value, record) => record.gender === value,
-    },
-    {
-      title: '班级',
-      dataIndex: 'class_name',
-      key: 'class_name',
-      width: 120,
-      ...getColumnSearchProps('class_name'),
-    },
-    {
-      title: '学号',
-      dataIndex: 'student_id',
-      key: 'student_id',
-      width: 120,
-      ...getColumnSearchProps('student_id'),
-    },
-    {
-      title: '联系方式',
-      key: 'contact',
-      width: 200,
-      render: (_, record) => (
-        <Space direction="vertical" size="small">
-          {record.phone && <span>📱 {record.phone}</span>}
-          {record.email && <span>📧 {record.email}</span>}
-          {record.qq && <span>QQ: {record.qq}</span>}
-          {record.wechat && <span>微信: {record.wechat}</span>}
-        </Space>
-      ),
-    },
-    {
-      title: '技能专长',
-      dataIndex: 'skills',
-      key: 'skills',
-      width: 200,
+      title: '背景信息',
+      dataIndex: 'background',
+      key: 'background',
+      width: 250,
       ellipsis: true,
-      ...getColumnSearchProps('skills'),
-    },
-    {
-      title: '研究兴趣',
-      dataIndex: 'research_interests',
-      key: 'research_interests',
-      width: 200,
-      ellipsis: true,
+      ...getColumnSearchProps('background'),
     },
     {
       title: '项目数',
@@ -199,60 +150,37 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       ],
       onFilter: (value, record) => record.is_senior === value,
       render: (_, record) => (
-        <Space>
-          {record.is_senior ? (
-            <Tag color="gold">高级合作者</Tag>
-          ) : (
-            <Tag color="green">普通合作者</Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
-      title: '小组',
-      key: 'group',
-      width: 80,
-      render: (_, record) => (
-        <Checkbox
-          checked={localGroupMarks[record.id] || false}
-          onChange={() => onGroupToggle(record.id)}
-        >
-          小组
-        </Checkbox>
+        <Tag color={record.is_senior ? 'gold' : 'green'}>
+          {record.is_senior ? '高级合作者' : '普通合作者'}
+        </Tag>
       ),
     },
     {
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 150,
+      width: 180,
       render: (_, record) => (
         <Space size="small">
           <Button
-            type="link"
+            type="text"
             icon={<EyeOutlined />}
             onClick={() => onView(record)}
-            size="small"
-          >
-            查看
-          </Button>
+            title="查看详情"
+          />
           <Button
-            type="link"
+            type="text"
             icon={<EditOutlined />}
             onClick={() => onEdit(record)}
-            size="small"
-          >
-            编辑
-          </Button>
+            title="编辑"
+          />
           <Button
-            type="link"
+            type="text"
             danger
             icon={<DeleteOutlined />}
             onClick={() => onDelete(record)}
-            size="small"
-          >
-            删除
-          </Button>
+            title="删除"
+          />
         </Space>
       ),
     },
@@ -264,16 +192,20 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       dataSource={data}
       rowKey="id"
       loading={loading}
-      scroll={{ x: 1500 }}
       pagination={{
         current: currentPage,
         pageSize: pageSize,
         total: total,
         onChange: onPageChange,
         showSizeChanger: true,
-        showTotal: (total) => `共 ${total} 条`,
+        showQuickJumper: true,
         pageSizeOptions: ['10', '20', '50', '100'],
+        showTotal: (total) => `共 ${total} 条`,
       }}
+      scroll={{ x: 1000 }}
+      size="small"
     />
   );
 };
+
+export default CollaboratorTable;

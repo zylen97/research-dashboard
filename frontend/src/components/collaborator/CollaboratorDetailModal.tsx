@@ -1,20 +1,21 @@
 import React from 'react';
 import { Modal, Descriptions, Tag, Avatar, Space } from 'antd';
-import { UserOutlined, TeamOutlined } from '@ant-design/icons';
+import { UserOutlined } from '@ant-design/icons';
 import { Collaborator } from '../../types';
-import { formatTextWithLineBreaks } from '../../utils/formatters';
 
 interface CollaboratorDetailModalProps {
   visible: boolean;
   collaborator: Collaborator | null;
-  isGroupMember: boolean;
   onClose: () => void;
 }
 
+/**
+ * 合作者详情模态框（简化版）
+ * 只显示4个字段：姓名、背景信息、联系方式、高级合作者
+ */
 export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = ({
   visible,
   collaborator,
-  isGroupMember,
   onClose,
 }) => {
   if (!collaborator) return null;
@@ -30,61 +31,35 @@ export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = (
             icon={<UserOutlined />}
           />
           <span>{collaborator.name} - 详细信息</span>
-          {isGroupMember && (
-            <Tag icon={<TeamOutlined />} color="blue">
-              小组成员
-            </Tag>
-          )}
         </Space>
       }
       open={visible}
       onCancel={onClose}
       footer={null}
-      width={800}
+      width={700}
     >
       <Descriptions bordered column={2}>
-        <Descriptions.Item label="姓名">{collaborator.name}</Descriptions.Item>
-        <Descriptions.Item label="性别">{collaborator.gender}</Descriptions.Item>
-        <Descriptions.Item label="班级">{collaborator.class_name}</Descriptions.Item>
-        
-        <Descriptions.Item label="状态">
+        <Descriptions.Item label="姓名" span={1}>
+          {collaborator.name}
+        </Descriptions.Item>
+
+        <Descriptions.Item label="状态" span={1}>
           <Tag color={collaborator.is_senior ? 'gold' : 'green'}>
             {collaborator.is_senior ? '高级合作者' : '普通合作者'}
           </Tag>
         </Descriptions.Item>
-        <Descriptions.Item label="参与项目数">
+
+        <Descriptions.Item label="背景信息" span={2}>
+          <div style={{ whiteSpace: 'pre-wrap' }}>
+            {collaborator.background}
+          </div>
+        </Descriptions.Item>
+
+        <Descriptions.Item label="参与项目数" span={1}>
           <Tag color="blue">{collaborator.project_count || 0} 个</Tag>
         </Descriptions.Item>
-        
-        {collaborator.skills && (
-          <Descriptions.Item label="技能专长" span={2}>
-            {collaborator.skills}
-          </Descriptions.Item>
-        )}
-        
-        {collaborator.research_interests && (
-          <Descriptions.Item label="研究兴趣" span={2}>
-            {collaborator.research_interests}
-          </Descriptions.Item>
-        )}
-        
-        {collaborator.future_plans && (
-          <Descriptions.Item label="未来规划" span={2}>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
-              {formatTextWithLineBreaks(collaborator.future_plans)}
-            </div>
-          </Descriptions.Item>
-        )}
-        
-        {collaborator.background && (
-          <Descriptions.Item label="背景资料" span={2}>
-            <div style={{ whiteSpace: 'pre-wrap' }}>
-              {formatTextWithLineBreaks(collaborator.background)}
-            </div>
-          </Descriptions.Item>
-        )}
-        
-        <Descriptions.Item label="创建时间" span={2}>
+
+        <Descriptions.Item label="创建时间" span={1}>
           {new Date(collaborator.created_at).toLocaleString('zh-CN')}
         </Descriptions.Item>
       </Descriptions>
