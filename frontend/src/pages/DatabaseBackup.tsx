@@ -30,7 +30,6 @@ import {
   MessageOutlined,
   ExclamationCircleOutlined,
   BulbOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -292,20 +291,6 @@ const DatabaseBackup: React.FC = () => {
         </Space>
       ),
       sorter: (a: BackupItem, b: BackupItem) => (a.ideas_count || 0) - (b.ideas_count || 0),
-    },
-    {
-      title: 'Prompts',
-      dataIndex: 'prompts_count',
-      key: 'prompts',
-      render: (count: number) => (
-        <Space>
-          <FileTextOutlined />
-          <Tag color={count === 0 ? 'warning' : 'processing'}>
-            {count || 0}
-          </Tag>
-        </Space>
-      ),
-      sorter: (a: BackupItem, b: BackupItem) => (a.prompts_count || 0) - (b.prompts_count || 0),
     },
     {
       title: '操作',

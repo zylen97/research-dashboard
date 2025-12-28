@@ -372,7 +372,6 @@ export const auditApi = {
   getAuditLogs: (params?: {
     table_name?: string;
     action?: string;
-    user_id?: number;
     skip?: number;
     limit?: number;
     start_date?: string;
@@ -392,13 +391,6 @@ export const auditApi = {
     recent_actions: any[];
   }> =>
     api.get('/audit/stats'),
-
-  // 获取用户操作历史
-  getUserActions: (userId: number, params?: {
-    skip?: number;
-    limit?: number;
-  }): Promise<any[]> =>
-    api.get(`/audit/user/${userId}`, { params }),
 };
 
 // Ideas管理 API

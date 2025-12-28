@@ -162,8 +162,6 @@ export interface SystemConfig {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  created_by_id?: number;
-  updated_by_id?: number;
 }
 
 export interface SystemConfigCreate {
@@ -212,24 +210,5 @@ export interface AITestResponse {
   provider: string;
   response_time?: number;
   response_content?: string;
-}
-
-// Prompt管理类型
-export interface Prompt {
-  id: number;
-  name: string;
-  content: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PromptCreate {
-  name: string;
-  content: string;
-}
-
-export interface PromptUpdate {
-  name?: string;
-  content?: string;
 }
 

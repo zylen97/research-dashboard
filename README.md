@@ -196,12 +196,6 @@ cd backend && python migrations/migration.py
 - `GET /api/config/ai/providers` - 获取AI配置
 - `POST /api/config/ai/test` - 测试AI连接
 
-### Prompt管理
-- `GET /api/prompts/` - 获取模板列表
-- `POST /api/prompts/` - 创建模板
-- `PUT /api/prompts/{id}` - 更新模板
-- `DELETE /api/prompts/{id}` - 删除模板
-
 ---
 
 ## 🆕 最新更新 (v2.1.0)
