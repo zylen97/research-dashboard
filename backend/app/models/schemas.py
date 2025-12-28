@@ -2,26 +2,18 @@ from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import List, Optional, Union
 from datetime import datetime
 
-# Collaborator schemas
+# Collaborator schemas（极简版 - 只保留3个业务字段）
 class CollaboratorBase(BaseModel):
-    name: str = Field(..., max_length=100)
-    gender: Optional[str] = Field(None, max_length=10)
-    class_name: Optional[str] = Field(None, max_length=100)
-    future_plan: Optional[str] = None
-    background: Optional[str] = None
-    contact_info: Optional[str] = Field(None, max_length=200)
-    is_senior: Optional[bool] = Field(default=True)
+    name: str = Field(..., max_length=100, description="姓名")
+    background: str = Field(..., description="背景信息")
+    is_senior: Optional[bool] = Field(default=True, description="高级合作者")
 
 class CollaboratorCreate(CollaboratorBase):
     pass
 
 class CollaboratorUpdate(BaseModel):
-    name: Optional[str] = Field(None, max_length=100)
-    gender: Optional[str] = Field(None, max_length=10)
-    class_name: Optional[str] = Field(None, max_length=100)
-    future_plan: Optional[str] = None
-    background: Optional[str] = None
-    contact_info: Optional[str] = Field(None, max_length=200)
+    name: Optional[str] = Field(None, max_length=100, description="姓名")
+    background: Optional[str] = Field(None, description="背景信息")
     is_senior: Optional[bool] = None
 
 class Collaborator(CollaboratorBase):
@@ -30,7 +22,8 @@ class Collaborator(CollaboratorBase):
     deleted_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
-    
+    project_count: int = 0  # 参与的项目数量（计算属性，不存储在数据库）
+
     class Config:
         from_attributes = True
 
@@ -45,6 +38,17 @@ class ResearchProjectBase(BaseModel):
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     is_todo: bool = Field(default=False)
+
+    # 我的身份字段
+    my_role: str = Field(default='other_author', description="我的身份: first_author/corresponding_author/other_author")
+
+    @field_validator('my_role')
+    @classmethod
+    def validate_my_role(cls, v):
+        valid_roles = ['first_author', 'corresponding_author', 'other_author']
+        if v not in valid_roles:
+            raise ValueError(f'my_role must be one of {valid_roles}')
+        return v
 
 class ResearchProjectCreate(ResearchProjectBase):
     collaborator_ids: List[int] = []
@@ -64,6 +68,18 @@ class ResearchProjectUpdate(BaseModel):
     is_todo: Optional[bool] = None
     start_date: Optional[datetime] = Field(None, description="项目开始时间")
 
+    # 我的身份字段（可选更新）
+    my_role: Optional[str] = None
+
+    @field_validator('my_role')
+    @classmethod
+    def validate_my_role(cls, v):
+        if v is not None:
+            valid_roles = ['first_author', 'corresponding_author', 'other_author']
+            if v not in valid_roles:
+                raise ValueError(f'my_role must be one of {valid_roles}')
+        return v
+
 class ResearchProject(ResearchProjectBase):
     id: int
     start_date: datetime
@@ -75,7 +91,7 @@ class ResearchProject(ResearchProjectBase):
     communication_logs: List['CommunicationLog'] = []  # 交流记录
     latest_communication: Optional[str] = None  # 最新交流进度摘要
     actual_start_date: Optional[datetime] = None    # 从交流日志计算的实际开始时间
-    
+
     class Config:
         from_attributes = True
 
@@ -88,7 +104,6 @@ class CommunicationLogBase(BaseModel):
     title: str = Field(..., max_length=200)
     content: str
     outcomes: Optional[str] = None
-    action_items: Optional[str] = None
     communication_date: datetime = Field(default_factory=datetime.utcnow)
 
 class CommunicationLogCreate(BaseModel):
@@ -97,7 +112,6 @@ class CommunicationLogCreate(BaseModel):
     title: str = Field(..., max_length=200, min_length=1)
     content: str = Field(..., min_length=1)
     outcomes: Optional[str] = None
-    action_items: Optional[str] = None
     communication_date: Union[str, datetime] = Field(default_factory=datetime.utcnow)
     
     @field_validator('title', 'content', mode='before')
@@ -132,7 +146,6 @@ class CommunicationLogUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
     content: Optional[str] = None
     outcomes: Optional[str] = None
-    action_items: Optional[str] = None
     communication_date: Optional[Union[str, datetime]] = None
     
     @field_validator('communication_date', mode='before')

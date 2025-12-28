@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Typography, Avatar, Button, theme, Space, Drawer } from 'antd';
+import { Layout, Menu, Typography, Button, theme, Drawer } from 'antd';
 import {
   DashboardOutlined,
   TeamOutlined,
@@ -7,7 +7,6 @@ import {
   UnorderedListOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
-  UserOutlined,
   DatabaseOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -173,11 +172,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               height: 48,
             }}
           />
-
-          {/* 工具栏 */}
-          <Space size="middle">
-            <Avatar icon={<UserOutlined />} />
-          </Space>
         </Header>
 
         {/* 内容区域 */}

@@ -26,6 +26,11 @@ async def get_collaborators(
     if not include_deleted:
         query = query.filter(Collaborator.is_deleted == False)
     collaborators = query.offset(skip).limit(limit).all()
+
+    # 计算每个合作者的项目数（利用ORM关系）
+    for collaborator in collaborators:
+        collaborator.project_count = len(collaborator.projects)
+
     return collaborators
 
 @router.get("/{collaborator_id}", response_model=CollaboratorSchema)
@@ -40,6 +45,10 @@ async def get_collaborator(collaborator_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Collaborator not found"
         )
+
+    # 计算项目数
+    collaborator.project_count = len(collaborator.projects)
+
     return collaborator
 
 @router.post("/", response_model=CollaboratorSchema)
