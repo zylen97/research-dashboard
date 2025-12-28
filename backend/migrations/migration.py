@@ -20,15 +20,15 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 彻底移除用户系统
-MIGRATION_VERSION = "v1.40_remove_user_system_completely"
+# 迁移版本号 - 删除action_items字段
+MIGRATION_VERSION = "v2.3_remove_action_items"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         # 创建迁移记录表（如果不存在）
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS migration_history (
@@ -37,11 +37,11 @@ def check_if_migration_completed(db_path):
                 executed_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        
+
         # 检查当前版本是否已执行
         cursor.execute("SELECT version FROM migration_history WHERE version = ?", (MIGRATION_VERSION,))
         result = cursor.fetchone()
-        
+
         conn.close()
         return result is not None
     except Exception as e:
@@ -67,243 +67,194 @@ def run_migration():
     if not db_path:
         logger.error("找不到数据库文件")
         return False
-    
+
     logger.info(f"使用数据库文件: {db_path}")
-    
+
     # 检查是否已执行过
     if check_if_migration_completed(db_path):
         logger.info(f"迁移 {MIGRATION_VERSION} 已执行过，跳过")
         return True
-    
+
     # 备份数据库
     backup_path = backup_database(db_path)
-    
+
     try:
         conn = sqlite3.connect(db_path)
         cursor = conn.cursor()
-        
+
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info("🎯 目标: 彻底移除用户系统")
+        logger.info("🎯 目标: 从communication_logs表删除action_items字段")
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v1.40迁移任务：彻底移除用户系统
+        # 🔧 v2.3迁移任务：删除action_items字段
         # 变更：
-        # 1. 重建 audit_logs 表（移除 user_id 字段）
-        # 2. 重建 system_configs 表（移除 created_by_id, updated_by_id 字段）
-        # 3. 删除 user_project_todos 表
-        # 4. 删除 user_api_settings 表
-        # 5. 删除 users 表
+        # 1. 从 communication_logs 表删除 action_items 字段
+        # 2. 保留其他所有字段
         # 说明：
-        # - 保留所有审计日志历史记录（仅移除 user_id 字段）
-        # - 保留所有系统配置（仅移除用户外键字段）
-        # - 核心业务功能不受影响
+        # - SQLite不支持DROP COLUMN，需要重建表
+        # - 必须明确列出字段映射，防止数据错位（教训：2025-07-24）
         # ===========================================
 
         # ============================
-        # Step 1: 重建 audit_logs 表
+        # Step 1: 获取迁移前的统计数据
         # ============================
-        logger.info("\n📋 Step 1: 重建 audit_logs 表（移除 user_id 字段）")
+        logger.info("\n📋 Step 1: 获取迁移前统计数据")
 
-        if table_exists(cursor, 'audit_logs'):
-            # 统计数据
-            cursor.execute("SELECT COUNT(*) FROM audit_logs")
-            audit_count = cursor.fetchone()[0]
-            logger.info(f"   当前 audit_logs 有 {audit_count} 条记录")
-
-            # 创建临时表（无 user_id）
-            cursor.execute("""
-                CREATE TABLE audit_logs_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    table_name VARCHAR(50) NOT NULL,
-                    record_id INTEGER NOT NULL,
-                    action VARCHAR(20) NOT NULL,
-                    ip_address VARCHAR(45),
-                    old_values TEXT,
-                    new_values TEXT,
-                    changes TEXT,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            # 复制数据（排除 user_id）
-            cursor.execute("""
-                INSERT INTO audit_logs_new
-                (id, table_name, record_id, action, ip_address, old_values, new_values, changes, created_at)
-                SELECT id, table_name, record_id, action, ip_address, old_values, new_values, changes, created_at
-                FROM audit_logs
-            """)
-
-            # 验证数据完整性
-            cursor.execute("SELECT COUNT(*) FROM audit_logs_new")
-            new_count = cursor.fetchone()[0]
-
-            if new_count != audit_count:
-                logger.error(f"   ❌ 数据迁移失败: 原{audit_count}条 -> 新{new_count}条")
-                conn.rollback()
-                return False
-
-            # 删除旧表（这会自动删除关联的索引）
-            cursor.execute("DROP TABLE audit_logs")
-
-            # 重命名新表
-            cursor.execute("ALTER TABLE audit_logs_new RENAME TO audit_logs")
-
-            # 现在创建索引（旧索引已随旧表删除）
-            cursor.execute("CREATE INDEX ix_audit_logs_id ON audit_logs (id)")
-
-            logger.info(f"   ✅ audit_logs 重建成功，保留 {new_count} 条记录")
-        else:
-            logger.info("   ℹ️ audit_logs 表不存在，跳过")
+        cursor.execute("SELECT COUNT(*) FROM communication_logs")
+        original_log_count = cursor.fetchone()[0]
+        logger.info(f"   交流日志总数: {original_log_count}")
 
         # ============================
-        # Step 2: 重建 system_configs 表
+        # Step 2: 重建 communication_logs 表（删除action_items）
         # ============================
-        logger.info("\n📋 Step 2: 重建 system_configs 表（移除用户外键字段）")
+        logger.info("\n📋 Step 2: 重建 communication_logs 表，删除 action_items 字段")
 
-        if table_exists(cursor, 'system_configs'):
-            cursor.execute("SELECT COUNT(*) FROM system_configs")
-            config_count = cursor.fetchone()[0]
-            logger.info(f"   当前 system_configs 有 {config_count} 条记录")
+        # 2.1 创建新表（不包含action_items字段）
+        logger.info("   创建新表 communication_logs_new...")
+        cursor.execute("""
+            CREATE TABLE communication_logs_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                collaborator_id INTEGER,
+                communication_type VARCHAR(50),
+                title VARCHAR(200) NOT NULL,
+                content TEXT NOT NULL,
+                outcomes TEXT,
+                communication_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (project_id) REFERENCES research_projects(id) ON DELETE CASCADE,
+                FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
+            )
+        """)
 
-            # 创建临时表
-            cursor.execute("""
-                CREATE TABLE system_configs_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    key VARCHAR(100) UNIQUE NOT NULL,
-                    value TEXT NOT NULL,
-                    category VARCHAR(50) NOT NULL DEFAULT 'general',
-                    description VARCHAR(500),
-                    is_encrypted BOOLEAN DEFAULT 0,
-                    is_active BOOLEAN DEFAULT 1,
-                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
+        # 2.2 复制数据（明确字段映射，跳过action_items字段）
+        logger.info("   复制数据到新表（明确字段映射，跳过action_items字段）...")
+        cursor.execute("""
+            INSERT INTO communication_logs_new (
+                id, project_id, collaborator_id, communication_type,
+                title, content, outcomes,
+                communication_date, created_at, updated_at
+            )
+            SELECT
+                id, project_id, collaborator_id, communication_type,
+                title, content, outcomes,
+                communication_date, created_at, updated_at
+            FROM communication_logs
+        """)
 
-            # 复制数据（排除用户外键字段）
-            cursor.execute("""
-                INSERT INTO system_configs_new
-                (id, key, value, category, description, is_encrypted, is_active, created_at, updated_at)
-                SELECT id, key, value, category, description, is_encrypted, is_active, created_at, updated_at
-                FROM system_configs
-            """)
+        copied_log_count = cursor.rowcount
+        logger.info(f"   ✅ 已复制 {copied_log_count} 条交流日志记录")
 
-            # 验证
-            cursor.execute("SELECT COUNT(*) FROM system_configs_new")
-            new_count = cursor.fetchone()[0]
+        # 2.3 删除旧表
+        logger.info("   删除旧表...")
+        cursor.execute("DROP TABLE communication_logs")
 
-            if new_count != config_count:
-                logger.error(f"   ❌ 数据迁移失败: 原{config_count}条 -> 新{new_count}条")
-                conn.rollback()
-                return False
+        # 2.4 重命名新表
+        logger.info("   重命名新表...")
+        cursor.execute("ALTER TABLE communication_logs_new RENAME TO communication_logs")
 
-            # 删除旧表（这会自动删除关联的索引）
-            cursor.execute("DROP TABLE system_configs")
+        # 2.5 重建索引
+        logger.info("   重建索引...")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_logs_id ON communication_logs(id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communication_logs_project ON communication_logs(project_id)")
 
-            # 重命名新表
-            cursor.execute("ALTER TABLE system_configs_new RENAME TO system_configs")
-
-            # 现在创建索引（旧索引已随旧表删除）
-            cursor.execute("CREATE INDEX idx_config_category_active ON system_configs(category, is_active)")
-            cursor.execute("CREATE INDEX idx_config_encrypted_active ON system_configs(is_encrypted, is_active)")
-            cursor.execute("CREATE INDEX idx_config_key ON system_configs(key)")
-            cursor.execute("CREATE INDEX idx_config_created_at ON system_configs(created_at)")
-
-            logger.info(f"   ✅ system_configs 重建成功，保留 {new_count} 条记录")
-        else:
-            logger.info("   ℹ️ system_configs 表不存在，跳过")
-
-        # ============================
-        # Step 3: 删除用户关联表
-        # ============================
-        logger.info("\n📋 Step 3: 删除用户关联表")
-
-        if table_exists(cursor, 'user_project_todos'):
-            cursor.execute("SELECT COUNT(*) FROM user_project_todos")
-            count = cursor.fetchone()[0]
-            cursor.execute("DROP TABLE user_project_todos")
-            logger.info(f"   ✅ user_project_todos 删除成功（原有 {count} 条记录）")
-        else:
-            logger.info("   ℹ️ user_project_todos 表不存在，跳过")
-
-        if table_exists(cursor, 'user_api_settings'):
-            cursor.execute("SELECT COUNT(*) FROM user_api_settings")
-            count = cursor.fetchone()[0]
-            cursor.execute("DROP TABLE user_api_settings")
-            logger.info(f"   ✅ user_api_settings 删除成功（原有 {count} 条记录）")
-        else:
-            logger.info("   ℹ️ user_api_settings 表不存在，跳过")
+        logger.info("   ✅ communication_logs 表重建完成")
+        logger.info("   ✅ 已删除字段: action_items")
 
         # ============================
-        # Step 4: 删除 users 表
+        # Step 3: 验证数据完整性
         # ============================
-        logger.info("\n📋 Step 4: 删除 users 主表")
+        logger.info("\n📋 Step 3: 验证数据完整性")
 
-        if table_exists(cursor, 'users'):
-            cursor.execute("SELECT COUNT(*) FROM users")
-            count = cursor.fetchone()[0]
-            cursor.execute("DROP TABLE users")
-            logger.info(f"   ✅ users 表删除成功（原有 {count} 条用户记录）")
-        else:
-            logger.info("   ℹ️ users 表不存在，跳过")
+        # 验证记录数量
+        cursor.execute("SELECT COUNT(*) FROM communication_logs")
+        new_log_count = cursor.fetchone()[0]
+        logger.info(f"   迁移后日志总数: {new_log_count}")
 
-        # ============================
-        # Step 5: 验证核心表完整性
-        # ============================
-        logger.info("\n📋 Step 5: 验证核心表完整性")
-
-        required_tables = ['research_projects', 'collaborators', 'ideas', 'audit_logs', 'system_configs']
-        all_valid = True
-        for table in required_tables:
-            if not table_exists(cursor, table):
-                logger.error(f"   ❌ 核心表 {table} 不存在！")
-                all_valid = False
-            else:
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
-                count = cursor.fetchone()[0]
-                logger.info(f"   ✅ {table}: {count} 条记录")
-
-        if not all_valid:
-            logger.error("核心表完整性验证失败！")
+        if new_log_count != original_log_count:
+            logger.error(f"   ❌ 记录数不匹配！迁移前: {original_log_count}, 迁移后: {new_log_count}")
             conn.rollback()
             return False
+        else:
+            logger.info(f"   ✅ 记录数一致: {new_log_count}")
+
+        # 验证表字段
+        log_columns = get_table_columns(cursor, 'communication_logs')
+
+        # 验证action_items字段已删除
+        if 'action_items' not in log_columns:
+            logger.info("   ✅ action_items 字段已成功删除")
+        else:
+            logger.error("   ❌ action_items 字段仍然存在！")
+            conn.rollback()
+            return False
+
+        # 验证必需字段存在
+        required_fields = ['id', 'project_id', 'title', 'content', 'outcomes', 'communication_date']
+        for field in required_fields:
+            if field in log_columns:
+                logger.info(f"   ✅ {field} 字段已保留")
+            else:
+                logger.error(f"   ❌ {field} 字段丢失！")
+                conn.rollback()
+                return False
+
+        # 显示字段列表
+        logger.info(f"\n   Communication_logs表最终字段: {', '.join(log_columns)}")
+
+        # 显示示例数据（防止字段错位）
+        logger.info("\n   前3条交流日志记录示例:")
+        cursor.execute("""
+            SELECT id, project_id, title, content, outcomes, communication_date
+            FROM communication_logs
+            LIMIT 3
+        """)
+        for row in cursor.fetchall():
+            title = row[2][:30] + '...' if len(row[2]) > 30 else row[2]
+            content_preview = (row[3][:30] + '...') if row[3] and len(row[3]) > 30 else (row[3] or '-')
+            outcomes_preview = (row[4][:30] + '...') if row[4] and len(row[4]) > 30 else (row[4] or '-')
+            logger.info(f"     ID={row[0]}, ProjectID={row[1]}")
+            logger.info(f"       Title={title}")
+            logger.info(f"       Content={content_preview}")
+            logger.info(f"       Outcomes={outcomes_preview}")
+            logger.info(f"       Date={row[5]}")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v1.40 用户系统移除完成！")
-        logger.info("✅ 已删除表: users, user_project_todos, user_api_settings")
-        logger.info("✅ 已移除字段: audit_logs.user_id, system_configs.created_by_id/updated_by_id")
-        logger.info("✅ 核心业务表完好，数据完整")
+        logger.info("🎉 v2.3 交流日志系统简化完成！")
+        logger.info("✅ 已删除: action_items 字段（从 communication_logs）")
+        logger.info(f"✅ 共处理: {new_log_count} 条交流日志")
+        logger.info("⚠️  重要: 项目级 is_todo 功能未受影响，继续保留")
         logger.info("=" * 70)
-        
-        
+
         conn.close()
-        
+
         return True
-        
+
     except Exception as e:
         logger.error(f"迁移执行失败: {e}")
         logger.error(f"错误类型: {type(e).__name__}")
         logger.error(f"详细错误信息: {str(e)}")
-        
+
         # 尝试回滚事务
         try:
             conn.rollback()
             logger.info("事务已回滚")
         except:
             logger.error("无法回滚事务")
-        
+
         # 关闭连接
         try:
             conn.close()
         except:
             pass
-            
+
         logger.info(f"数据库备份位于: {backup_path}")
         logger.error("建议从备份恢复数据库")
         return False
@@ -311,10 +262,10 @@ def run_migration():
 if __name__ == "__main__":
     logger.info(f"开始执行迁移版本: {MIGRATION_VERSION}")
     logger.info(f"执行时间: {datetime.now()}")
-    
+
     try:
         success = run_migration()
-        
+
         if success:
             logger.info("✅ 迁移执行成功")
             print("Migration completed successfully")
@@ -323,12 +274,12 @@ if __name__ == "__main__":
             logger.error("❌ 迁移执行失败")
             print("Migration failed")
             sys.exit(1)
-            
+
     except KeyboardInterrupt:
         logger.warning("迁移被用户中断")
         print("Migration interrupted by user")
         sys.exit(1)
-        
+
     except Exception as e:
         logger.error(f"未预期的错误: {e}")
         print(f"Unexpected error: {e}")

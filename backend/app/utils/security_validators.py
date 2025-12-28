@@ -267,7 +267,7 @@ class SecurityValidator:
             sanitized_data['gender'] = gender
         
         # 验证布尔值字段
-        for bool_field in ['is_senior', 'is_group']:
+        for bool_field in ['is_senior']:
             value = data.get(bool_field)
             if value is not None:
                 if isinstance(value, bool):
@@ -306,14 +306,7 @@ class SecurityValidator:
             if cls.check_sql_injection(content):
                 errors.append("交流内容包含不安全的内容")
             sanitized_data['content'] = cls.sanitize_string(content, max_length=5000)
-        
-        # 验证后续行动
-        action_items = data.get('action_items', '')
-        if action_items:
-            if cls.check_sql_injection(action_items):
-                errors.append("后续行动包含不安全的内容")
-            sanitized_data['action_items'] = cls.sanitize_string(action_items, max_length=2000)
-        
+
         # 验证交流类型
         communication_type = data.get('communication_type', 'meeting')
         valid_types = ['meeting', 'email', 'phone', 'video_call', 'in_person', 'chat']

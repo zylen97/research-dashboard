@@ -17,26 +17,16 @@ export interface PaginationParams {
   limit?: number;
 }
 
-// 合作者类型
+// 合作者类型（极简版 - 只保留3个业务字段）
 export interface Collaborator {
   id: number;
-  name: string;
-  gender?: string;
-  class_name?: string;
-  student_id?: string;
-  phone?: string;
-  email?: string;
-  qq?: string;
-  wechat?: string;
-  skills?: string;
-  research_interests?: string;
-  future_plans?: string;
-  background?: string;
-  contact_info?: string;
-  is_senior: boolean;
-  is_group?: boolean;   // 是否为小组成员
-  is_deleted: boolean;  // 软删除标记
-  deleted_at?: string;  // 删除时间
+  name: string;           // 必填
+  background: string;     // 必填
+  is_senior: boolean;     // 可选
+
+  // 系统字段
+  is_deleted: boolean;
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
   project_count?: number;
@@ -44,24 +34,14 @@ export interface Collaborator {
 
 export interface CollaboratorCreate {
   name: string;
-  gender?: string;
-  class_name?: string;
-  future_plan?: string;
-  background?: string;
-  contact_info?: string;
+  background: string;
   is_senior?: boolean;
-  is_group?: boolean;
 }
 
 export interface CollaboratorUpdate {
   name?: string;
-  gender?: string;
-  class_name?: string;
-  future_plan?: string;
   background?: string;
-  contact_info?: string;
   is_senior?: boolean;
-  is_group?: boolean;
 }
 
 // 研究项目类型
@@ -84,6 +64,9 @@ export interface ResearchProject {
   actual_start_date?: string;
   is_todo: boolean; // 是否标记为待办事项
   todo_marked_at?: string; // 标记为待办事项的时间
+
+  // 我的身份字段
+  my_role: 'first_author' | 'corresponding_author' | 'other_author';
 }
 
 export interface ResearchProjectCreate {
@@ -98,6 +81,9 @@ export interface ResearchProjectCreate {
   collaborator_ids?: number[];
   is_todo?: boolean; // 是否标记为待办事项
   start_date?: string; // 项目开始时间
+
+  // 我的身份字段（必填）
+  my_role: 'first_author' | 'corresponding_author' | 'other_author';
 }
 
 export interface ResearchProjectUpdate {
@@ -112,6 +98,9 @@ export interface ResearchProjectUpdate {
   collaborator_ids?: number[];
   is_todo?: boolean; // 是否标记为待办事项
   start_date?: string; // 项目开始时间
+
+  // 我的身份字段（更新时可选）
+  my_role?: 'first_author' | 'corresponding_author' | 'other_author';
 }
 
 
@@ -124,7 +113,6 @@ export interface CommunicationLog {
   title: string;
   content: string;
   outcomes?: string;
-  action_items?: string;
   communication_date: string;
   created_at: string;
   updated_at: string;
@@ -137,7 +125,6 @@ export interface CommunicationLogCreate {
   title: string;
   content: string;
   outcomes?: string;
-  action_items?: string;
   communication_date?: string;
 }
 
@@ -146,7 +133,6 @@ export interface CommunicationLogUpdate {
   title?: string;
   content?: string;
   outcomes?: string;
-  action_items?: string;
   communication_date?: string;
 }
 

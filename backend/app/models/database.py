@@ -22,22 +22,20 @@ project_collaborators = Table(
 # Association table for many-to-many relationship between projects and collaborators
 
 class Collaborator(Base):
-    """合作者模型"""
+    """合作者模型（极简版 - 只保留3个业务字段）"""
     __tablename__ = "collaborators"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, index=True)
-    gender = Column(String(10))
-    class_name = Column(String(100))
-    future_plan = Column(Text)
-    background = Column(Text)
-    contact_info = Column(String(200))
+    background = Column(Text, nullable=False)
     is_senior = Column(Boolean, default=True)
+
+    # 系统字段
     is_deleted = Column(Boolean, default=False)
     deleted_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     projects = relationship("ResearchProject", secondary=project_collaborators, back_populates="collaborators")
 
@@ -59,7 +57,10 @@ class ResearchProject(Base):
     todo_marked_at = Column(DateTime, nullable=True)  # 标记为待办的时间
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
+    # 我的身份字段
+    my_role = Column(String(50), nullable=False, default='other_author')  # 我在研究中的身份
+
     # Relationships
     collaborators = relationship("Collaborator", secondary=project_collaborators, back_populates="projects")
     communication_logs = relationship("CommunicationLog", back_populates="project", cascade="all, delete-orphan")
@@ -93,8 +94,7 @@ class CommunicationLog(Base):
     title = Column(String(200), nullable=False)
     content = Column(Text, nullable=False)
     outcomes = Column(Text)  # 会议结果或决定
-    action_items = Column(Text)  # 待办事项
-    
+
     communication_date = Column(DateTime, default=datetime.utcnow)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

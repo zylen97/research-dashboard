@@ -95,7 +95,6 @@ export interface CommunicationLogBase {
   title: string;
   content: string;
   outcomes?: string;
-  action_items?: string;
   communication_date: string;
 }
 

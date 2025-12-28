@@ -25,7 +25,6 @@ interface CommunicationFormValues {
   title: string;
   content?: string;
   outcomes?: string;
-  action_items?: string;
   communication_date?: any;
 }
 
@@ -95,7 +94,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
       communication_type: 'meeting', // 默认值，后端需要
       title: values.title.trim(),
       content: content,
-      ...(values.action_items?.trim() && { action_items: values.action_items.trim() }),
       ...(values.communication_date && { communication_date: values.communication_date.format('YYYY-MM-DD') }),
     };
 
@@ -125,7 +123,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     form.setFieldsValue({
       title: log.title,
       content: log.content,
-      action_items: log.action_items,
       communication_date: log.communication_date ? dayjs(log.communication_date) : undefined,
     });
     setIsAddModalVisible(true);
@@ -170,13 +167,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         dataIndex: 'content',
         key: 'content',
         ellipsis: true,
-      },
-      {
-        title: '待办事项',
-        dataIndex: 'action_items',
-        key: 'action_items',
-        ellipsis: true,
-        render: (text: string) => text || '-',
       },
       {
         title: '操作',
@@ -312,16 +302,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
             <TextArea
               rows={4}
               placeholder="请详细记录交流的主要内容、讨论的问题等"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="action_items"
-            label="待办事项"
-          >
-            <TextArea
-              rows={3}
-              placeholder="记录需要后续跟进的事项或任务"
             />
           </Form.Item>
         </Form>
