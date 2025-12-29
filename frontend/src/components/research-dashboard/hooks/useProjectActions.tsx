@@ -56,8 +56,8 @@ export const useProjectActions = ({
 
   // 标记为待办 mutation
   const markAsTodoMutation = useMutation({
-    mutationFn: ({ id, priority = 0, notes }: { id: number; priority?: number; notes?: string | undefined }) =>
-      researchApi.markAsTodo(id, priority, notes),
+    mutationFn: (id: number) =>
+      researchApi.markAsTodo(id),
     onSuccess: () => {
       message.success('已标记为待办事项！');
       queryClient.invalidateQueries({ queryKey: ['user-todos'] });
@@ -65,7 +65,7 @@ export const useProjectActions = ({
     },
     onError: (error: any, variables) => {
       // 如果API调用失败，恢复本地状态
-      revertLocalTodoStatus(variables.id, {
+      revertLocalTodoStatus(variables, {
         is_todo: false,
         marked_at: null,
         priority: null,
@@ -92,12 +92,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 创建交流日志 mutation
+  // 创建论文进度 mutation
   const createLogMutation = useMutation({
     mutationFn: ({ projectId, logData }: { projectId: number; logData: any }) =>
       researchApi.createCommunicationLog(projectId, logData),
     onSuccess: () => {
-      message.success('交流日志创建成功！');
+      message.success('论文进度创建成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -110,12 +110,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 更新交流日志 mutation
+  // 更新论文进度 mutation
   const updateLogMutation = useMutation({
     mutationFn: ({ projectId, logId, logData }: { projectId: number; logId: number; logData: any }) =>
       researchApi.updateCommunicationLog(projectId, logId, logData),
     onSuccess: () => {
-      message.success('交流日志更新成功！');
+      message.success('论文进度更新成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -127,12 +127,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 删除交流日志 mutation
+  // 删除论文进度 mutation
   const deleteLogMutation = useMutation({
     mutationFn: ({ projectId, logId }: { projectId: number; logId: number }) =>
       researchApi.deleteCommunicationLog(projectId, logId),
     onSuccess: () => {
-      message.success('交流日志删除成功！');
+      message.success('论文进度删除成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -159,7 +159,7 @@ export const useProjectActions = ({
           <ul style={{ marginLeft: 20 }}>
             <li>
               <span style={{ color: '#ff4d4f' }}>
-                所有相关的交流日志将被永久删除
+                所有相关的论文进度将被永久删除
               </span>
             </li>
             <li>
@@ -183,24 +183,20 @@ export const useProjectActions = ({
   };
 
   // 处理切换待办状态
-  const handleToggleTodo = (project: ResearchProject, priority?: number, notes?: string) => {
+  const handleToggleTodo = (project: ResearchProject) => {
     const currentTodoStatus = getProjectTodoStatus(project);
     const previousStatus = { ...currentTodoStatus };
-    
+
     if (!currentTodoStatus.is_todo) {
       // 标记为待办
       updateLocalTodoStatus(project.id, {
         is_todo: true,
         marked_at: new Date().toISOString(),
-        priority: priority || 0,
-        notes: notes || null
+        priority: 0,
+        notes: null
       });
-      
-      markAsTodoMutation.mutate({
-        id: project.id,
-        priority: priority || 0,
-        notes: notes
-      });
+
+      markAsTodoMutation.mutate(project.id);
     } else {
       // 取消待办
       updateLocalTodoStatus(project.id, {
@@ -209,7 +205,7 @@ export const useProjectActions = ({
         priority: null,
         notes: null
       });
-      
+
       unmarkTodoMutation.mutateAsync(project.id, {
         onError: () => {
           // 传递之前的状态以便回滚

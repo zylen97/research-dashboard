@@ -120,7 +120,7 @@ const ResearchDashboard: React.FC = () => {
     setIsModalVisible(true);
   };
 
-  // 处理交流日志查看
+  // 处理论文进度查看
   const handleViewLogs = (project: ResearchProject) => {
     setSelectedProject(project);
     setIsCommunicationModalVisible(true);
@@ -228,9 +228,9 @@ const ResearchDashboard: React.FC = () => {
             研究看板
           </Title>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>显示存档项目</span>
-            <Switch 
-              checked={showArchived} 
+            <span>显示已发表项目</span>
+            <Switch
+              checked={showArchived}
               onChange={handleShowArchivedChange}
               size="small"
             />
@@ -326,11 +326,10 @@ const ResearchDashboard: React.FC = () => {
           <Form.Item
             name="idea_description"
             label="项目描述"
-            rules={[{ required: true, message: '请输入项目描述' }]}
           >
-            <TextArea 
-              rows={4} 
-              placeholder="请详细描述项目的核心idea和目标"
+            <TextArea
+              rows={4}
+              placeholder="请详细描述项目的核心idea和目标（可选）"
             />
           </Form.Item>
 
@@ -385,7 +384,7 @@ const ResearchDashboard: React.FC = () => {
               <Select.Option value="paused">暂停</Select.Option>
               <Select.Option value="reviewing">审稿中</Select.Option>
               <Select.Option value="revising">返修中</Select.Option>
-              <Select.Option value="completed">存档</Select.Option>
+              <Select.Option value="completed">已发表</Select.Option>
             </Select>
           </Form.Item>
 
@@ -431,7 +430,7 @@ const ResearchDashboard: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 交流日志模态框 */}
+      {/* 论文进度模态框 */}
       <CommunicationLogModal
         visible={isCommunicationModalVisible}
         project={selectedProject}
@@ -441,7 +440,7 @@ const ResearchDashboard: React.FC = () => {
           setSelectedProject(null);
         }}
         onUpdate={() => {
-          // 刷新项目列表以更新最新交流进度
+          // 刷新项目列表以更新最新论文进度
           refetch();
         }}
       />

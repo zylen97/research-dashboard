@@ -24,7 +24,7 @@ interface ProjectPreviewModalProps {
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     active: 'processing',      // 撰写中 - 蓝色
-    completed: 'default',      // 存档 - 灰色
+    completed: 'default',      // 已发表 - 灰色
     paused: 'warning',         // 暂停 - 黄色
     reviewing: 'purple',       // 审稿中 - 紫色
     revising: 'error',         // 返修中 - 红色
@@ -36,7 +36,7 @@ const getStatusColor = (status: string) => {
 const getStatusText = (status: string) => {
   const statusMap: Record<string, string> = {
     active: '撰写中',
-    completed: '存档',
+    completed: '已发表',
     paused: '暂停',
     reviewing: '审稿中',
     revising: '返修中',

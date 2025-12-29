@@ -34,7 +34,7 @@ export interface ProjectColumnProps {
 const getStatusColor = (status: string) => {
   const colors: Record<string, string> = {
     active: 'processing',      // 撰写中 - 蓝色
-    completed: 'default',      // 存档 - 灰色
+    completed: 'default',      // 已发表 - 灰色
     paused: 'warning',         // 暂停 - 黄色
     reviewing: 'purple',       // 审稿中 - 紫色
     revising: 'error',         // 返修中 - 红色
@@ -85,6 +85,26 @@ export const createProjectColumns = ({
     },
   },
   ...(isMobile ? [] : [{
+    title: '(拟)投稿期刊',
+    dataIndex: 'target_journal',
+    key: 'target_journal',
+    width: 150,
+    render: (target_journal: string) => (
+      <div
+        style={{
+          color: '#666',
+          fontSize: '13px',
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          lineHeight: '1.4'
+        }}
+        title={target_journal}
+      >
+        {target_journal || '-'}
+      </div>
+    ),
+  }]),
+  ...(isMobile ? [] : [{
     title: '研究方法',
     dataIndex: 'research_method',
     key: 'research_method',
@@ -132,7 +152,7 @@ export const createProjectColumns = ({
     render: (status: string) => (
       <Tag color={getStatusColor(status)}>
         {status === 'active' ? '撰写中' :
-         status === 'completed' ? '存档' :
+         status === 'completed' ? '已发表' :
          status === 'paused' ? '暂停' :
          status === 'reviewing' ? '审稿中' :
          status === 'revising' ? '返修中' : status}
@@ -191,14 +211,14 @@ export const createProjectColumns = ({
     },
   }]),
   ...(isMobile ? [] : [{
-    title: '交流进度',
+    title: '论文进度',
     key: 'communication_progress',
     width: 200,
     render: (record: ResearchProject) => {
       // 使用communication_logs数组，正确排序获取最新记录
       const logs = record.communication_logs || [];
       if (logs.length > 0) {
-        // 按交流日期排序，获取最新的交流记录（带容错）
+        // 按进度日期排序，获取最新的论文进度记录（带容错）
         const sortedLogs = [...logs].sort((a, b) => {
           const dateA = new Date(a.communication_date || a.created_at);
           const dateB = new Date(b.communication_date || b.created_at);
@@ -208,7 +228,7 @@ export const createProjectColumns = ({
         if (!latestLog) {
           return (
             <Text style={{ fontSize: '13px', color: '#999' }}>
-              暂无交流记录
+              暂无进度记录
             </Text>
           );
         }
@@ -237,7 +257,7 @@ export const createProjectColumns = ({
       }
       return (
         <Text style={{ fontSize: '13px', color: '#999' }}>
-          暂无交流记录
+          暂无进度记录
         </Text>
       );
     },
@@ -270,7 +290,7 @@ export const createProjectColumns = ({
             type="text"
             icon={<MessageOutlined />}
             onClick={() => actions.onViewLogs(project)}
-            title="交流日志"
+            title="论文进度"
           />
           <Button
             type="text"

@@ -20,8 +20,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 重建Ideas表以对齐模型定义
-MIGRATION_VERSION = "v2.4_rebuild_ideas_table"
+# 迁移版本号 - Ideas负责人外键化
+MIGRATION_VERSION = "v2.5_idea_responsible_person_fk"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -84,18 +84,18 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info("🎯 目标: 重建 Ideas 表以对齐模型定义")
+        logger.info("🎯 目标: 将Ideas负责人字段改为外键关联Collaborator表")
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v2.4迁移任务：重建Ideas表
+        # 🔧 v2.5迁移任务：Ideas负责人外键化
         # 变更：
-        # 1. 删除旧的 ideas 表（字段：research_question, source_literature等）
-        # 2. 创建新的 ideas 表（字段：project_name, project_description等）
+        # 1. responsible_person (VARCHAR) → responsible_person_id (INTEGER + 外键)
+        # 2. 添加外键约束: FOREIGN KEY (responsible_person_id) REFERENCES collaborators(id)
         # 说明：
         # - Ideas表当前为空，可以安全重建
-        # - 新表结构对齐 database.py 中的 Idea 模型定义
-        # - 教训：2025-07-24 数据库表结构必须与模型定义一致
+        # - 支持从Collaborator表选择负责人
+        # - 转化为Research时可自动添加负责人到合作者列表
         # ===========================================
 
         # ============================
@@ -128,9 +128,9 @@ def run_migration():
         logger.info("   ✅ 旧表已删除")
 
         # ============================
-        # Step 3: 创建新 Ideas 表（对齐模型定义）
+        # Step 3: 创建新 Ideas 表（外键关联）
         # ============================
-        logger.info("\n📋 Step 3: 创建新 Ideas 表（对齐 database.py 模型）")
+        logger.info("\n📋 Step 3: 创建新 Ideas 表（负责人外键关联Collaborator）")
 
         cursor.execute("""
             CREATE TABLE ideas (
@@ -139,13 +139,14 @@ def run_migration():
                 project_description TEXT,
                 research_method TEXT NOT NULL,
                 source TEXT,
-                responsible_person VARCHAR(100) NOT NULL,
+                responsible_person_id INTEGER NOT NULL,
                 maturity VARCHAR(20) NOT NULL DEFAULT 'immature',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (responsible_person_id) REFERENCES collaborators(id)
             )
         """)
-        logger.info("   ✅ 新表已创建")
+        logger.info("   ✅ 新表已创建（responsible_person_id外键字段）")
 
         # ============================
         # Step 4: 创建索引
@@ -155,8 +156,8 @@ def run_migration():
         cursor.execute("CREATE INDEX idx_ideas_maturity ON ideas(maturity)")
         logger.info("   ✅ 索引 idx_ideas_maturity 已创建")
 
-        cursor.execute("CREATE INDEX idx_ideas_responsible_person ON ideas(responsible_person)")
-        logger.info("   ✅ 索引 idx_ideas_responsible_person 已创建")
+        cursor.execute("CREATE INDEX idx_ideas_responsible_person_id ON ideas(responsible_person_id)")
+        logger.info("   ✅ 索引 idx_ideas_responsible_person_id 已创建")
 
         cursor.execute("CREATE INDEX idx_ideas_created_at ON ideas(created_at)")
         logger.info("   ✅ 索引 idx_ideas_created_at 已创建")
@@ -177,7 +178,7 @@ def run_migration():
             'project_description': 'TEXT',
             'research_method': 'TEXT',
             'source': 'TEXT',
-            'responsible_person': 'VARCHAR(100)',
+            'responsible_person_id': 'INTEGER',
             'maturity': 'VARCHAR(20)',
             'created_at': 'DATETIME',
             'updated_at': 'DATETIME'
@@ -208,11 +209,12 @@ def run_migration():
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v2.4 Ideas 表重建完成！")
-        logger.info("✅ 旧表字段: research_question, source_literature, collaborator_id 等")
-        logger.info("✅ 新表字段: project_name, project_description, responsible_person 等")
-        logger.info("✅ 表结构已对齐 database.py Idea 模型定义")
-        logger.info("⚠️  重要: Ideas 表现在可以正常使用，不会出现字段错位问题")
+        logger.info("🎉 v2.5 Ideas 负责人外键化完成！")
+        logger.info("✅ 旧字段: responsible_person (VARCHAR) - 文本字段")
+        logger.info("✅ 新字段: responsible_person_id (INTEGER) - 外键关联collaborators表")
+        logger.info("✅ 外键约束: FOREIGN KEY (responsible_person_id) REFERENCES collaborators(id)")
+        logger.info("✅ 索引已创建: idx_ideas_responsible_person_id")
+        logger.info("⚠️  重要: 现在可以从Collaborator表选择负责人，转化时自动添加到合作者列表")
         logger.info("=" * 70)
 
         conn.close()

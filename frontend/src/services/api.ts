@@ -196,21 +196,21 @@ export const researchApi = {
   deleteProject: (id: number): Promise<{ message: string }> =>
     api.delete(`/research/${id}`),
 
-  // 获取项目交流日志
+  // 获取项目论文进度
   getCommunicationLogs: (id: number): Promise<CommunicationLog[]> =>
     api.get(`/research/${id}/logs`),
 
-  // 创建交流日志
+  // 创建论文进度
   createCommunicationLog: (projectId: number, data: CommunicationLogCreate): Promise<CommunicationLog> => {
     console.log('API调用参数:', { projectId, data });
     return api.post(`/research/${projectId}/logs`, data);
   },
 
-  // 更新交流日志
+  // 更新论文进度
   updateCommunicationLog: (projectId: number, logId: number, data: CommunicationLogUpdate): Promise<CommunicationLog> =>
     api.put(`/research/${projectId}/logs/${logId}`, data),
 
-  // 删除交流日志
+  // 删除论文进度
   deleteCommunicationLog: (projectId: number, logId: number): Promise<{ message: string }> =>
     api.delete(`/research/${projectId}/logs/${logId}`),
 
@@ -225,8 +225,8 @@ export const researchApi = {
   },
 
   // 将项目标记为待办
-  markAsTodo: (projectId: number, priority?: number, notes?: string): Promise<{ message: string }> =>
-    api.post(`/research/${projectId}/todo`, { priority, notes }),
+  markAsTodo: (projectId: number): Promise<{ message: string }> =>
+    api.post(`/research/${projectId}/todo`),
 
   // 取消项目的待办标记
   unmarkTodo: (projectId: number): Promise<{ message: string }> =>
@@ -400,7 +400,7 @@ export const ideaApi = {
     skip?: number;
     limit?: number;
     maturity?: 'mature' | 'immature';
-    responsible_person?: string;
+    responsible_person_id?: number;
   }): Promise<Idea[]> => {
     const response = await api.get('/ideas/', { params });
     return handleListResponse<Idea>(response, 'API.getIdeas');

@@ -30,7 +30,7 @@ class Collaborator(CollaboratorBase):
 # Research Project schemas
 class ResearchProjectBase(BaseModel):
     title: str = Field(..., max_length=200)
-    idea_description: str
+    idea_description: str = Field(default='', description="项目描述")
     research_method: Optional[str] = Field(None, description="研究方法")
     source: Optional[str] = Field(None, description="来源")
     target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
@@ -100,7 +100,7 @@ class ResearchProject(ResearchProjectBase):
 class CommunicationLogBase(BaseModel):
     project_id: int
     collaborator_id: Optional[int] = None
-    communication_type: str = Field(..., max_length=50)
+    communication_type: Optional[str] = Field('meeting', max_length=50, description="通讯类型")
     title: str = Field(..., max_length=200)
     content: str
     outcomes: Optional[str] = None
@@ -108,20 +108,28 @@ class CommunicationLogBase(BaseModel):
 
 class CommunicationLogCreate(BaseModel):
     collaborator_id: Optional[int] = None
-    communication_type: str = Field(..., max_length=50)
+    communication_type: Optional[str] = Field('meeting', max_length=50, description="通讯类型")
     title: str = Field(..., max_length=200, min_length=1)
-    content: str = Field(..., min_length=1)
+    content: str = Field(default='', description="进度内容")
     outcomes: Optional[str] = None
     communication_date: Union[str, datetime] = Field(default_factory=datetime.utcnow)
-    
-    @field_validator('title', 'content', mode='before')
-    def strip_and_validate_text(cls, v):
+
+    @field_validator('title', mode='before')
+    def strip_and_validate_title(cls, v):
         if v is None:
             return v
         if isinstance(v, str):
             v = v.strip()
             if not v:  # 去除空白后如果为空，返回None让min_length验证失败
                 return None
+        return v
+
+    @field_validator('content', mode='before')
+    def strip_content(cls, v):
+        if v is None or v == '':
+            return ''  # 允许空值，返回空字符串
+        if isinstance(v, str):
+            return v.strip()
         return v
 
     @field_validator('communication_date', mode='before')
@@ -225,15 +233,15 @@ class AITestResponse(BaseModel):
     message: str
     response: Optional[str] = None
 
-# Ideas管理 schemas - 重新设计版本
+# Ideas管理 schemas - 负责人外键化版本
 class IdeaBase(BaseModel):
     project_name: str = Field(..., min_length=1, max_length=200, description="项目名称")
     project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
     research_method: str = Field(..., min_length=1, max_length=1000, description="研究方法")
     source: Optional[str] = Field(None, max_length=500, description="来源信息")
-    responsible_person: str = Field(..., min_length=1, max_length=100, description="负责人")
+    responsible_person_id: int = Field(..., description="负责人ID（外键关联collaborators表）")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
-    
+
     @field_validator('maturity')
     @classmethod
     def validate_maturity(cls, v):
@@ -251,9 +259,9 @@ class IdeaUpdate(BaseModel):
     project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
     research_method: Optional[str] = Field(None, min_length=1, max_length=1000, description="研究方法")
     source: Optional[str] = Field(None, max_length=500, description="来源信息")
-    responsible_person: Optional[str] = Field(None, min_length=1, max_length=100, description="负责人")
+    responsible_person_id: Optional[int] = Field(None, description="负责人ID")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
-    
+
     @field_validator('maturity')
     @classmethod
     def validate_maturity(cls, v):
@@ -262,11 +270,14 @@ class IdeaUpdate(BaseModel):
         return v
 
 class Idea(IdeaBase):
-    """完整的Ideas数据模型"""
+    """完整的Ideas数据模型 - 包含关联的负责人对象"""
     id: int
     created_at: datetime
     updated_at: datetime
-    
+
+    # 关联的负责人对象
+    responsible_person: Collaborator = Field(..., description="负责人对象（包含name等信息）")
+
     class Config:
         from_attributes = True
 

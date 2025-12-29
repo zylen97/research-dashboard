@@ -30,7 +30,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
-import { ideasApi } from '../services/apiOptimized';
+import { ideasApi, collaboratorApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 
 const { Title } = Typography;
@@ -43,6 +43,12 @@ const IdeasManagementPage: React.FC = () => {
   const [convertingIdeaId, setConvertingIdeaId] = useState<number | null>(null);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+
+  // 查询合作者列表（用于下拉选择器）
+  const { data: collaborators = [] } = useQuery({
+    queryKey: ['collaborators'],
+    queryFn: () => collaboratorApi.getList(),
+  });
 
   // 查询Ideas列表 - 使用增强的安全方法
   const { data: ideasData = [], isLoading, refetch, error } = useQuery({
@@ -206,7 +212,11 @@ const IdeasManagementPage: React.FC = () => {
   // 打开编辑模态框
   const openEditModal = (idea: Idea) => {
     setEditingIdea(idea);
-    form.setFieldsValue(idea);
+    // 回填数据时，从responsible_person对象提取ID
+    form.setFieldsValue({
+      ...idea,
+      responsible_person_id: idea.responsible_person?.id,
+    });
     setModalVisible(true);
   };
 
@@ -316,6 +326,7 @@ const IdeasManagementPage: React.FC = () => {
       dataIndex: 'responsible_person',
       key: 'responsible_person',
       width: 120,
+      render: (responsible_person: any) => responsible_person?.name || '-',
     },
     {
       title: '成熟度',
@@ -507,14 +518,26 @@ const IdeasManagementPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="responsible_person"
+            name="responsible_person_id"
             label="负责人"
             rules={[
-              { required: true, message: '请输入负责人' },
-              { max: 100, message: '负责人姓名不能超过100字符' }
+              { required: true, message: '请选择负责人' },
             ]}
           >
-            <Input placeholder="项目负责人姓名" />
+            <Select
+              placeholder="选择负责人"
+              showSearch
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {Array.isArray(collaborators) && collaborators.map((collaborator: any) => (
+                <Select.Option key={collaborator.id} value={collaborator.id}>
+                  {collaborator.name}
+                  {collaborator.is_senior && ' ⭐'}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item

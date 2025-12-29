@@ -1,18 +1,21 @@
 """
-Ideas管理路由 - 重新设计版本
-简化的表单设计：项目名称、项目描述、研究方法、来源、负责人、成熟度
-包含转化为研究项目功能
+Ideas管理路由 - 负责人外键化版本
+简化的表单设计：项目名称、项目描述、研究方法、来源、负责人ID、成熟度
+包含转化为研究项目功能（自动添加负责人到合作者列表）
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
+import logging
 
 from ..models import get_db, Idea, ResearchProject, IdeaCreate, IdeaUpdate, IdeaSchema
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
 from ..utils.response import success_response
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -25,29 +28,27 @@ async def get_ideas(
     skip: int = 0,
     limit: int = 100,
     maturity: Optional[str] = None,
-    responsible_person: Optional[str] = None,
+    responsible_person_id: Optional[int] = None,
     db: Session = Depends(get_db)
 ):
-    """获取Ideas列表"""
+    """获取Ideas列表（预加载负责人信息）"""
     try:
-        filters = {}
+        # 使用joinedload预加载responsible_person关系，避免N+1查询
+        query = db.query(Idea).options(joinedload(Idea.responsible_person))
+
         if maturity:
-            filters['maturity'] = maturity
-        if responsible_person:
-            filters['responsible_person'] = responsible_person
-        
-        ideas = idea_crud.get_multi(
-            db,
-            skip=skip,
-            limit=limit,
-            filters=filters
-        )
-        
+            query = query.filter(Idea.maturity == maturity)
+        if responsible_person_id:
+            query = query.filter(Idea.responsible_person_id == responsible_person_id)
+
+        ideas = query.offset(skip).limit(limit).all()
+
         # 按创建时间倒序排序
         ideas.sort(key=lambda x: x.created_at, reverse=True)
-        
+
         return ideas
     except Exception as e:
+        logger.error(f"获取Ideas列表失败: {e}")
         raise HTTPException(status_code=500, detail=f"获取Ideas列表失败: {str(e)}")
 
 @router.get("/{idea_id}", response_model=IdeaSchema)
@@ -132,7 +133,7 @@ async def update_idea(
             "project_description": db_idea.project_description,
             "research_method": db_idea.research_method,
             "source": db_idea.source,
-            "responsible_person": db_idea.responsible_person,
+            "responsible_person_id": db_idea.responsible_person_id,
             "maturity": db_idea.maturity
         }
         
@@ -210,13 +211,13 @@ async def convert_to_project(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """将Idea转化为研究项目"""
+    """将Idea转化为研究项目（自动添加负责人到合作者列表）"""
     try:
-        # 获取Idea
-        idea = idea_crud.get(db, id=idea_id)
+        # 预加载负责人关系
+        idea = db.query(Idea).options(joinedload(Idea.responsible_person)).filter(Idea.id == idea_id).first()
         if not idea:
             raise HTTPException(status_code=404, detail="Idea not found")
-        
+
         # 创建新的研究项目
         new_project = ResearchProject(
             title=idea.project_name,
@@ -224,19 +225,26 @@ async def convert_to_project(
             research_method=idea.research_method,
             source=idea.source,
             status="active",
-            progress=0.0
+            progress=0.0,
+            my_role='first_author'  # 新增：默认设置为第一作者
         )
-        
+
+        # 🔥 核心新增：自动将负责人添加到合作者列表
+        responsible_collaborator = idea.responsible_person
+        if responsible_collaborator:
+            new_project.collaborators.append(responsible_collaborator)
+            logger.info(f"自动添加负责人 {responsible_collaborator.name} (is_senior={responsible_collaborator.is_senior}) 到项目合作者列表")
+
         # 添加到数据库
         db.add(new_project)
-        
+
         # 删除已转化的Idea
-        idea_crud.remove(db, id=idea_id)
-        
+        db.delete(idea)
+
         # 提交事务
         db.commit()
         db.refresh(new_project)
-        
+
         # 记录审计日志
         try:
             audit_service = AuditService(db)
@@ -246,20 +254,24 @@ async def convert_to_project(
                 record_id=idea_id,
                 new_values={
                     "converted_to_project_id": new_project.id,
-                    "project_title": new_project.title
+                    "project_title": new_project.title,
+                    "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None,
+                    "responsible_person_is_senior": responsible_collaborator.is_senior if responsible_collaborator else None
                 }
             )
         except Exception as audit_error:
-            print(f"审计日志记录失败: {audit_error}")
-        
+            logger.warning(f"审计日志记录失败: {audit_error}")
+
         return {
             "message": "Idea successfully converted to research project",
             "project_id": new_project.id,
-            "project_title": new_project.title
+            "project_title": new_project.title,
+            "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         db.rollback()
+        logger.error(f"转化为研究项目失败: {e}")
         raise HTTPException(status_code=500, detail=f"转化为研究项目失败: {str(e)}")

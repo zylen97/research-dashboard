@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint, event
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -10,6 +10,14 @@ DATABASE_URL = settings.get_database_url()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# 启用SQLite外键约束（确保外键约束生效）
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_conn, connection_record):
+    """在每个数据库连接建立时启用外键约束"""
+    cursor = dbapi_conn.cursor()
+    cursor.execute("PRAGMA foreign_keys=ON")
+    cursor.close()
 
 # Association table for many-to-many relationship between projects and collaborators
 project_collaborators = Table(
@@ -126,23 +134,26 @@ class SystemConfig(Base):
 
 
 class Idea(Base):
-    """Ideas管理模型 - 重新设计版本"""
+    """Ideas管理模型 - 负责人外键化版本"""
     __tablename__ = "ideas"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     project_name = Column(Text, nullable=False, comment="项目名称")
     project_description = Column(Text, nullable=True, comment="项目描述")
     research_method = Column(Text, nullable=False, comment="研究方法")
     source = Column(Text, nullable=True, comment="来源信息")
-    responsible_person = Column(String(100), nullable=False, comment="负责人")
+    responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=False, comment="负责人ID")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
-    
+
+    # 关系属性
+    responsible_person = relationship("Collaborator", foreign_keys=[responsible_person_id])
+
     # 索引优化
     __table_args__ = (
         Index('idx_ideas_maturity', 'maturity'),
-        Index('idx_ideas_responsible_person', 'responsible_person'),
+        Index('idx_ideas_responsible_person_id', 'responsible_person_id'),
         Index('idx_ideas_created_at', 'created_at'),
     )
 

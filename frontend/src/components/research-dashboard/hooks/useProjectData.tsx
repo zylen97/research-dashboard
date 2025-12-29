@@ -64,7 +64,7 @@ export const useProjectData = () => {
     return { is_todo: false, marked_at: null, priority: null, notes: null };
   }, [todoStatusCache]);
 
-  // 按待办状态排序项目：待办项目置顶，然后按交流进度日期倒序
+  // 按待办状态排序项目：待办项目置顶，然后按论文进度日期倒序
   const sortedProjects = useMemo(() => {
     return [...projects].sort((a, b) => {
       const aTodoStatus = getProjectTodoStatus(a);
@@ -87,8 +87,8 @@ export const useProjectData = () => {
         return 0;
       }
       
-      // 3. 都不是待办项目时，按交流进度日期倒序排列
-      // 获取最新交流记录的日期
+      // 3. 都不是待办项目时，按论文进度日期倒序排列
+      // 获取最新论文进度记录的日期
       const getLatestCommunicationDate = (project: ResearchProject) => {
         const logs = project.communication_logs || [];
         if (logs.length === 0) return null;
@@ -107,17 +107,17 @@ export const useProjectData = () => {
       
       const aLatestDate = getLatestCommunicationDate(a);
       const bLatestDate = getLatestCommunicationDate(b);
-      
-      // 有交流记录的项目优先于没有交流记录的项目
+
+      // 有论文进度的项目优先于没有论文进度的项目
       if (aLatestDate && !bLatestDate) return -1;
       if (!aLatestDate && bLatestDate) return 1;
-      
-      // 都有交流记录时，按最新交流日期倒序
+
+      // 都有论文进度时，按最新记录日期倒序
       if (aLatestDate && bLatestDate) {
         return bLatestDate.getTime() - aLatestDate.getTime();
       }
-      
-      // 都没有交流记录时，按创建时间倒序
+
+      // 都没有论文进度时，按创建时间倒序
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     });
   }, [projects, getProjectTodoStatus]);
