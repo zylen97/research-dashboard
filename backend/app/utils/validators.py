@@ -3,7 +3,7 @@
 """
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-from ..models import ResearchProject, Collaborator, CommunicationLog
+from ..models import ResearchProject, Collaborator, CommunicationLog, Idea
 
 class DataValidator:
     """数据验证器"""
@@ -47,25 +47,35 @@ class DataValidator:
             Collaborator.id == collaborator_id,
             Collaborator.is_deleted == False
         ).first()
-        
+
         if not collaborator:
             return {"exists": False}
-        
+
         # 检查参与的项目
         projects = collaborator.projects
         active_projects = [p for p in projects if p.status in ["active", "reviewing", "revising"]]
-        
+
         # 检查交流日志
         communication_logs = db.query(CommunicationLog).filter(
             CommunicationLog.collaborator_id == collaborator_id
         ).count()
-        
+
+        # 检查作为负责人的Ideas（关键外键依赖）
+        responsible_ideas = db.query(Idea).filter(
+            Idea.responsible_person_id == collaborator_id
+        ).all()
+
         warnings = []
+        can_delete = True
+
         if active_projects:
             warnings.append(f"合作者仍参与 {len(active_projects)} 个活跃项目")
         if communication_logs > 0:
             warnings.append(f"合作者有 {communication_logs} 条交流记录")
-        
+        if responsible_ideas:
+            warnings.append(f"合作者是 {len(responsible_ideas)} 个项目想法的负责人")
+            can_delete = False  # 有外键约束，不能删除
+
         return {
             "exists": True,
             "collaborator_id": collaborator_id,
@@ -74,9 +84,11 @@ class DataValidator:
             "active_projects_count": len(active_projects),
             "project_titles": [p.title for p in projects],
             "communication_logs_count": communication_logs,
-            "can_delete": True,  # 软删除总是可以的
+            "responsible_ideas_count": len(responsible_ideas),
+            "responsible_idea_names": [idea.project_name for idea in responsible_ideas],
+            "can_delete": can_delete,
             "warnings": warnings,
-            "recommendation": "soft_delete" if warnings else "safe_to_delete"
+            "recommendation": "cannot_delete" if responsible_ideas else ("soft_delete" if warnings else "safe_to_delete")
         }
     
     @staticmethod

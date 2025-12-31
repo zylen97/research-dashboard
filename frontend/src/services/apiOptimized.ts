@@ -12,6 +12,11 @@ import {
   BackupStats, BackupListResponse, BackupCreateResponse
 } from '../types';
 import { Idea, IdeaCreate, IdeaUpdate, ConvertToProjectResponse } from '../types/ideas';
+import {
+  Journal, JournalCreate, JournalUpdate,
+  JournalStats, JournalReferences, JournalBatchImportResponse,
+  Tag, TagCreate, TagUpdate
+} from '../types/journals';
 import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptor } from '../utils/errorHandler';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
@@ -320,6 +325,77 @@ export const validationApi = {
   checkConsistency: () =>
     api.get('/validation/consistency'),
 };
+
+// 标签管理API - 提供标签的CRUD操作和关联查询
+export const tagApi = createExtendedCRUDApi<
+  Tag,
+  TagCreate,
+  TagUpdate,
+  {
+    getTags: (params?: { search?: string }) => Promise<Tag[]>;
+    getTagJournals: (tagId: number) => Promise<Journal[]>;
+  }
+>(
+  '/tags',
+  'API.getTags',
+  (basePath) => ({
+    getTags: async (params?: { search?: string }): Promise<Tag[]> => {
+      try {
+        const response = await api.get(`${basePath}/`, { params });
+        return handleListResponse<Tag>(response, 'API.getTags');
+      } catch (error) {
+        console.error('获取标签列表失败:', error);
+        return [];
+      }
+    },
+
+    getTagJournals: async (tagId: number): Promise<Journal[]> => {
+      try {
+        const response = await api.get(`${basePath}/${tagId}/journals`);
+        return handleListResponse<Journal>(response, 'API.getTagJournals');
+      } catch (error) {
+        console.error('获取标签期刊列表失败:', error);
+        return [];
+      }
+    },
+  })
+);
+
+// 期刊库API - 使用扩展CRUD工厂，包含统计和批量导入功能
+export const journalApi = createExtendedCRUDApi<
+  Journal,
+  JournalCreate,
+  JournalUpdate,
+  {
+    getJournals: (params?: { language?: string; tag_ids?: string; search?: string }) => Promise<Journal[]>;
+    getJournalStats: (id: number) => Promise<JournalStats>;
+    getJournalReferences: (id: number, refType?: 'reference' | 'target') => Promise<JournalReferences>;
+    batchImport: (journals: JournalCreate[]) => Promise<JournalBatchImportResponse>;
+  }
+>(
+  '/journals',
+  'API.getJournals',
+  (basePath) => ({
+    getJournals: async (params?: { language?: string; tag_ids?: string; search?: string }): Promise<Journal[]> => {
+      try {
+        const response = await api.get(`${basePath}/`, { params });
+        return handleListResponse<Journal>(response, 'API.getJournals');
+      } catch (error) {
+        console.error('获取期刊列表失败:', error);
+        return [];
+      }
+    },
+
+    getJournalStats: (id: number): Promise<JournalStats> =>
+      api.get(`${basePath}/${id}/stats`),
+
+    getJournalReferences: (id: number, refType?: 'reference' | 'target'): Promise<JournalReferences> =>
+      api.get(`${basePath}/${id}/references`, { params: { ref_type: refType } }),
+
+    batchImport: (journals: JournalCreate[]): Promise<JournalBatchImportResponse> =>
+      api.post(`${basePath}/batch-import`, journals),
+  })
+);
 
 export const auditApi = {
   getAuditLogs: (params?: any) =>

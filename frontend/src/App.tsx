@@ -4,6 +4,8 @@ import MainLayout from './components/MainLayout';
 import ResearchDashboard from './pages/ResearchDashboard';
 import CollaboratorManagement from './pages/CollaboratorManagement';
 import IdeasManagement from './pages/IdeasManagement';
+import JournalsManagement from './pages/JournalsManagement';
+import TagsManagement from './pages/TagsManagement';
 import DatabaseBackup from './pages/DatabaseBackup';
 
 const App: React.FC = () => {
@@ -15,6 +17,8 @@ const App: React.FC = () => {
         <Route path="/research" element={<Navigate to="/dashboard" replace />} />
         <Route path="/collaborators" element={<CollaboratorManagement />} />
         <Route path="/ideas-management" element={<IdeasManagement />} />
+        <Route path="/journals" element={<JournalsManagement />} />
+        <Route path="/tags" element={<TagsManagement />} />
         <Route path="/backup" element={<DatabaseBackup />} />
       </Routes>
     </MainLayout>

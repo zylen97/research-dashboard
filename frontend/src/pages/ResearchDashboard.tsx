@@ -16,16 +16,18 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
 import { ResearchProject, ResearchProjectCreate } from '../types';
-import { 
-  StatisticsCards, 
+import {
+  StatisticsCards,
   createProjectColumns,
-  useProjectData, 
+  useProjectData,
   useProjectActions,
-  ResizableTitle 
+  ResizableTitle
 } from '../components/research-dashboard';
 import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
+import { journalApi } from '../services/apiOptimized';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -35,7 +37,6 @@ const DEFAULT_COLUMN_WIDTHS = {
   index: 50,
   title: 180,
   research_method: 60,
-  source: 200,
   status: 70,
   collaborators: 180,
   communication_progress: 200,
@@ -73,6 +74,12 @@ const ResearchDashboard: React.FC = () => {
     revertLocalTodoStatus,
     refetch,
   } = useProjectData();
+
+  // 查询期刊列表（用于期刊下拉选择器）
+  const { data: journals = [] } = useQuery({
+    queryKey: ['journals'],
+    queryFn: () => journalApi.getJournals(),
+  });
 
   const {
     createProjectMutation,
@@ -364,18 +371,44 @@ const ResearchDashboard: React.FC = () => {
             label="参考期刊（可选）"
             rules={[{ max: 200, message: '参考期刊不能超过200字符' }]}
           >
-            <Input
-              placeholder="请输入期刊名称，如：系统工程理论与实践"
-            />
+            <Select
+              showSearch
+              placeholder="选择或输入期刊名称"
+              mode="tags"
+              maxCount={1}
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {Array.isArray(journals) && journals.map((journal: any) => (
+                <Select.Option key={journal.id} value={journal.name}>
+                  {journal.name}
+                  {journal.category && ` (${journal.category})`}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item
             name="target_journal"
             label="(拟)投稿期刊"
           >
-            <Input 
-              placeholder="请输入目标投稿期刊（可选）"
-            />
+            <Select
+              showSearch
+              placeholder="选择或输入期刊名称"
+              mode="tags"
+              maxCount={1}
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {Array.isArray(journals) && journals.map((journal: any) => (
+                <Select.Option key={journal.id} value={journal.name}>
+                  {journal.name}
+                  {journal.category && ` (${journal.category})`}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item

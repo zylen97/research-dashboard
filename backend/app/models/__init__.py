@@ -10,7 +10,10 @@ from .database import (
     AuditLog,
     SystemConfig,
     Idea,
-    project_collaborators
+    Tag,
+    Journal,
+    project_collaborators,
+    journal_tags
 )
 
 from .schemas import (
@@ -53,12 +56,24 @@ from .schemas import (
     IdeaUpdate,
     Idea as IdeaSchema,
 
+    # Tag schemas
+    TagBase,
+    TagCreate,
+    TagUpdate,
+    Tag as TagSchema,
+
+    # Journal schemas
+    JournalBase,
+    JournalCreate,
+    JournalUpdate,
+    Journal as JournalSchema,
+
 )
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea",
-    "project_collaborators",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal",
+    "project_collaborators", "journal_tags",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",
@@ -66,4 +81,6 @@ __all__ = [
     "SystemConfigBase", "SystemConfigCreate", "SystemConfigUpdate", "SystemConfigSchema",
     "AIProviderConfig", "AITestRequest", "AITestResponse",
     "IdeaBase", "IdeaCreate", "IdeaUpdate", "IdeaSchema",
+    "TagBase", "TagCreate", "TagUpdate", "TagSchema",
+    "JournalBase", "JournalCreate", "JournalUpdate", "JournalSchema",
 ]

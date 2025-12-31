@@ -21,76 +21,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 拆分source字段
-MIGRATION_VERSION = "v2.7_split_source_field"
-
-
-# ============================
-# 数据拆分算法
-# ============================
-def split_source_field(source_text):
-    """
-    拆分来源字段为（参考论文，参考期刊）
-
-    规则：
-    1. 查找书名号《》内的内容作为期刊
-    2. 查找中文逗号，前面的内容作为论文
-    3. 如果没有逗号，整个文本作为论文
-    4. 如果格式不规范（太短），返回(None, None)保留原source
-
-    示例：
-    - "论文标题，《期刊》" -> ("论文标题", "期刊")
-    - "只有论文标题" -> ("只有论文标题", None)
-    - "123" -> (None, None)  # 不规范，保留原source
-    - "" -> (None, None)
-
-    Args:
-        source_text: 原始来源文本
-
-    Returns:
-        (paper, journal): 参考论文和参考期刊的元组
-    """
-    if not source_text or not isinstance(source_text, str):
-        return (None, None)
-
-    source_text = source_text.strip()
-
-    # 如果太短（如"123"），认为不规范
-    if len(source_text) < 5:
-        return (None, None)
-
-    # 查找期刊（书名号内的内容）
-    journal_match = re.search(r'《([^》]+)》', source_text)
-    journal = journal_match.group(1).strip() if journal_match else None
-
-    # 查找论文（中文逗号前的内容）
-    if '，' in source_text:
-        # 分割并取逗号前的部分
-        parts = source_text.split('，', 1)
-        paper = parts[0].strip()
-
-        # 如果逗号前面是空的，不规范
-        if not paper:
-            return (None, None)
-    elif ',' in source_text:
-        # 也支持英文逗号
-        parts = source_text.split(',', 1)
-        paper = parts[0].strip()
-        if not paper:
-            return (None, None)
-    else:
-        # 没有逗号，整个文本作为论文标题
-        # 但如果有书名号，去掉书名号部分
-        if journal_match:
-            paper = source_text.replace(journal_match.group(0), '').strip()
-        else:
-            paper = source_text
-
-    # 验证：至少要有论文或期刊之一
-    if not paper and not journal:
-        return (None, None)
-
-    return (paper or None, journal or None)
+# 迁移版本号 - 期刊Tags系统
+MIGRATION_VERSION = "v3.0_journal_tags_system"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -153,159 +85,251 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info("🎯 目标: 拆分source字段为reference_paper和reference_journal")
+        logger.info("🎯 目标: 创建Tags表和journal_tags关联表，删除category和impact_factor字段")
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v2.7迁移任务：拆分source字段
+        # 🔧 v3.0迁移任务：期刊Tags系统
         # 变更：
-        # 1. Ideas表和ResearchProject表都添加新字段：
-        #    - reference_paper TEXT NULL
-        #    - reference_journal TEXT NULL
-        # 2. 迁移现有source数据到新字段
-        # 3. 保留source字段（向后兼容）
+        # 1. 创建tags表（标签定义）
+        # 2. 创建journal_tags表（多对多关联）
+        # 3. 提取现有category创建标签
+        # 4. 建立期刊-标签关联
+        # 5. 重建journals表（删除category和impact_factor字段）
         # ===========================================
 
         # ============================
-        # Step 1: 添加新字段到Ideas表
+        # Step 1: 创建tags表和journal_tags表
         # ============================
-        logger.info("\n📋 Step 1: 为Ideas表添加新字段")
+        logger.info("\n📋 Step 1: 创建tags表和journal_tags表")
 
-        ideas_columns = get_table_columns(cursor, 'ideas')
+        if not table_exists(cursor, 'tags'):
+            cursor.execute("""
+                CREATE TABLE tags (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    description TEXT,
+                    color TEXT DEFAULT 'blue',
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            logger.info("   ✅ 创建表: tags")
 
-        if 'reference_paper' not in ideas_columns:
-            cursor.execute("ALTER TABLE ideas ADD COLUMN reference_paper TEXT")
-            logger.info("   ✅ 添加字段: reference_paper")
+            # 创建索引
+            cursor.execute("CREATE INDEX idx_tag_name ON tags(name)")
+            logger.info("   ✅ 创建索引: idx_tag_name")
         else:
-            logger.info("   ⏭️  字段已存在: reference_paper")
+            logger.info("   ⏭️  表已存在: tags")
 
-        if 'reference_journal' not in ideas_columns:
-            cursor.execute("ALTER TABLE ideas ADD COLUMN reference_journal TEXT")
-            logger.info("   ✅ 添加字段: reference_journal")
+        if not table_exists(cursor, 'journal_tags'):
+            cursor.execute("""
+                CREATE TABLE journal_tags (
+                    journal_id INTEGER NOT NULL,
+                    tag_id INTEGER NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    PRIMARY KEY (journal_id, tag_id),
+                    FOREIGN KEY (journal_id) REFERENCES journals(id) ON DELETE CASCADE,
+                    FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+                )
+            """)
+            logger.info("   ✅ 创建表: journal_tags")
+
+            # 创建索引
+            cursor.execute("CREATE INDEX idx_journal_tags_journal ON journal_tags(journal_id)")
+            cursor.execute("CREATE INDEX idx_journal_tags_tag ON journal_tags(tag_id)")
+            logger.info("   ✅ 创建索引: journal_tags索引")
         else:
-            logger.info("   ⏭️  字段已存在: reference_journal")
+            logger.info("   ⏭️  表已存在: journal_tags")
 
         # ============================
-        # Step 2: 添加新字段到ResearchProject表
+        # Step 2: 提取现有category创建标签
         # ============================
-        logger.info("\n📋 Step 2: 为ResearchProject表添加新字段")
+        logger.info("\n📋 Step 2: 提取现有category创建标签")
 
-        projects_columns = get_table_columns(cursor, 'research_projects')
+        # 提取所有非空分类
+        cursor.execute("""
+            SELECT DISTINCT category
+            FROM journals
+            WHERE category IS NOT NULL AND category != ''
+            ORDER BY category
+        """)
+        categories = cursor.fetchall()
+        logger.info(f"   📊 发现 {len(categories)} 个不同的分类")
 
-        if 'reference_paper' not in projects_columns:
-            cursor.execute("ALTER TABLE research_projects ADD COLUMN reference_paper TEXT")
-            logger.info("   ✅ 添加字段: reference_paper")
-        else:
-            logger.info("   ⏭️  字段已存在: reference_paper")
+        # 创建标签并建立映射
+        tag_mapping = {}
+        for category_name, in categories:
+            # 检查标签是否已存在
+            cursor.execute("SELECT id FROM tags WHERE name = ?", (category_name,))
+            existing_tag = cursor.fetchone()
 
-        if 'reference_journal' not in projects_columns:
-            cursor.execute("ALTER TABLE research_projects ADD COLUMN reference_journal TEXT")
-            logger.info("   ✅ 添加字段: reference_journal")
-        else:
-            logger.info("   ⏭️  字段已存在: reference_journal")
-
-        # ============================
-        # Step 3: 迁移Ideas表数据
-        # ============================
-        logger.info("\n📋 Step 3: 迁移Ideas表source数据")
-
-        cursor.execute("SELECT id, source FROM ideas WHERE source IS NOT NULL AND source != ''")
-        ideas_rows = cursor.fetchall()
-
-        logger.info(f"   发现 {len(ideas_rows)} 条有source数据的记录")
-
-        success_count = 0
-        failed_count = 0
-
-        for row in ideas_rows:
-            idea_id, source_text = row
-            paper, journal = split_source_field(source_text)
-
-            if paper is not None or journal is not None:
-                # 拆分成功
-                cursor.execute("""
-                    UPDATE ideas
-                    SET reference_paper = ?, reference_journal = ?
-                    WHERE id = ?
-                """, (paper, journal, idea_id))
-                paper_preview = (paper[:30] + '...') if paper and len(paper) > 30 else paper
-                logger.info(f"   ✅ [ID={idea_id}] 拆分成功: paper='{paper_preview}', journal='{journal}'")
-                success_count += 1
+            if existing_tag:
+                tag_id = existing_tag[0]
+                logger.info(f"   ⏭️  标签已存在: {category_name} (ID: {tag_id})")
             else:
-                # 拆分失败，保留原source
-                logger.warning(f"   ⚠️  [ID={idea_id}] 拆分失败，保留原source: '{source_text}'")
-                failed_count += 1
-
-        logger.info(f"   Ideas表迁移完成: 成功={success_count}, 失败={failed_count}")
-
-        # ============================
-        # Step 4: 迁移ResearchProject表数据
-        # ============================
-        logger.info("\n📋 Step 4: 迁移ResearchProject表source数据")
-
-        cursor.execute("SELECT id, source FROM research_projects WHERE source IS NOT NULL AND source != ''")
-        project_rows = cursor.fetchall()
-
-        logger.info(f"   发现 {len(project_rows)} 条有source数据的记录")
-
-        success_count = 0
-        failed_count = 0
-
-        for row in project_rows:
-            project_id, source_text = row
-            paper, journal = split_source_field(source_text)
-
-            if paper is not None or journal is not None:
                 cursor.execute("""
-                    UPDATE research_projects
-                    SET reference_paper = ?, reference_journal = ?
-                    WHERE id = ?
-                """, (paper, journal, project_id))
-                paper_preview = (paper[:30] + '...') if paper and len(paper) > 30 else paper
-                logger.info(f"   ✅ [ID={project_id}] 拆分成功: paper='{paper_preview}', journal='{journal}'")
-                success_count += 1
-            else:
-                logger.warning(f"   ⚠️  [ID={project_id}] 拆分失败，保留原source: '{source_text}'")
-                failed_count += 1
+                    INSERT INTO tags (name, description, color)
+                    VALUES (?, ?, ?)
+                """, (category_name, f'从旧分类"{category_name}"自动迁移', 'blue'))
 
-        logger.info(f"   ResearchProject表迁移完成: 成功={success_count}, 失败={failed_count}")
+                tag_id = cursor.lastrowid
+                logger.info(f"   ✅ 创建标签: {category_name} (ID: {tag_id})")
+
+            tag_mapping[category_name] = tag_id
+
+        logger.info(f"   📊 共处理 {len(tag_mapping)} 个标签")
+
+        # ============================
+        # Step 3: 建立期刊-标签关联
+        # ============================
+        logger.info("\n📋 Step 3: 建立期刊-标签关联")
+
+        # 查询所有有分类的期刊
+        cursor.execute("""
+            SELECT id, category
+            FROM journals
+            WHERE category IS NOT NULL AND category != ''
+        """)
+        journals_with_category = cursor.fetchall()
+        logger.info(f"   📊 发现 {len(journals_with_category)} 个期刊有分类")
+
+        # 创建关联
+        association_count = 0
+        for journal_id, category_name in journals_with_category:
+            tag_id = tag_mapping.get(category_name)
+            if tag_id:
+                # 检查关联是否已存在
+                cursor.execute("""
+                    SELECT 1 FROM journal_tags
+                    WHERE journal_id = ? AND tag_id = ?
+                """, (journal_id, tag_id))
+
+                if not cursor.fetchone():
+                    cursor.execute("""
+                        INSERT INTO journal_tags (journal_id, tag_id)
+                        VALUES (?, ?)
+                    """, (journal_id, tag_id))
+                    association_count += 1
+
+        logger.info(f"   ✅ 创建 {association_count} 个期刊-标签关联")
+
+        # ============================
+        # Step 4: 重建journals表（删除category和impact_factor字段）
+        # ============================
+        logger.info("\n📋 Step 4: 重建journals表（删除category和impact_factor字段）")
+
+        # 读取现有数据（排除要删除的字段）
+        cursor.execute("""
+            SELECT id, name, language, notes, created_at, updated_at
+            FROM journals
+        """)
+        journals_data = cursor.fetchall()
+        logger.info(f"   📊 读取到 {len(journals_data)} 条期刊数据")
+
+        # 备份旧表
+        cursor.execute("DROP TABLE IF EXISTS journals_old")
+        cursor.execute("ALTER TABLE journals RENAME TO journals_old")
+        logger.info("   ✅ 备份旧表为 journals_old")
+
+        # 创建新表（不含category和impact_factor）
+        cursor.execute("""
+            CREATE TABLE journals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                language TEXT NOT NULL DEFAULT 'zh',
+                notes TEXT,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        logger.info("   ✅ 创建新表: journals（不含category和impact_factor字段）")
+
+        # 删除旧索引（如果存在）
+        old_indexes = ['idx_journal_name', 'idx_journal_language', 'idx_journal_category', 'idx_journal_language_category']
+        for idx in old_indexes:
+            try:
+                cursor.execute(f"DROP INDEX IF EXISTS {idx}")
+            except:
+                pass
+
+        # 创建索引
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_name ON journals(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_language ON journals(language)")
+        logger.info("   ✅ 创建索引")
+
+        # 迁移数据
+        for row in journals_data:
+            cursor.execute("""
+                INSERT INTO journals (id, name, language, notes, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, row)
+        logger.info(f"   ✅ 迁移 {len(journals_data)} 条数据到新表")
+
+        # 删除旧表
+        cursor.execute("DROP TABLE journals_old")
+        logger.info("   ✅ 删除旧表 journals_old")
 
         # ============================
         # Step 5: 验证迁移结果
         # ============================
         logger.info("\n📋 Step 5: 验证迁移结果")
 
-        # 验证字段
-        ideas_columns_new = get_table_columns(cursor, 'ideas')
-        projects_columns_new = get_table_columns(cursor, 'research_projects')
+        # 验证tags表
+        cursor.execute("SELECT COUNT(*) FROM tags")
+        tags_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ tags表: {tags_count} 条记录")
 
-        required_fields = ['source', 'reference_paper', 'reference_journal']
+        # 验证journal_tags表
+        cursor.execute("SELECT COUNT(*) FROM journal_tags")
+        associations_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ journal_tags关联: {associations_count} 条记录")
 
+        # 验证journals表字段
+        journals_columns = get_table_columns(cursor, 'journals')
+        required_fields = ['id', 'name', 'language', 'notes', 'created_at', 'updated_at']
+        removed_fields = ['category', 'impact_factor']
+
+        all_fields_ok = True
         for field in required_fields:
-            if field in ideas_columns_new:
-                logger.info(f"   ✅ Ideas表.{field} 存在")
+            if field in journals_columns:
+                logger.info(f"   ✅ journals表.{field} 存在")
             else:
-                logger.error(f"   ❌ Ideas表.{field} 缺失！")
-                conn.rollback()
-                return False
+                logger.error(f"   ❌ journals表.{field} 缺失！")
+                all_fields_ok = False
 
-            if field in projects_columns_new:
-                logger.info(f"   ✅ ResearchProject表.{field} 存在")
+        for field in removed_fields:
+            if field not in journals_columns:
+                logger.info(f"   ✅ journals表.{field} 已删除")
             else:
-                logger.error(f"   ❌ ResearchProject表.{field} 缺失！")
-                conn.rollback()
-                return False
+                logger.error(f"   ❌ journals表.{field} 仍然存在！")
+                all_fields_ok = False
+
+        if not all_fields_ok:
+            conn.rollback()
+            return False
+
+        # 验证数据完整性
+        cursor.execute("SELECT COUNT(*) FROM journals")
+        journals_count = cursor.fetchone()[0]
+        if journals_count == len(journals_data):
+            logger.info(f"   ✅ 数据完整性验证通过（{journals_count}条数据）")
+        else:
+            logger.error(f"   ❌ 数据丢失！原始数据{len(journals_data)}条，现在{journals_count}条")
+            conn.rollback()
+            return False
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v2.7 Source字段拆分完成！")
-        logger.info("✅ 新增字段: reference_paper, reference_journal")
-        logger.info("✅ 保留字段: source (向后兼容)")
-        logger.info("✅ 数据迁移: 规范数据已拆分，不规范数据保留在source")
-        logger.info("⚠️  重要: 前端需要更新为使用新字段")
+        logger.info("🎉 v3.0 期刊Tags系统创建完成！")
+        logger.info(f"✅ 新增表: tags（{tags_count}条）")
+        logger.info(f"✅ 新增表: journal_tags（{associations_count}条关联）")
+        logger.info(f"✅ 删除字段: category、impact_factor")
+        logger.info(f"✅ 保留数据: {journals_count} 条期刊")
+        logger.info("⚠️  下一步: 更新后端API和前端UI")
         logger.info("=" * 70)
 
         conn.close()

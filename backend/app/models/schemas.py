@@ -255,6 +255,7 @@ class IdeaBase(BaseModel):
     source: Optional[str] = Field(None, max_length=500, deprecated=True, description="来源信息（已废弃）")
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
+    target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
     responsible_person_id: int = Field(..., description="负责人ID（外键关联collaborators表）")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
 
@@ -277,6 +278,7 @@ class IdeaUpdate(BaseModel):
     source: Optional[str] = Field(None, max_length=500, deprecated=True)
     reference_paper: Optional[str] = Field(None, max_length=1000)
     reference_journal: Optional[str] = Field(None, max_length=200)
+    target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
     responsible_person_id: Optional[int] = Field(None, description="负责人ID")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
 
@@ -301,6 +303,100 @@ class Idea(IdeaBase):
 
 # Schema aliases for compatibility
 IdeaSchema = Idea
+
+# Tag schemas - 期刊标签管理
+class TagBase(BaseModel):
+    """标签基础数据模型"""
+    name: str = Field(..., min_length=1, max_length=50, description="标签名称（唯一）")
+    description: Optional[str] = Field(None, max_length=200, description="标签描述")
+    color: str = Field(default='blue', description="前端显示颜色")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError('标签名称不能为空')
+        return v
+
+class TagCreate(TagBase):
+    """创建标签的数据模型"""
+    pass
+
+class TagUpdate(BaseModel):
+    """更新标签的数据模型"""
+    name: Optional[str] = Field(None, min_length=1, max_length=50, description="标签名称")
+    description: Optional[str] = Field(None, max_length=200, description="标签描述")
+    color: Optional[str] = None
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError('标签名称不能为空')
+        return v
+
+class TagSchema(TagBase):
+    """完整的标签数据模型（包含ID和时间戳）"""
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    journal_count: int = Field(default=0, description="使用该标签的期刊数量")
+
+    class Config:
+        from_attributes = True
+
+Tag = TagSchema  # 别名
+
+# Journal schemas - 期刊库管理
+class JournalBase(BaseModel):
+    """期刊基础数据模型"""
+    name: str = Field(..., min_length=1, max_length=200, description="期刊名称（唯一）")
+    language: str = Field(default='zh', description="语言：zh/en")
+    notes: Optional[str] = Field(None, description="备注")
+
+    @field_validator('language')
+    @classmethod
+    def validate_language(cls, v):
+        if v not in ['zh', 'en']:
+            raise ValueError('language must be either "zh" or "en"')
+        return v
+
+class JournalCreate(JournalBase):
+    """创建期刊的数据模型"""
+    tag_ids: List[int] = Field(default=[], description="关联的标签ID列表")
+
+class JournalUpdate(BaseModel):
+    """更新期刊的数据模型"""
+    name: Optional[str] = Field(None, min_length=1, max_length=200, description="期刊名称")
+    language: Optional[str] = Field(None, description="语言：zh/en")
+    notes: Optional[str] = Field(None, description="备注")
+    tag_ids: Optional[List[int]] = Field(None, description="标签ID列表（完全替换）")
+
+    @field_validator('language')
+    @classmethod
+    def validate_language(cls, v):
+        if v is not None and v not in ['zh', 'en']:
+            raise ValueError('language must be either "zh" or "en"')
+        return v
+
+class Journal(JournalBase):
+    """完整的期刊数据模型（包含ID和时间戳）"""
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    # 关联的标签
+    tags: List[Tag] = Field(default=[], description="关联的标签列表")
+
+    # 统计字段（API返回时动态计算）
+    reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
+    target_count: int = Field(default=0, description="作为拟投稿期刊的引用次数")
+
+    class Config:
+        from_attributes = True
 
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference

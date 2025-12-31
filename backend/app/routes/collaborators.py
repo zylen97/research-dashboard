@@ -409,6 +409,25 @@ async def delete_collaborator(
             detail="Collaborator not found"
         )
 
+    # 检查依赖关系（外键约束）
+    dependencies = DataValidator.check_collaborator_dependencies(collaborator_id, db)
+
+    if not dependencies["can_delete"]:
+        # 有外键约束，无法删除
+        error_details = {
+            "error": "无法删除该合作者",
+            "reason": "存在外键约束",
+            "details": {
+                "responsible_ideas_count": dependencies.get("responsible_ideas_count", 0),
+                "responsible_idea_names": dependencies.get("responsible_idea_names", [])
+            },
+            "suggestion": "请先将这些项目想法的负责人更改为其他合作者，或删除这些项目想法后再尝试删除该合作者"
+        }
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=error_details
+        )
+
     # 保存旧值用于审计
     old_values = AuditService.serialize_model_instance(db_collaborator)
 

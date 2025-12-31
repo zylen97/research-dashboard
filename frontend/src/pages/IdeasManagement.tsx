@@ -30,7 +30,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
-import { ideasApi, collaboratorApi } from '../services/apiOptimized';
+import { ideasApi, collaboratorApi, journalApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 
 const { Title } = Typography;
@@ -48,6 +48,12 @@ const IdeasManagementPage: React.FC = () => {
   const { data: collaborators = [] } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getList(),
+  });
+
+  // 查询期刊列表（用于期刊下拉选择器）
+  const { data: journals = [] } = useQuery({
+    queryKey: ['journals'],
+    queryFn: () => journalApi.getJournals(),
   });
 
   // 查询Ideas列表 - 使用增强的安全方法
@@ -336,6 +342,20 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
+      title: '拟投稿期刊',
+      dataIndex: 'target_journal',
+      key: 'target_journal',
+      width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
       title: '负责人',
       dataIndex: 'responsible_person',
       key: 'responsible_person',
@@ -539,9 +559,45 @@ const IdeasManagementPage: React.FC = () => {
             label="参考期刊（可选）"
             rules={[{ max: 200, message: '参考期刊不能超过200字符' }]}
           >
-            <Input
-              placeholder="请输入期刊名称，如：系统工程理论与实践"
-            />
+            <Select
+              showSearch
+              placeholder="选择或输入期刊名称"
+              mode="tags"
+              maxCount={1}
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {Array.isArray(journals) && journals.map((journal: any) => (
+                <Select.Option key={journal.id} value={journal.name}>
+                  {journal.name}
+                  {journal.category && ` (${journal.category})`}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="target_journal"
+            label="拟投稿期刊（可选）"
+            rules={[{ max: 200, message: '拟投稿期刊不能超过200字符' }]}
+          >
+            <Select
+              showSearch
+              placeholder="选择或输入期刊名称"
+              mode="tags"
+              maxCount={1}
+              filterOption={(input, option) =>
+                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
+              }
+            >
+              {Array.isArray(journals) && journals.map((journal: any) => (
+                <Select.Option key={journal.id} value={journal.name}>
+                  {journal.name}
+                  {journal.category && ` (${journal.category})`}
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
 
           <Form.Item

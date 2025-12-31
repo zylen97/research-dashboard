@@ -27,6 +27,15 @@ project_collaborators = Table(
     Column('collaborator_id', Integer, ForeignKey('collaborators.id'))
 )
 
+# Association table for many-to-many relationship between journals and tags
+journal_tags = Table(
+    'journal_tags',
+    Base.metadata,
+    Column('journal_id', Integer, ForeignKey('journals.id', ondelete='CASCADE'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
 # Association table for many-to-many relationship between projects and collaborators
 
 class Collaborator(Base):
@@ -146,6 +155,7 @@ class Idea(Base):
     source = Column(Text, nullable=True, comment="来源信息（已废弃，使用reference_paper和reference_journal）")
     reference_paper = Column(Text, nullable=True, comment="参考论文")
     reference_journal = Column(Text, nullable=True, comment="参考期刊")
+    target_journal = Column(Text, nullable=True, comment="拟投稿期刊")
     responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=False, comment="负责人ID")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
@@ -159,6 +169,49 @@ class Idea(Base):
         Index('idx_ideas_maturity', 'maturity'),
         Index('idx_ideas_responsible_person_id', 'responsible_person_id'),
         Index('idx_ideas_created_at', 'created_at'),
+    )
+
+
+class Tag(Base):
+    """期刊标签模型"""
+    __tablename__ = "tags"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(50), nullable=False, unique=True, index=True, comment="标签名称（唯一）")
+    description = Column(String(200), nullable=True, comment="标签描述")
+    color = Column(String(20), nullable=True, default='blue', comment="前端显示颜色")
+
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    # 关联关系
+    journals = relationship("Journal", secondary="journal_tags", back_populates="tags")
+
+
+class Journal(Base):
+    """期刊库模型"""
+    __tablename__ = "journals"
+
+    # 主键
+    id = Column(Integer, primary_key=True, index=True)
+
+    # 基础信息
+    name = Column(String(200), nullable=False, unique=True, index=True, comment="期刊名称（唯一）")
+    language = Column(String(10), nullable=False, default='zh', index=True, comment="语言：zh/en")
+
+    # 额外信息
+    notes = Column(Text, nullable=True, comment="备注")
+
+    # 系统字段
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    # 关联关系
+    tags = relationship("Tag", secondary="journal_tags", back_populates="journals")
+
+    # 索引优化
+    __table_args__ = (
+        Index('idx_journal_language', 'language'),
     )
 
 

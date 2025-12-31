@@ -226,6 +226,7 @@ async def convert_to_project(
             # 优先使用新字段，如果新字段为空则回退到source
             reference_paper=idea.reference_paper if idea.reference_paper else None,
             reference_journal=idea.reference_journal if idea.reference_journal else None,
+            target_journal=idea.target_journal if idea.target_journal else None,
             source=idea.source if (not idea.reference_paper and not idea.reference_journal) else None,
             status="active",
             progress=0.0,

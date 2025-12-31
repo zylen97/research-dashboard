@@ -8,6 +8,8 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   DatabaseOutlined,
+  GlobalOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -50,16 +52,28 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         onClick: () => navigate('/dashboard'),
       },
       {
+        key: '/ideas-management',
+        icon: <UnorderedListOutlined />,
+        label: 'Idea面板',
+        onClick: () => navigate('/ideas-management'),
+      },
+      {
         key: '/collaborators',
         icon: <TeamOutlined />,
         label: '合作者管理',
         onClick: () => navigate('/collaborators'),
       },
       {
-        key: '/ideas-management',
-        icon: <UnorderedListOutlined />,
-        label: 'Idea面板',
-        onClick: () => navigate('/ideas-management'),
+        key: '/journals',
+        icon: <GlobalOutlined />,
+        label: '期刊库',
+        onClick: () => navigate('/journals'),
+      },
+      {
+        key: '/tags',
+        icon: <TagsOutlined />,
+        label: '标签管理',
+        onClick: () => navigate('/tags'),
       },
       {
         key: '/backup',
