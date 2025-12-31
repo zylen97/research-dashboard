@@ -367,7 +367,7 @@ export const journalApi = createExtendedCRUDApi<
   JournalCreate,
   JournalUpdate,
   {
-    getJournals: (params?: { language?: string; tag_ids?: string; search?: string }) => Promise<Journal[]>;
+    getJournals: (params?: { tag_ids?: string; search?: string }) => Promise<Journal[]>;
     getJournalStats: (id: number) => Promise<JournalStats>;
     getJournalReferences: (id: number, refType?: 'reference' | 'target') => Promise<JournalReferences>;
     batchImport: (journals: JournalCreate[]) => Promise<JournalBatchImportResponse>;
@@ -376,7 +376,7 @@ export const journalApi = createExtendedCRUDApi<
   '/journals',
   'API.getJournals',
   (basePath) => ({
-    getJournals: async (params?: { language?: string; tag_ids?: string; search?: string }): Promise<Journal[]> => {
+    getJournals: async (params?: { tag_ids?: string; search?: string }): Promise<Journal[]> => {
       try {
         const response = await api.get(`${basePath}/`, { params });
         return handleListResponse<Journal>(response, 'API.getJournals');

@@ -199,7 +199,6 @@ async def get_tag_journals(
         journal_dict = {
             "id": journal.id,
             "name": journal.name,
-            "language": journal.language,
             "notes": journal.notes,
             "created_at": journal.created_at,
             "updated_at": journal.updated_at,

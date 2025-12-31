@@ -197,7 +197,6 @@ class Journal(Base):
 
     # 基础信息
     name = Column(String(200), nullable=False, unique=True, index=True, comment="期刊名称（唯一）")
-    language = Column(String(10), nullable=False, default='zh', index=True, comment="语言：zh/en")
 
     # 额外信息
     notes = Column(Text, nullable=True, comment="备注")
@@ -208,11 +207,6 @@ class Journal(Base):
 
     # 关联关系
     tags = relationship("Tag", secondary="journal_tags", back_populates="journals")
-
-    # 索引优化
-    __table_args__ = (
-        Index('idx_journal_language', 'language'),
-    )
 
 
 # Create database tables

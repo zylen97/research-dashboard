@@ -1,17 +1,16 @@
 /**
- * 标签管理页面
- * 提供标签的CRUD操作，支持颜色选择和期刊关联查看
+ * 标签管理面板组件
+ * 可复用的标签CRUD组件，用于在期刊库Tab中嵌入
  */
 import React, { useState } from 'react';
 import {
-  Table, Button, Space, message, Popconfirm, Modal, Form, Input, Select, Tag as AntTag, Card, Typography
+  Table, Button, Space, message, Popconfirm, Modal, Form, Input, Select, Tag as AntTag
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, TagsOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tagApi } from '../services/apiOptimized';
 import { Tag, TagCreate, TagUpdate } from '../types/journals';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
 
@@ -28,7 +27,7 @@ const TAG_COLORS = [
   { label: '灰色', value: 'default' },
 ];
 
-const TagsManagement: React.FC = () => {
+export const TagManagementPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
@@ -214,30 +213,25 @@ const TagsManagement: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Card>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={3} style={{ margin: 0 }}>
-            <TagsOutlined /> 标签管理
-          </Title>
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
-            新建标签
-          </Button>
-        </div>
+    <>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => handleOpenModal()}>
+          新建标签
+        </Button>
+      </div>
 
-        <Table
-          columns={columns}
-          dataSource={tags}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 个标签`,
-            defaultPageSize: 20,
-          }}
-          scroll={{ x: 1000 }}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={tags}
+        rowKey="id"
+        loading={isLoading}
+        pagination={{
+          showSizeChanger: true,
+          showTotal: (total) => `共 ${total} 个标签`,
+          defaultPageSize: 20,
+        }}
+        scroll={{ x: 1000 }}
+      />
 
       {/* 创建/编辑标签模态框 */}
       <Modal
@@ -280,8 +274,6 @@ const TagsManagement: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </>
   );
 };
-
-export default TagsManagement;

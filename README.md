@@ -16,6 +16,8 @@ USTS Research Dashboard 是一个科研项目管理平台，提供项目进度�
 - 📊 **项目管理** - 研究项目全生命周期管理，支持多状态流转
 - 👥 **合作者管理** - 合作者信息管理和项目关联
 - 💡 **Ideas管理** - 研究想法收集、评估和项目转化
+- 📚 **期刊库管理** - 期刊信息管理、标签分类、引用统计
+- 🏷️ **标签管理** - 标签系统，支持期刊多维度分类
 - 🤖 **AI处理** - Excel文献批量处理，智能生成研究建议
 - 📄 **模板系统** - Prompt模板管理，提高AI交互效率
 - 💾 **数据备份** - 自动备份和恢复功能
@@ -195,6 +197,21 @@ cd backend && python migrations/migration.py
 - `POST /api/ideas/process-excel` - Excel文件AI处理
 - `GET /api/config/ai/providers` - 获取AI配置
 - `POST /api/config/ai/test` - 测试AI连接
+
+### 期刊库管理
+- `GET /api/journals/` - 获取期刊列表（支持标签筛选、搜索）
+- `POST /api/journals/` - 创建期刊
+- `PUT /api/journals/{id}` - 更新期刊
+- `DELETE /api/journals/{id}` - 删除期刊（检查引用关系）
+- `GET /api/journals/{id}/stats` - 获取期刊统计信息
+- `GET /api/journals/{id}/references` - 获取引用该期刊的Ideas和Projects
+
+### 标签管理
+- `GET /api/tags/` - 获取标签列表
+- `POST /api/tags/` - 创建标签
+- `PUT /api/tags/{id}` - 更新标签
+- `DELETE /api/tags/{id}` - 删除标签（需检查是否被期刊使用）
+- `GET /api/tags/{id}/journals` - 获取标签关联的期刊
 
 ---
 

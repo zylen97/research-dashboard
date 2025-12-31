@@ -354,33 +354,17 @@ Tag = TagSchema  # 别名
 class JournalBase(BaseModel):
     """期刊基础数据模型"""
     name: str = Field(..., min_length=1, max_length=200, description="期刊名称（唯一）")
-    language: str = Field(default='zh', description="语言：zh/en")
     notes: Optional[str] = Field(None, description="备注")
-
-    @field_validator('language')
-    @classmethod
-    def validate_language(cls, v):
-        if v not in ['zh', 'en']:
-            raise ValueError('language must be either "zh" or "en"')
-        return v
 
 class JournalCreate(JournalBase):
     """创建期刊的数据模型"""
-    tag_ids: List[int] = Field(default=[], description="关联的标签ID列表")
+    tag_ids: List[int] = Field(default=[], description="关联的标签ID列表（可选）")
 
 class JournalUpdate(BaseModel):
     """更新期刊的数据模型"""
     name: Optional[str] = Field(None, min_length=1, max_length=200, description="期刊名称")
-    language: Optional[str] = Field(None, description="语言：zh/en")
     notes: Optional[str] = Field(None, description="备注")
     tag_ids: Optional[List[int]] = Field(None, description="标签ID列表（完全替换）")
-
-    @field_validator('language')
-    @classmethod
-    def validate_language(cls, v):
-        if v is not None and v not in ['zh', 'en']:
-            raise ValueError('language must be either "zh" or "en"')
-        return v
 
 class Journal(JournalBase):
     """完整的期刊数据模型（包含ID和时间戳）"""

@@ -147,7 +147,6 @@ async def get_journals(
     request: Request,
     skip: int = 0,
     limit: int = 1000,
-    language: Optional[str] = None,
     tag_ids: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db)
@@ -156,16 +155,11 @@ async def get_journals(
     获取期刊列表
 
     支持筛选参数：
-    - language: 期刊语言 (zh/en)
     - tag_ids: 标签ID列表，逗号分隔（如 "1,2,3"）
     - search: 搜索关键词（匹配期刊名称）
     """
     try:
         query = db.query(Journal)
-
-        # 应用筛选条件
-        if language:
-            query = query.filter(Journal.language == language)
 
         # 标签筛选（支持多个标签）
         if tag_ids:
@@ -214,17 +208,11 @@ async def create_journal(
                 detail=f"期刊 '{journal.name}' 已存在"
             )
 
-        # 验证language字段
-        if journal.language not in ['zh', 'en']:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="language must be 'zh' or 'en'"
-            )
-
-        # 验证tag_ids（如果提供）
+        # 验证tag_ids（完全可选）
         tag_ids = journal.tag_ids if hasattr(journal, 'tag_ids') else []
+
         if tag_ids:
-            # 检查所有标签是否存在
+            # 只有在提供了标签时才验证其有效性
             existing_tags = db.query(Tag).filter(Tag.id.in_(tag_ids)).all()
             if len(existing_tags) != len(tag_ids):
                 existing_tag_ids = {tag.id for tag in existing_tags}
@@ -233,6 +221,8 @@ async def create_journal(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=f"标签ID不存在: {invalid_ids}"
                 )
+        else:
+            existing_tags = []
 
         # 创建期刊（不包含tag_ids字段）
         journal_data = journal.model_dump(exclude={'tag_ids'})
@@ -327,14 +317,7 @@ async def update_journal(
                     detail=f"期刊名称 '{journal_update.name}' 已被使用"
                 )
 
-        # 验证language字段
-        if journal_update.language and journal_update.language not in ['zh', 'en']:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="language must be 'zh' or 'en'"
-            )
-
-        # 处理tag_ids更新（完全替换模式）
+        # 处理tag_ids更新（完全替换模式，标签完全可选）
         tag_ids = journal_update.tag_ids if hasattr(journal_update, 'tag_ids') and journal_update.tag_ids is not None else None
         if tag_ids is not None:
             # 验证所有标签是否存在
@@ -362,7 +345,6 @@ async def update_journal(
         # 保存旧值用于审计
         old_values = {
             "name": db_journal.name,
-            "language": db_journal.language,
             "notes": db_journal.notes
         }
 
@@ -444,8 +426,8 @@ async def delete_journal(
         # 记录审计日志（在删除前）
         old_values = {
             "name": journal.name,
-            "language": journal.language,
-            "notes": journal.notes
+            "notes": journal.notes,
+            "tags": [tag.name for tag in journal.tags] if journal.tags else []
         }
 
         try:
@@ -499,7 +481,6 @@ async def get_journal_stats(
             "journal": {
                 "id": journal.id,
                 "name": journal.name,
-                "language": journal.language,
                 "tags": [{"id": t.id, "name": t.name, "color": t.color} for t in journal.tags]
             },
             "stats": stats,
@@ -588,14 +569,6 @@ async def batch_import_journals(
                     skipped_journals.append({
                         "name": journal_data.name,
                         "reason": "期刊名称已存在"
-                    })
-                    continue
-
-                # 验证language字段
-                if journal_data.language not in ['zh', 'en']:
-                    errors.append({
-                        "name": journal_data.name,
-                        "error": f"无效的language值: {journal_data.language}，必须为zh或en"
                     })
                     continue
 

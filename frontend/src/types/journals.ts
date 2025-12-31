@@ -2,9 +2,6 @@
  * 期刊库类型定义
  */
 
-// 期刊语言枚举
-export type JournalLanguage = 'zh' | 'en';
-
 // ===== 标签类型定义 =====
 
 // 标签基础数据
@@ -37,7 +34,6 @@ export interface TagUpdate {
 // 期刊基础数据（创建/更新时使用）
 export interface JournalBase {
   name: string;                    // 期刊名称（唯一）
-  language: JournalLanguage;       // 语言：zh/en
   notes?: string | null;           // 备注
 }
 
@@ -57,13 +53,12 @@ export interface Journal extends JournalBase {
 
 // 创建期刊请求
 export interface JournalCreate extends JournalBase {
-  tag_ids?: number[];  // 关联的标签ID列表
+  tag_ids: number[];  // 关联的标签ID列表（可选）
 }
 
 // 更新期刊请求（所有字段可选）
 export interface JournalUpdate {
   name?: string;
-  language?: JournalLanguage;
   notes?: string | null;
   tag_ids?: number[];  // 标签ID列表（完全替换）
 }
@@ -73,7 +68,6 @@ export interface JournalStats {
   journal: {
     id: number;
     name: string;
-    language: JournalLanguage;
     tags: Array<{
       id: number;
       name: string;

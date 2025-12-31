@@ -6,10 +6,9 @@ This directory contains database backups for the Research Dashboard project.
 
 ```
 backups/
-├── local/          # Local automatic backups
-│   └── YYYYMMDD_HHMMSS/
-│       └── research_dashboard.db
-└── README.md       # This file
+└── YYYYMMDD_HHMMSS/           # 按时间戳命名的备份目录
+    ├── research_dashboard.db   # 数据库备份
+    └── backup_info.txt         # 备份信息（可选）
 ```
 
 ## Backup Policy

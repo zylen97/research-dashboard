@@ -30,6 +30,7 @@ import {
   MessageOutlined,
   ExclamationCircleOutlined,
   BulbOutlined,
+  BookOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -291,6 +292,20 @@ const DatabaseBackup: React.FC = () => {
         </Space>
       ),
       sorter: (a: BackupItem, b: BackupItem) => (a.ideas_count || 0) - (b.ideas_count || 0),
+    },
+    {
+      title: '期刊',
+      dataIndex: 'journals_count',
+      key: 'journals',
+      render: (count: number) => (
+        <Space>
+          <BookOutlined />
+          <Tag color={count === 0 ? 'warning' : 'cyan'}>
+            {count || 0}
+          </Tag>
+        </Space>
+      ),
+      sorter: (a: BackupItem, b: BackupItem) => (a.journals_count || 0) - (b.journals_count || 0),
     },
     {
       title: '操作',

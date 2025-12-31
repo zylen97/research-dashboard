@@ -19,6 +19,7 @@ import {
   Statistic,
   Row,
   Col,
+  Tabs,
 } from 'antd';
 import {
   PlusOutlined,
@@ -41,6 +42,7 @@ import {
   JournalReferences,
   Tag as JournalTag,
 } from '../types/journals';
+import { TagManagementPanel } from '../components/TagManagementPanel';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -48,6 +50,9 @@ const { Option } = Select;
 
 const JournalsManagement: React.FC = () => {
   const queryClient = useQueryClient();
+
+  // Tab状态
+  const [activeTab, setActiveTab] = useState<string>('journals');
 
   // 状态管理
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -58,7 +63,6 @@ const JournalsManagement: React.FC = () => {
   const [pageSize, setPageSize] = useState(50);
 
   // 筛选状态
-  const [languageFilter, setLanguageFilter] = useState<string | undefined>(undefined);
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [searchText, setSearchText] = useState<string>('');
 
@@ -76,10 +80,9 @@ const JournalsManagement: React.FC = () => {
     isLoading,
     refetch,
   } = useQuery({
-    queryKey: ['journals', languageFilter, selectedTagIds, searchText],
+    queryKey: ['journals', selectedTagIds, searchText],
     queryFn: () => {
-      const params: { language?: string; tag_ids?: string; search?: string } = {};
-      if (languageFilter) params.language = languageFilter;
+      const params: { tag_ids?: string; search?: string } = {};
       if (selectedTagIds.length > 0) params.tag_ids = selectedTagIds.join(',');
       if (searchText) params.search = searchText;
       return journalApi.getJournals(params);
@@ -174,7 +177,6 @@ const JournalsManagement: React.FC = () => {
   const handleSubmit = async (values: any) => {
     const journalData: JournalCreate = {
       name: values.name.trim(),
-      language: values.language,
       notes: values.notes?.trim() || null,
       tag_ids: values.tag_ids || [],
     };
@@ -191,7 +193,6 @@ const JournalsManagement: React.FC = () => {
     setEditingJournal(journal);
     form.setFieldsValue({
       name: journal.name,
-      language: journal.language,
       tag_ids: journal.tags.map((t) => t.id),
       notes: journal.notes,
     });
@@ -228,21 +229,10 @@ const JournalsManagement: React.FC = () => {
       ellipsis: true,
     },
     {
-      title: '语言',
-      dataIndex: 'language',
-      key: 'language',
-      width: 80,
-      render: (language: string) => (
-        <Tag color={language === 'zh' ? 'blue' : 'green'}>
-          {language === 'zh' ? '中文' : '英文'}
-        </Tag>
-      ),
-    },
-    {
       title: '标签',
       dataIndex: 'tags',
       key: 'tags',
-      width: 200,
+      width: 250,
       render: (tags: JournalTag[]) => (
         <>
           {tags?.map((tag) => (
@@ -338,39 +328,35 @@ const JournalsManagement: React.FC = () => {
           >
             刷新
           </Button>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingJournal(null);
-              form.resetFields();
-              setIsModalVisible(true);
-            }}
-          >
-            新建期刊
-          </Button>
+          {activeTab === 'journals' && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingJournal(null);
+                form.resetFields();
+                setIsModalVisible(true);
+              }}
+            >
+              新建期刊
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* 筛选栏 */}
+      {/* Tabs：期刊列表和标签管理 */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          {
+            key: 'journals',
+            label: '期刊列表',
+            children: (
+              <>
+                {/* 筛选栏 */}
       <Card style={{ marginBottom: '16px' }}>
         <Space size="middle" wrap>
-          <div>
-            <Text strong style={{ marginRight: 8 }}>
-              语言：
-            </Text>
-            <Select
-              style={{ width: 120 }}
-              placeholder="全部"
-              allowClear
-              value={languageFilter}
-              onChange={setLanguageFilter}
-            >
-              <Option value="zh">中文</Option>
-              <Option value="en">英文</Option>
-            </Select>
-          </div>
-
           <div>
             <Text strong style={{ marginRight: 8 }}>
               标签：
@@ -458,21 +444,12 @@ const JournalsManagement: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="language"
-            label="语言"
-            rules={[{ required: true, message: '请选择语言' }]}
-            initialValue="zh"
+            name="tag_ids"
+            label="标签"
           >
-            <Select placeholder="请选择语言">
-              <Option value="zh">中文</Option>
-              <Option value="en">英文</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="tag_ids" label="标签">
             <Select
               mode="multiple"
-              placeholder="请选择标签（可多选）"
+              placeholder="选择标签（可选）"
               allowClear
             >
               {tags.map((tag) => (
@@ -515,11 +492,6 @@ const JournalsManagement: React.FC = () => {
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="期刊名称">
                   {journalStats.journal.name}
-                </Descriptions.Item>
-                <Descriptions.Item label="语言">
-                  <Tag color={journalStats.journal.language === 'zh' ? 'blue' : 'green'}>
-                    {journalStats.journal.language === 'zh' ? '中文' : '英文'}
-                  </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="标签">
                   {journalStats.journal.tags?.map((tag: { id: number; name: string; color: string }) => (
@@ -695,6 +667,16 @@ const JournalsManagement: React.FC = () => {
           </>
         )}
       </Drawer>
+              </>
+            ),
+          },
+          {
+            key: 'tags',
+            label: '标签管理',
+            children: <TagManagementPanel />,
+          },
+        ]}
+      />
     </div>
   );
 };

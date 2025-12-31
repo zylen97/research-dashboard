@@ -29,6 +29,7 @@ export interface BackupItem {
   projects_count?: number;       // 项目数量
   logs_count?: number;           // 论文进度数量
   ideas_count?: number;          // Ideas数量
+  journals_count?: number;       // 期刊数量
 }
 
 export interface BackupListResponse {
