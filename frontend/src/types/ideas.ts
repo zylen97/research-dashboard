@@ -7,9 +7,11 @@ import { Collaborator } from './index';
 // Idea基础信息
 export interface IdeaBase {
   project_name: string;           // 项目名称
-  project_description?: string;   // 项目描述（可选）
+  project_description: string;    // 项目描述（必填）
   research_method: string;        // 研究方法
-  source?: string;               // 来源信息（可选）
+  source?: string;               // 来源信息（已废弃，使用reference_paper和reference_journal）
+  reference_paper?: string;       // 参考论文（可选）
+  reference_journal?: string;     // 参考期刊（可选）
   responsible_person_id: number;  // 负责人ID（外键关联collaborators表）
   maturity: 'mature' | 'immature'; // 成熟度
 }

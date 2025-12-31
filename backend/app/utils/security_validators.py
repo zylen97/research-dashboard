@@ -140,14 +140,30 @@ class SecurityValidator:
             else:
                 sanitized_data['research_method'] = cls.sanitize_string(research_method, max_length=2000)
         
-        # 验证和清理来源
+        # 验证和清理来源（旧字段，保留兼容性）
         source = data.get('source', '')
         if source:
             if cls.check_sql_injection(source):
                 errors.append("来源包含不安全的内容")
             else:
                 sanitized_data['source'] = cls.sanitize_string(source, max_length=2000)
-        
+
+        # 验证和清理参考论文（新字段）
+        reference_paper = data.get('reference_paper', '')
+        if reference_paper:
+            if cls.check_sql_injection(reference_paper):
+                errors.append("参考论文包含不安全的内容")
+            else:
+                sanitized_data['reference_paper'] = cls.sanitize_string(reference_paper, max_length=1000)
+
+        # 验证和清理参考期刊（新字段）
+        reference_journal = data.get('reference_journal', '')
+        if reference_journal:
+            if cls.check_sql_injection(reference_journal):
+                errors.append("参考期刊包含不安全的内容")
+            else:
+                sanitized_data['reference_journal'] = cls.sanitize_string(reference_journal, max_length=200)
+
         # 验证和清理目标期刊
         target_journal = data.get('target_journal', '')
         if target_journal:

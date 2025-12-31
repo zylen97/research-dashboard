@@ -111,13 +111,25 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         </div>
       )}
 
-      {/* 来源 */}
-      {project.source && (
+      {/* 参考论文 */}
+      {project.reference_paper && (
         <div style={{ marginBottom: 24 }}>
           <Title level={5}>
-            <LinkOutlined /> 来源
+            <FileTextOutlined /> 参考论文
           </Title>
-          <Text>{project.source}</Text>
+          <Text style={{ whiteSpace: 'pre-wrap' }}>
+            {project.reference_paper}
+          </Text>
+        </div>
+      )}
+
+      {/* 参考期刊 */}
+      {project.reference_journal && (
+        <div style={{ marginBottom: 24 }}>
+          <Title level={5}>
+            <LinkOutlined /> 参考期刊
+          </Title>
+          <Text>{project.reference_journal}</Text>
         </div>
       )}
 

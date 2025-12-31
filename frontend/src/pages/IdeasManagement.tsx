@@ -308,9 +308,23 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
-      title: '来源',
-      dataIndex: 'source',
-      key: 'source',
+      title: '参考论文',
+      dataIndex: 'reference_paper',
+      key: 'reference_paper',
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: '参考期刊',
+      dataIndex: 'reference_journal',
+      key: 'reference_journal',
       width: 150,
       ellipsis: {
         showTitle: false,
@@ -468,7 +482,7 @@ const IdeasManagementPage: React.FC = () => {
         <Form
           form={form}
           layout="vertical"
-          requiredMark={false}
+          requiredMark={true}
         >
           <Form.Item
             name="project_name"
@@ -483,8 +497,11 @@ const IdeasManagementPage: React.FC = () => {
 
           <Form.Item
             name="project_description"
-            label="项目描述（可选）"
-            rules={[{ max: 2000, message: '项目描述不能超过2000字符' }]}
+            label="项目描述"
+            rules={[
+              { required: true, message: '请输入项目描述' },
+              { max: 2000, message: '项目描述不能超过2000字符' }
+            ]}
           >
             <TextArea
               rows={3}
@@ -507,13 +524,23 @@ const IdeasManagementPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="source"
-            label="来源（可选）"
-            rules={[{ max: 500, message: '来源信息不能超过500字符' }]}
+            name="reference_paper"
+            label="参考论文（可选）"
+            rules={[{ max: 1000, message: '参考论文不能超过1000字符' }]}
           >
             <TextArea
               rows={2}
-              placeholder="期刊、文献或其他来源信息"
+              placeholder="请输入参考论文的标题或内容"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="reference_journal"
+            label="参考期刊（可选）"
+            rules={[{ max: 200, message: '参考期刊不能超过200字符' }]}
+          >
+            <Input
+              placeholder="请输入期刊名称，如：系统工程理论与实践"
             />
           </Form.Item>
 

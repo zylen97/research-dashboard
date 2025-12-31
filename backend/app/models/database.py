@@ -55,9 +55,11 @@ class ResearchProject(Base):
     title = Column(String(200), nullable=False, index=True)
     idea_description = Column(Text, nullable=False)  # idea描述
     research_method = Column(Text, nullable=True)  # 研究方法（从Ideas转化而来）
-    source = Column(Text, nullable=True)  # 来源（从Ideas转化而来）
+    source = Column(Text, nullable=True)  # 来源（已废弃，使用reference_paper和reference_journal）
+    reference_paper = Column(Text, nullable=True)  # 参考论文
+    reference_journal = Column(Text, nullable=True)  # 参考期刊
     target_journal = Column(Text, nullable=True)  # (拟)投稿期刊
-    status = Column(String(50), default="active")  # active, completed, paused
+    status = Column(String(50), default="active", nullable=False)  # active, completed, paused, reviewing, revising
     progress = Column(Float, default=0.0)  # 进展百分比
     start_date = Column(DateTime, default=datetime.utcnow)
     expected_completion = Column(DateTime)
@@ -139,9 +141,11 @@ class Idea(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     project_name = Column(Text, nullable=False, comment="项目名称")
-    project_description = Column(Text, nullable=True, comment="项目描述")
+    project_description = Column(Text, nullable=False, comment="项目描述")
     research_method = Column(Text, nullable=False, comment="研究方法")
-    source = Column(Text, nullable=True, comment="来源信息")
+    source = Column(Text, nullable=True, comment="来源信息（已废弃，使用reference_paper和reference_journal）")
+    reference_paper = Column(Text, nullable=True, comment="参考论文")
+    reference_journal = Column(Text, nullable=True, comment="参考期刊")
     responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=False, comment="负责人ID")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")

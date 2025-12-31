@@ -326,30 +326,46 @@ const ResearchDashboard: React.FC = () => {
           <Form.Item
             name="idea_description"
             label="项目描述"
+            rules={[{ required: true, message: '请输入项目描述' }]}
           >
             <TextArea
               rows={4}
-              placeholder="请详细描述项目的核心idea和目标（可选）"
+              placeholder="请详细描述项目的核心idea和目标"
             />
           </Form.Item>
 
           <Form.Item
             name="research_method"
             label="研究方法"
+            rules={[
+              { required: true, message: '请输入研究方法' },
+              { max: 2000, message: '研究方法不能超过2000字符' }
+            ]}
           >
-            <TextArea 
-              rows={2} 
-              placeholder="请输入研究方法（可选）"
+            <TextArea
+              rows={2}
+              placeholder="请输入研究方法"
             />
           </Form.Item>
 
           <Form.Item
-            name="source"
-            label="来源"
+            name="reference_paper"
+            label="参考论文（可选）"
+            rules={[{ max: 1000, message: '参考论文不能超过1000字符' }]}
           >
-            <TextArea 
+            <TextArea
               rows={2}
-              placeholder="请输入来源信息（可选）"
+              placeholder="请输入参考论文的标题或内容"
+            />
+          </Form.Item>
+
+          <Form.Item
+            name="reference_journal"
+            label="参考期刊（可选）"
+            rules={[{ max: 200, message: '参考期刊不能超过200字符' }]}
+          >
+            <Input
+              placeholder="请输入期刊名称，如：系统工程理论与实践"
             />
           </Form.Item>
 
@@ -377,9 +393,10 @@ const ResearchDashboard: React.FC = () => {
           <Form.Item
             name="status"
             label="项目状态"
+            rules={[{ required: true, message: '请选择项目状态' }]}
             initialValue="active"
           >
-            <Select>
+            <Select placeholder="请选择项目状态">
               <Select.Option value="active">撰写中</Select.Option>
               <Select.Option value="paused">暂停</Select.Option>
               <Select.Option value="reviewing">审稿中</Select.Option>

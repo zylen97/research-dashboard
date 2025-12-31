@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Union
 from datetime import datetime
+from enum import Enum
 
 # Collaborator schemas（极简版 - 只保留3个业务字段）
 class CollaboratorBase(BaseModel):
@@ -27,14 +28,25 @@ class Collaborator(CollaboratorBase):
     class Config:
         from_attributes = True
 
+# Research Project 枚举类型
+class ProjectStatus(str, Enum):
+    """项目状态枚举"""
+    ACTIVE = "active"          # 撰写中
+    PAUSED = "paused"          # 暂停
+    REVIEWING = "reviewing"    # 审稿中
+    REVISING = "revising"      # 返修中
+    COMPLETED = "completed"    # 已发表
+
 # Research Project schemas
 class ResearchProjectBase(BaseModel):
     title: str = Field(..., max_length=200)
     idea_description: str = Field(default='', description="项目描述")
-    research_method: Optional[str] = Field(None, description="研究方法")
-    source: Optional[str] = Field(None, description="来源")
+    research_method: str = Field(..., min_length=1, max_length=2000, description="研究方法")
+    source: Optional[str] = Field(None, deprecated=True, description="来源（已废弃）")
+    reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
+    reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
     target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
-    status: str = Field(default="active", max_length=50)
+    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, description="项目状态")
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     is_todo: bool = Field(default=False)
@@ -59,9 +71,11 @@ class ResearchProjectUpdate(BaseModel):
     title: Optional[str] = Field(None, max_length=200)
     idea_description: Optional[str] = None
     research_method: Optional[str] = None
-    source: Optional[str] = None
+    source: Optional[str] = Field(None, deprecated=True)
+    reference_paper: Optional[str] = Field(None, max_length=1000)
+    reference_journal: Optional[str] = Field(None, max_length=200)
     target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
-    status: Optional[str] = Field(None, max_length=50)
+    status: Optional[ProjectStatus] = Field(None, description="项目状态")
     progress: Optional[float] = Field(None, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     collaborator_ids: Optional[List[int]] = None
@@ -236,9 +250,11 @@ class AITestResponse(BaseModel):
 # Ideas管理 schemas - 负责人外键化版本
 class IdeaBase(BaseModel):
     project_name: str = Field(..., min_length=1, max_length=200, description="项目名称")
-    project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
+    project_description: str = Field(..., min_length=1, max_length=2000, description="项目描述")
     research_method: str = Field(..., min_length=1, max_length=1000, description="研究方法")
-    source: Optional[str] = Field(None, max_length=500, description="来源信息")
+    source: Optional[str] = Field(None, max_length=500, deprecated=True, description="来源信息（已废弃）")
+    reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
+    reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
     responsible_person_id: int = Field(..., description="负责人ID（外键关联collaborators表）")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
 
@@ -258,7 +274,9 @@ class IdeaUpdate(BaseModel):
     project_name: Optional[str] = Field(None, min_length=1, max_length=200, description="项目名称")
     project_description: Optional[str] = Field(None, max_length=2000, description="项目描述")
     research_method: Optional[str] = Field(None, min_length=1, max_length=1000, description="研究方法")
-    source: Optional[str] = Field(None, max_length=500, description="来源信息")
+    source: Optional[str] = Field(None, max_length=500, deprecated=True)
+    reference_paper: Optional[str] = Field(None, max_length=1000)
+    reference_journal: Optional[str] = Field(None, max_length=200)
     responsible_person_id: Optional[int] = Field(None, description="负责人ID")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
 

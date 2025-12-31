@@ -124,40 +124,68 @@ export const createProjectColumns = ({
       </div>
     ),
   }]),
-  ...(isMobile ? [] : [{
-    title: '来源',
-    dataIndex: 'source',
-    key: 'source',
-    width: 200,
-    render: (source: string) => (
-      <div
-        style={{ 
-          color: '#666', 
-          fontSize: '12px',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          lineHeight: '1.4'
-        }}
-        title={source}
-      >
-        {source || '-'}
-      </div>
-    ),
-  }]),
+  ...(isMobile ? [] : [
+    {
+      title: '参考论文',
+      dataIndex: 'reference_paper',
+      key: 'reference_paper',
+      width: 200,
+      render: (text: string) => (
+        <div
+          style={{
+            color: '#666',
+            fontSize: '12px',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: '1.4'
+          }}
+          title={text}
+        >
+          {text || '-'}
+        </div>
+      ),
+    },
+    {
+      title: '参考期刊',
+      dataIndex: 'reference_journal',
+      key: 'reference_journal',
+      width: 150,
+      render: (text: string) => (
+        <div
+          style={{
+            color: '#666',
+            fontSize: '12px',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            lineHeight: '1.4'
+          }}
+          title={text}
+        >
+          {text || '-'}
+        </div>
+      ),
+    }
+  ]),
   {
     title: '状态',
     dataIndex: 'status',
     key: 'status',
     width: 70,
-    render: (status: string) => (
-      <Tag color={getStatusColor(status)}>
-        {status === 'active' ? '撰写中' :
-         status === 'completed' ? '已发表' :
-         status === 'paused' ? '暂停' :
-         status === 'reviewing' ? '审稿中' :
-         status === 'revising' ? '返修中' : status}
-      </Tag>
-    ),
+    render: (status: string) => {
+      // 防御null/undefined
+      if (!status) {
+        return <Tag color="default">未知状态</Tag>;
+      }
+      return (
+        <Tag color={getStatusColor(status)}>
+          {status === 'active' ? '撰写中' :
+           status === 'completed' ? '已发表' :
+           status === 'paused' ? '暂停' :
+           status === 'reviewing' ? '审稿中' :
+           status === 'revising' ? '返修中' : status}
+        </Tag>
+      );
+    },
   },
   // 🆕 我的身份列
   {

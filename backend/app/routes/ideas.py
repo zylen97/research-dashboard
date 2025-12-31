@@ -223,7 +223,10 @@ async def convert_to_project(
             title=idea.project_name,
             idea_description=idea.project_description or idea.project_name,
             research_method=idea.research_method,
-            source=idea.source,
+            # 优先使用新字段，如果新字段为空则回退到source
+            reference_paper=idea.reference_paper if idea.reference_paper else None,
+            reference_journal=idea.reference_journal if idea.reference_journal else None,
+            source=idea.source if (not idea.reference_paper and not idea.reference_journal) else None,
             status="active",
             progress=0.0,
             my_role='first_author'  # 新增：默认设置为第一作者

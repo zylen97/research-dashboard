@@ -50,7 +50,9 @@ export interface ResearchProject {
   title: string;
   idea_description: string;
   research_method?: string; // 研究方法（从Ideas转化而来）
-  source?: string; // 来源（从Ideas转化而来）
+  source?: string; // 来源（已废弃，从Ideas转化而来）
+  reference_paper?: string; // 参考论文
+  reference_journal?: string; // 参考期刊
   target_journal?: string; // (拟)投稿期刊
   status: string;
   progress: number;
@@ -73,7 +75,9 @@ export interface ResearchProjectCreate {
   title: string;
   idea_description: string;
   research_method?: string;
-  source?: string;
+  source?: string; // 已废弃
+  reference_paper?: string;
+  reference_journal?: string;
   target_journal?: string; // (拟)投稿期刊
   status?: string;
   progress?: number;
@@ -90,7 +94,9 @@ export interface ResearchProjectUpdate {
   title?: string;
   idea_description?: string;
   research_method?: string;
-  source?: string;
+  source?: string; // 已废弃
+  reference_paper?: string;
+  reference_journal?: string;
   target_journal?: string; // (拟)投稿期刊
   status?: string;
   progress?: number;
