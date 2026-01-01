@@ -1,11 +1,10 @@
 /**
  * 期刊论文Tab组件
- * 显示期刊下的论文列表，支持导入和批量分析
+ * 显示期刊下的论文列表
  */
 import React, { useState, useMemo } from 'react';
 import {
   Button,
-  Upload,
   Table,
   Space,
   Modal,
@@ -14,25 +13,21 @@ import {
   Card,
   message,
   Popconfirm,
-  Alert,
   Divider,
   Select,
   Descriptions,
 } from 'antd';
 import {
-  UploadOutlined,
   ReloadOutlined,
   DeleteOutlined,
-  RocketOutlined,
   EyeOutlined,
+  RocketOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
 import { journalApi, paperApi } from '../services/apiOptimized';
 import { Paper } from '../types/papers';
-import { AIConfigUpdate } from '../types/ai';
-import AIAnalysisConfigModal from './AIAnalysisConfigModal';
 import {
   AVAILABLE_COLUMNS,
   COLUMN_VISIBILITY_KEYS,
@@ -43,20 +38,17 @@ import PaperStatsCards from './papers/PaperStatsCards';
 import ColumnFilter from './papers/ColumnFilter';
 
 const { Text, Paragraph } = Typography;
-const { Dragger } = Upload;
 
 interface JournalPapersTabProps {
   journalId: number;
   journalName: string;
 }
 
-const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalName }) => {
+const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalName: _journalName }) => {
   const queryClient = useQueryClient();
 
   // 状态管理
-  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
-  const [isAIConfigModalVisible, setIsAIConfigModalVisible] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -97,54 +89,6 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
     queryFn: () => journalApi.getById(journalId),
     enabled: !!journalId,
   });
-
-  // Excel导入
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => journalApi.importPapersToJournal(journalId, file),
-    onSuccess: (data) => {
-      const importedCount = data?.data?.imported_count || 0;
-      message.success(`成功导入 ${importedCount} 篇论文`);
-      queryClient.invalidateQueries({ queryKey: ['journal-papers', journalId] });
-      queryClient.invalidateQueries({ queryKey: ['journal-detail', journalId] });
-      refetchStats();
-      setIsImportModalVisible(false);
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || '导入失败');
-    },
-  });
-
-  // 批量AI分析
-  const analyzeMutation = useMutation({
-    mutationFn: (aiConfig: AIConfigUpdate | null) =>
-      journalApi.analyzeJournalPapers(journalId, aiConfig, 'pending', 3),
-    onSuccess: (data) => {
-      const successCount = data?.data?.analyzed_count || 0;
-      const totalCount = data?.data?.details?.total || 0;
-      message.success(`分析完成：${successCount}/${totalCount} 篇成功`);
-      queryClient.invalidateQueries({ queryKey: ['journal-papers', journalId] });
-      queryClient.invalidateQueries({ queryKey: ['journal-detail', journalId] });
-      refetchStats();
-    },
-    onError: (error: any) => {
-      message.error(error.response?.data?.detail || '分析失败');
-    },
-  });
-
-  // 处理批量分析按钮点击
-  const handleBatchAnalyze = () => {
-    const pendingCount = papers.filter(p => p.status === 'pending').length;
-    if (pendingCount === 0) {
-      message.info('没有待分析的论文');
-      return;
-    }
-    setIsAIConfigModalVisible(true);
-  };
-
-  // 处理AI配置确认
-  const handleAIConfigConfirm = (config: AIConfigUpdate) => {
-    analyzeMutation.mutate(config);
-  };
 
   // 删除论文
   const deleteMutation = useMutation({
@@ -326,20 +270,6 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
             <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
               刷新
             </Button>
-            <Button
-              type="primary"
-              icon={<UploadOutlined />}
-              onClick={() => setIsImportModalVisible(true)}
-            >
-              导入
-            </Button>
-            <Button
-              icon={<RocketOutlined />}
-              onClick={handleBatchAnalyze}
-              loading={analyzeMutation.isPending}
-            >
-              分析
-            </Button>
             {selectedRowKeys.length > 0 && (
               <Button
                 danger
@@ -419,46 +349,7 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
         }}
       />
 
-      {/* Excel导入弹窗 */}
-      <Modal
-        title={`导入论文到: ${journalName}`}
-        open={isImportModalVisible}
-        onCancel={() => setIsImportModalVisible(false)}
-        footer={null}
-        width={600}
-      >
-        <Dragger
-          accept=".xlsx,.xls"
-          beforeUpload={(file) => {
-            uploadMutation.mutate(file);
-            return false;
-          }}
-          showUploadList={false}
-        >
-          <p className="ant-upload-drag-icon">
-            <UploadOutlined style={{ fontSize: 48 }} />
-          </p>
-          <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
-          <p className="ant-upload-hint">支持 .xlsx 和 .xls 格式的Excel文件</p>
-        </Dragger>
-        <Divider />
-        <Alert
-          message="Excel格式要求"
-          description={
-            <div>
-              <p>必填列：标题（或题名/Title）</p>
-              <p>可选列：作者、摘要、年份、期刊、卷、期、页码、预览链接</p>
-              <p>翻译字段：标题翻译、摘要翻译、摘要总结</p>
-              <p style={{ marginTop: 8, color: '#666' }}>
-                注：导入后会自动根据期刊名称归类，不存在的期刊将自动创建
-              </p>
-            </div>
-          }
-          type="info"
-        />
-      </Modal>
-
-      {/* 论文详情抽屉 */}
+      {/* 论文详情弹窗 */}
       <Modal
         title="论文详情"
         open={isDetailDrawerVisible}
@@ -554,14 +445,6 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
           </div>
         )}
       </Modal>
-
-      {/* AI分析配置弹窗 */}
-      <AIAnalysisConfigModal
-        visible={isAIConfigModalVisible}
-        onClose={() => setIsAIConfigModalVisible(false)}
-        onConfirm={handleAIConfigConfirm}
-        paperCount={papers.filter(p => p.status === 'pending').length}
-      />
     </div>
   );
 };

@@ -17,12 +17,15 @@ import {
   Divider,
   Descriptions,
   Typography,
+  Upload,
+  Alert,
 } from 'antd';
 import {
   ReloadOutlined,
   EyeOutlined,
   DeleteOutlined,
   RocketOutlined,
+  UploadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
@@ -64,6 +67,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
   const [journalFilter, setJournalFilter] = useState<number[]>(initialJournalIds);
   const [tagFilter, setTagFilter] = useState<number[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
 
   // 列可见性管理
   const { visibleColumns, setVisibleColumns } = useColumnVisibility(
@@ -138,6 +142,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     onSuccess: () => {
       message.success('论文删除成功');
       queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['papers-stats'] });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败');
@@ -151,6 +156,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       message.success(`已转换为Idea (ID: ${data.idea_id})`);
       queryClient.invalidateQueries({ queryKey: ['papers'] });
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      queryClient.invalidateQueries({ queryKey: ['papers-stats'] });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '转换失败');
@@ -164,9 +170,26 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       message.success(`已删除 ${data.deleted_count} 篇论文`);
       setSelectedRowKeys([]);
       queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['papers-stats'] });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '批量删除失败');
+    },
+  });
+
+  // Excel导入
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => paperApi.importFromExcel(file),
+    onSuccess: (data) => {
+      const importedCount = data?.imported_count || 0;
+      message.success(`成功导入 ${importedCount} 篇论文`);
+      queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['papers-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['journals'] });
+      setIsImportModalVisible(false);
+    },
+    onError: (error: any) => {
+      message.error(error.response?.data?.detail || '导入失败');
     },
   });
 
@@ -314,6 +337,13 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
             <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
               刷新
             </Button>
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setIsImportModalVisible(true)}
+            >
+              导入
+            </Button>
             {selectedRowKeys.length > 0 && (
               <Button
                 danger
@@ -327,7 +357,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
                   });
                 }}
               >
-                批量删除 ({selectedRowKeys.length})
+                删除 ({selectedRowKeys.length})
               </Button>
             )}
           </Space>
@@ -516,6 +546,45 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Excel导入弹窗 */}
+      <Modal
+        title="导入论文"
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <Upload.Dragger
+          accept=".xlsx,.xls"
+          beforeUpload={(file) => {
+            uploadMutation.mutate(file);
+            return false;
+          }}
+          showUploadList={false}
+        >
+          <p className="ant-upload-drag-icon">
+            <UploadOutlined style={{ fontSize: 48 }} />
+          </p>
+          <p className="ant-upload-text">点击或拖拽文件到此区域上传</p>
+          <p className="ant-upload-hint">支持 .xlsx 和 .xls 格式的Excel文件</p>
+        </Upload.Dragger>
+        <Divider />
+        <Alert
+          message="Excel格式要求"
+          description={
+            <div>
+              <p>必填列：标题（或题名/Title）</p>
+              <p>可选列：作者、摘要、年份、期刊、卷、期、页码、预览链接</p>
+              <p>翻译字段：标题翻译、摘要翻译、摘要总结</p>
+              <p style={{ marginTop: 8, color: '#666' }}>
+                注：导入后会自动根据期刊名称归类，不存在的期刊将自动创建
+              </p>
+            </div>
+          }
+          type="info"
+        />
       </Modal>
 
     </div>
