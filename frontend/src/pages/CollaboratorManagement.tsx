@@ -3,7 +3,6 @@ import {
   Button,
   Modal,
   Form,
-  Avatar,
   Typography,
   Tag,
   Space,
@@ -14,13 +13,12 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  UserOutlined,
   TeamOutlined,
   ReloadOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { collaboratorApi, researchApi } from '../services/apiOptimized';
+import { collaboratorApi, researchApi, ideasApi } from '../services/apiOptimized';
 import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { Collaborator, CollaboratorCreate } from '../types';
@@ -34,7 +32,7 @@ const { Title, Text } = Typography;
 
 /**
  * 合作者管理页面（简化版）
- * 只管理4个字段：name, background, contact_info, is_senior
+ * 只管理2个字段：name, background
  */
 const CollaboratorManagement: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -70,6 +68,13 @@ const CollaboratorManagement: React.FC = () => {
 
   const projects = handleListResponse(projectsData, 'CollaboratorManagement.projects');
 
+  // 获取Ideas数据
+  const { data: ideasData } = useQuery({
+    queryKey: ['ideas'],
+    queryFn: () => ideasApi.getList(),
+  });
+  const ideas = handleListResponse(ideasData, 'CollaboratorManagement.ideas');
+
   // 使用优化的CRUD Hook
   const {
     create,
@@ -97,20 +102,28 @@ const CollaboratorManagement: React.FC = () => {
     }
   );
 
-  // 排序合作者（简化版：只按is_senior排序）
+  // 排序合作者（按项目数降序，项目数相同时按名字排序）
   const sortedCollaborators = useMemo(() => {
     const safeCollaborators = handleListResponse<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
     return [...safeCollaborators].sort((a, b) => {
       if (!a || !b) return 0;
 
-      // 1. 高级合作者优先
-      if (a.is_senior && !b.is_senior) return -1;
-      if (!a.is_senior && b.is_senior) return 1;
+      // 1. 按项目数降序
+      const projectCountA = projects.filter((p: any) =>
+        p?.collaborators?.some((c: any) => c?.id === a.id)
+      ).length;
+      const projectCountB = projects.filter((p: any) =>
+        p?.collaborators?.some((c: any) => c?.id === b.id)
+      ).length;
 
-      // 2. 同级别时，按名字排序
+      if (projectCountA !== projectCountB) {
+        return projectCountB - projectCountA;
+      }
+
+      // 2. 项目数相同时按名字排序
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [collaborators]);
+  }, [collaborators, projects]);
 
   // 分析合作者参与状态
   const collaboratorParticipationStatus = useMemo(() => {
@@ -174,7 +187,7 @@ const CollaboratorManagement: React.FC = () => {
                 </p>
                 <ul style={{ marginLeft: 20 }}>
                   {dependencies.active_projects > 0 && (
-                    <li style={{ color: '#ff4d4f' }}>
+                    <li style={{ color: '#333333' }}>
                       参与 {dependencies.active_projects} 个进行中的项目
                     </li>
                   )}
@@ -202,12 +215,12 @@ const CollaboratorManagement: React.FC = () => {
               >
                 <Space direction="vertical">
                   <Radio value="soft" disabled={!can_soft_delete}>
-                    <span style={{ color: '#1890ff' }}>
+                    <span style={{ color: '#666666' }}>
                       软删除（推荐） - 可以随时恢复
                     </span>
                   </Radio>
                   <Radio value="hard" disabled={!can_hard_delete}>
-                    <span style={{ color: '#ff4d4f' }}>
+                    <span style={{ color: '#333333' }}>
                       永久删除 - 不可恢复
                       {hasActiveProjects && ' (有活跃项目，不可用)'}
                     </span>
@@ -232,12 +245,11 @@ const CollaboratorManagement: React.FC = () => {
     }
   );
 
-  // 处理表单提交（极简版 - 只处理3个字段）
+  // 处理表单提交（极简版 - 只处理2个字段）
   const handleSubmit = async (values: CollaboratorCreate) => {
     const apiValues: CollaboratorCreate = {
       name: values.name,
       background: values.background,
-      is_senior: values.is_senior ?? true,
     };
 
     if (editingCollaborator) {
@@ -253,7 +265,6 @@ const CollaboratorManagement: React.FC = () => {
     form.setFieldsValue({
       name: collaborator.name,
       background: collaborator.background,
-      is_senior: collaborator.is_senior,
     });
     setIsModalVisible(true);
   };
@@ -281,7 +292,7 @@ const CollaboratorManagement: React.FC = () => {
             合作者管理
           </Title>
           <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
-            管理所有合作者信息，<Tag color="gold">高级合作者</Tag> 为特别重要的合作伙伴
+            管理所有合作者信息
           </Text>
         </div>
         <Space>
@@ -294,7 +305,7 @@ const CollaboratorManagement: React.FC = () => {
             刷新
           </Button>
           <Button
-            type="primary"
+            type="default"
             icon={<PlusOutlined />}
             onClick={() => {
               setEditingCollaborator(null);
@@ -340,32 +351,14 @@ const CollaboratorManagement: React.FC = () => {
               render: (name: string, record) => {
                 const isParticipating = collaboratorParticipationStatus.get(record.id) || false;
                 return (
-                  <Space>
-                    <Avatar
-                      size={32}
-                      icon={<UserOutlined />}
-                      style={{
-                        backgroundColor: record.is_senior ? '#faad14' : '#1890ff',
-                      }}
-                    />
-                    <div>
-                      <div>
-                        <Text strong>{name}</Text>
-                        {record.is_senior && (
-                          <Tag color="gold" style={{ marginLeft: 8 }}>
-                            高级合作者
-                          </Tag>
-                        )}
-                      </div>
-                      {!isParticipating && (
-                        <div style={{ marginTop: 4 }}>
-                          <Tag color="orange" style={{ fontSize: '12px' }}>
-                            未参与项目
-                          </Tag>
-                        </div>
-                      )}
-                    </div>
-                  </Space>
+                  <div>
+                    <Text strong>{name}</Text>
+                    {!isParticipating && (
+                      <Tag style={{ marginLeft: 8, fontSize: '12px', backgroundColor: '#F5F5F5', color: '#666666', borderColor: '#E8E8E8' }}>
+                        未参与项目
+                      </Tag>
+                    )}
+                  </div>
                 );
               },
             },
@@ -389,7 +382,19 @@ const CollaboratorManagement: React.FC = () => {
                 const projectCount = projects.filter((p: any) =>
                   p?.collaborators?.some((c: any) => c?.id === record.id)
                 ).length;
-                return <Tag color="blue">{projectCount}</Tag>;
+                return <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>{projectCount}</Tag>;
+              },
+            },
+            {
+              title: '负责Idea数',
+              key: 'idea_count',
+              width: 120,
+              align: 'center',
+              render: (_, record) => {
+                const ideaCount = ideas.filter((i: any) =>
+                  i?.responsible_person?.id === record.id
+                ).length;
+                return <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>{ideaCount}</Tag>;
               },
             },
             {

@@ -3,11 +3,10 @@ from typing import List, Optional, Union
 from datetime import datetime
 from enum import Enum
 
-# Collaborator schemas（极简版 - 只保留3个业务字段）
+# Collaborator schemas（极简版 - 只保留2个业务字段）
 class CollaboratorBase(BaseModel):
     name: str = Field(..., max_length=100, description="姓名")
     background: str = Field(..., description="背景信息")
-    is_senior: Optional[bool] = Field(default=True, description="高级合作者")
 
 class CollaboratorCreate(CollaboratorBase):
     pass
@@ -15,7 +14,6 @@ class CollaboratorCreate(CollaboratorBase):
 class CollaboratorUpdate(BaseModel):
     name: Optional[str] = Field(None, max_length=100, description="姓名")
     background: Optional[str] = Field(None, description="背景信息")
-    is_senior: Optional[bool] = None
 
 class Collaborator(CollaboratorBase):
     id: int

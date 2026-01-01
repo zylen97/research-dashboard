@@ -214,7 +214,7 @@ const DatabaseBackup: React.FC = () => {
       title: '大小',
       dataIndex: 'sizeFormatted',
       key: 'size',
-      render: (text: string) => <Tag color="blue">{text}</Tag>,
+      render: (text: string) => <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>{text}</Tag>,
     },
     {
       title: '创建时间',
@@ -234,12 +234,16 @@ const DatabaseBackup: React.FC = () => {
       render: (count: number) => (
         <Space>
           <TeamOutlined />
-          <Tag color={count === 0 ? 'error' : 'success'}>
+          <Tag style={{
+            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+            color: count === 0 ? '#999999' : '#333333',
+            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+          }}>
             {count || 0}
           </Tag>
           {count === 0 && (
             <Tooltip title="备份中没有合作者数据">
-              <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+              <ExclamationCircleOutlined style={{ color: '#999999' }} />
             </Tooltip>
           )}
         </Space>
@@ -253,12 +257,16 @@ const DatabaseBackup: React.FC = () => {
       render: (count: number) => (
         <Space>
           <ProjectOutlined />
-          <Tag color={count === 0 ? 'error' : 'success'}>
+          <Tag style={{
+            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+            color: count === 0 ? '#999999' : '#333333',
+            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+          }}>
             {count || 0}
           </Tag>
           {count === 0 && (
             <Tooltip title="备份中没有项目数据">
-              <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+              <ExclamationCircleOutlined style={{ color: '#999999' }} />
             </Tooltip>
           )}
         </Space>
@@ -272,7 +280,11 @@ const DatabaseBackup: React.FC = () => {
       render: (count: number) => (
         <Space>
           <MessageOutlined />
-          <Tag color={count === 0 ? 'warning' : 'processing'}>
+          <Tag style={{
+            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+            color: count === 0 ? '#999999' : '#333333',
+            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+          }}>
             {count || 0}
           </Tag>
         </Space>
@@ -286,7 +298,11 @@ const DatabaseBackup: React.FC = () => {
       render: (count: number) => (
         <Space>
           <BulbOutlined />
-          <Tag color={count === 0 ? 'warning' : 'success'}>
+          <Tag style={{
+            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+            color: count === 0 ? '#999999' : '#333333',
+            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+          }}>
             {count || 0}
           </Tag>
         </Space>
@@ -300,7 +316,11 @@ const DatabaseBackup: React.FC = () => {
       render: (count: number) => (
         <Space>
           <BookOutlined />
-          <Tag color={count === 0 ? 'warning' : 'cyan'}>
+          <Tag style={{
+            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+            color: count === 0 ? '#999999' : '#333333',
+            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+          }}>
             {count || 0}
           </Tag>
         </Space>
@@ -314,7 +334,7 @@ const DatabaseBackup: React.FC = () => {
         <Space size="middle">
           <Tooltip title="下载备份">
             <Button
-              type="primary"
+              type="default"
               size="small"
               icon={<DownloadOutlined />}
               onClick={() => handleDownload(record.id, record.name)}
@@ -410,8 +430,8 @@ const DatabaseBackup: React.FC = () => {
               <Statistic
                 title="当前环境"
                 value={stats.current_environment}
-                valueStyle={{ 
-                  color: stats.current_environment === 'production' ? '#cf1322' : '#3f8600' 
+                valueStyle={{
+                  color: '#000000'
                 }}
               />
             </Card>
@@ -425,7 +445,7 @@ const DatabaseBackup: React.FC = () => {
         extra={
           <Space>
             <Button
-              type="primary"
+              type="default"
               icon={<CloudUploadOutlined />}
               onClick={handleCreateBackup}
               loading={createBackupMutation.isPending}

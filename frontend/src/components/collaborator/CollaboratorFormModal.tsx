@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Form, Input, Checkbox } from 'antd';
+import { Modal, Form, Input } from 'antd';
 import { Collaborator } from '../../types';
 
 const { TextArea } = Input;
@@ -15,7 +15,7 @@ interface CollaboratorFormModalProps {
 
 /**
  * 合作者表单模态框（极简版）
- * 只包含3个字段：姓名、背景信息、高级合作者
+ * 只包含2个字段：姓名、背景信息
  */
 const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
   visible,
@@ -46,7 +46,6 @@ const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{ is_senior: true }}
       >
         {/* 1. 姓名（必填） */}
         <Form.Item
@@ -67,14 +66,6 @@ const CollaboratorFormModal: React.FC<CollaboratorFormModalProps> = ({
             rows={4}
             placeholder="请输入合作者的背景信息（如：专业、研究方向、特长等）"
           />
-        </Form.Item>
-
-        {/* 3. 高级合作者（可选） */}
-        <Form.Item
-          name="is_senior"
-          valuePropName="checked"
-        >
-          <Checkbox>高级合作者</Checkbox>
         </Form.Item>
       </Form>
     </Modal>

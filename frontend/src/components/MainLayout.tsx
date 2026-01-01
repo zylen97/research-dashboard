@@ -98,8 +98,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         borderBottom: '1px solid #f0f0f0'
       }}>
         {(!collapsed || mobileView) && (
-          <Title level={5} style={{ margin: 0, color: '#333333', fontWeight: 700, letterSpacing: '0.5px', textTransform: 'uppercase' as const }}>
-            Research Dashboard
+          <Title level={5} style={{ margin: 0, color: '#333333', fontWeight: 700, letterSpacing: '0.5px' }}>
+            Zylen's Research Dashboard
           </Title>
         )}
         {collapsed && !mobileView && (

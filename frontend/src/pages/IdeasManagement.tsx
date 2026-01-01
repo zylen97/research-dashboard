@@ -17,6 +17,10 @@ import {
   Tag,
   message,
   Tooltip,
+  Row,
+  Col,
+  Card,
+  Statistic,
 } from 'antd';
 import {
   PlusOutlined,
@@ -285,20 +289,6 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
-      title: '项目描述',
-      dataIndex: 'project_description',
-      key: 'project_description',
-      width: 250,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          <span>{text || '-'}</span>
-        </Tooltip>
-      ),
-    },
-    {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
@@ -367,7 +357,13 @@ const IdeasManagementPage: React.FC = () => {
       key: 'maturity',
       width: 100,
       render: (maturity: string) => (
-        <Tag color={maturity === 'mature' ? 'green' : 'orange'}>
+        <Tag
+          style={{
+            backgroundColor: maturity === 'mature' ? '#E8E8E8' : '#F5F5F5',
+            color: maturity === 'mature' ? '#333333' : '#666666',
+            borderColor: maturity === 'mature' ? '#CCCCCC' : '#E8E8E8',
+          }}
+        >
           {MATURITY_OPTIONS.find(opt => opt.value === maturity)?.label || maturity}
         </Tag>
       ),
@@ -442,10 +438,41 @@ const IdeasManagementPage: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
+      {/* 统计卡片 */}
+      <Row gutter={16} style={{ marginBottom: '24px' }}>
+        <Col span={8}>
+          <Card className="statistics-card hover-shadow">
+            <Statistic
+              title="想法总数"
+              value={ideas?.length || 0}
+              valueStyle={{ color: '#333333' }}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card className="statistics-card hover-shadow">
+            <Statistic
+              title="成熟想法"
+              value={ideas?.filter((idea: Idea) => idea.maturity === 'mature').length || 0}
+              valueStyle={{ color: '#333333' }}
+            />
+          </Card>
+        </Col>
+        <Col span={8}>
+          <Card className="statistics-card hover-shadow">
+            <Statistic
+              title="待评估"
+              value={ideas?.filter((idea: Idea) => !idea.maturity || idea.maturity === 'immature').length || 0}
+              valueStyle={{ color: '#666666' }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       <div className="table-container">
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-            <BulbOutlined style={{ marginRight: '8px', color: '#faad14' }} />
+            <BulbOutlined style={{ marginRight: '8px', color: '#666666' }} />
             Idea面板
           </Title>
           <Space>
@@ -616,7 +643,6 @@ const IdeasManagementPage: React.FC = () => {
               {Array.isArray(collaborators) && collaborators.map((collaborator: any) => (
                 <Select.Option key={collaborator.id} value={collaborator.id}>
                   {collaborator.name}
-                  {collaborator.is_senior && ' ⭐'}
                 </Select.Option>
               ))}
             </Select>

@@ -237,7 +237,7 @@ async def convert_to_project(
         responsible_collaborator = idea.responsible_person
         if responsible_collaborator:
             new_project.collaborators.append(responsible_collaborator)
-            logger.info(f"自动添加负责人 {responsible_collaborator.name} (is_senior={responsible_collaborator.is_senior}) 到项目合作者列表")
+            logger.info(f"自动添加负责人 {responsible_collaborator.name} 到项目合作者列表")
 
         # 添加到数据库
         db.add(new_project)
@@ -259,8 +259,7 @@ async def convert_to_project(
                 new_values={
                     "converted_to_project_id": new_project.id,
                     "project_title": new_project.title,
-                    "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None,
-                    "responsible_person_is_senior": responsible_collaborator.is_senior if responsible_collaborator else None
+                    "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None
                 }
             )
         except Exception as audit_error:

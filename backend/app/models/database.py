@@ -39,13 +39,12 @@ journal_tags = Table(
 # Association table for many-to-many relationship between projects and collaborators
 
 class Collaborator(Base):
-    """合作者模型（极简版 - 只保留3个业务字段）"""
+    """合作者模型（极简版 - 只保留2个业务字段）"""
     __tablename__ = "collaborators"
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False, index=True)
     background = Column(Text, nullable=False)
-    is_senior = Column(Boolean, default=True)
 
     # 系统字段
     is_deleted = Column(Boolean, default=False)

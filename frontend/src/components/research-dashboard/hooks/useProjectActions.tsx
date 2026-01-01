@@ -1,6 +1,6 @@
 import { message, Modal } from 'antd';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { researchApi } from '../../../services/api';
+import { researchApi } from '../../../services/apiOptimized';
 import { ResearchProject } from '../../../types';
 import { TodoStatus } from './useProjectData';
 

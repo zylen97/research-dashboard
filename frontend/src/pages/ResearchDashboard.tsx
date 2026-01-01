@@ -199,11 +199,11 @@ const ResearchDashboard: React.FC = () => {
       {/* 待办项目行样式和可调整列宽样式 */}
       <style>{`
         .todo-project-row {
-          background-color: #fffbf0 !important;
-          border-left: 3px solid #faad14 !important;
+          background-color: #F5F5F5 !important;
+          border-left: 3px solid #666666 !important;
         }
         .todo-project-row:hover {
-          background-color: #fff7e6 !important;
+          background-color: #E8E8E8 !important;
         }
         
         .resizable-table .react-resizable {
@@ -222,7 +222,7 @@ const ResearchDashboard: React.FC = () => {
         }
         
         .resizable-table .react-resizable-handle:hover {
-          background-color: #1890ff;
+          background-color: #666666;
           opacity: 0.3;
         }
       `}</style>
@@ -447,13 +447,13 @@ const ResearchDashboard: React.FC = () => {
           >
             <Select placeholder="选择您的身份">
               <Select.Option value="first_author">
-                <span style={{ fontWeight: 'bold', color: '#ff4d4f' }}>🥇 第一作者</span>
+                <span style={{ fontWeight: 'bold', color: '#333333' }}>🥇 第一作者</span>
               </Select.Option>
               <Select.Option value="corresponding_author">
-                <span style={{ fontWeight: 'bold', color: '#1890ff' }}>✉️ 通讯作者</span>
+                <span style={{ fontWeight: 'bold', color: '#666666' }}>✉️ 通讯作者</span>
               </Select.Option>
               <Select.Option value="other_author">
-                <span style={{ color: '#8c8c8c' }}>👥 其他作者</span>
+                <span style={{ color: '#999999' }}>👥 其他作者</span>
               </Select.Option>
             </Select>
           </Form.Item>

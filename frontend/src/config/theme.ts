@@ -31,7 +31,7 @@ export const bauHausTheme: ThemeConfig = {
     colorBorderSecondary: '#F0F0F0',
 
     // === 排版系统 ===
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    fontFamily: '"Source Han Sans SC", "思源黑体 SC", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontSize: 14,
     fontSizeHeading1: 32,
     fontSizeHeading2: 24,
@@ -43,7 +43,7 @@ export const bauHausTheme: ThemeConfig = {
     fontWeightStrong: 600,
 
     // 行高
-    lineHeight: 1.5715,
+    lineHeight: 1.65,
     lineHeightHeading1: 1.2,
     lineHeightHeading2: 1.3,
     lineHeightHeading3: 1.4,
@@ -69,9 +69,9 @@ export const bauHausTheme: ThemeConfig = {
     lineWidthBold: 2,
     lineType: 'solid',
 
-    // === 圆角系统（极简：保持锐利） ===
-    borderRadius: 2,          // 基础圆角：2px（接近直角）
-    borderRadiusLG: 4,        // 大圆角：4px
+    // === 圆角系统（极简：适度柔和） ===
+    borderRadius: 4,          // 基础圆角：4px（温和舒适）
+    borderRadiusLG: 6,        // 大圆角：6px
     borderRadiusSM: 2,        // 小圆角：2px
     borderRadiusXS: 1,        // 极小圆角：1px
 
@@ -100,7 +100,7 @@ export const bauHausTheme: ThemeConfig = {
       dangerShadow: 'none',
       defaultShadow: 'none',
       fontWeight: 500,
-      borderRadius: 2,
+      borderRadius: 4,
       controlHeight: 32,
       paddingContentHorizontal: 16,
 
@@ -155,9 +155,9 @@ export const bauHausTheme: ThemeConfig = {
       boxShadowSecondary: 'none',
 
       // 紧凑间距
-      padding: 12,
-      paddingSM: 8,
-      paddingXS: 4,
+      padding: 16,
+      paddingSM: 12,
+      paddingXS: 8,
     },
 
     // === Input 输入框 ===
@@ -232,7 +232,7 @@ export const bauHausTheme: ThemeConfig = {
     // === Typography 排版 ===
     Typography: {
       titleMarginTop: '1.2em',
-      titleMarginBottom: '0.5em',
+      titleMarginBottom: '0.8em',
     },
   },
 

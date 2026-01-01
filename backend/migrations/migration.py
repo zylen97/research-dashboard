@@ -21,8 +21,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 移除语言字段，用标签代替
-MIGRATION_VERSION = "v3.1_remove_language_field"
+# 迁移版本号 - 移除is_senior字段
+MIGRATION_VERSION = "v3.3_remove_is_senior_field"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,261 +85,240 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 移除language字段，用"中文"和"英文"标签代替')
+        logger.info('🎯 目标: 移除is_senior字段，简化合作者管理')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v3.1迁移任务：移除language字段
+        # 🔧 v3.3迁移任务：移除is_senior字段
         # 变更：
-        # 1. 创建"中文"和"英文"语言标签
-        # 2. 将现有language字段映射为标签关联
-        # 3. 重建journals表（删除language字段）
-        # 4. 验证数据完整性
+        # 1. 重建collaborators表（删除is_senior字段）
+        # 2. 验证数据完整性
         # ===========================================
 
         # ============================
-        # Step 1: 创建语言标签
+        # Step 1: 重建collaborators表（删除is_senior字段）
         # ============================
-        logger.info("\n📋 Step 1: 创建语言标签")
+        logger.info("\n📋 Step 1: 重建collaborators表（删除is_senior字段）")
 
-        # 创建"中文"标签
-        cursor.execute("SELECT id FROM tags WHERE name = '中文'")
-        tag_zh = cursor.fetchone()
-        if tag_zh:
-            tag_id_zh = tag_zh[0]
-            logger.info(f"   ⏭️  标签已存在: 中文 (ID: {tag_id_zh})")
-        else:
-            cursor.execute("""
-                INSERT INTO tags (name, description, color, created_at, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """, ('中文', '中文期刊', 'blue'))
-            tag_id_zh = cursor.lastrowid
-            logger.info(f"   ✅ 创建标签: 中文 (ID: {tag_id_zh})")
-
-        # 创建"英文"标签
-        cursor.execute("SELECT id FROM tags WHERE name = '英文'")
-        tag_en = cursor.fetchone()
-        if tag_en:
-            tag_id_en = tag_en[0]
-            logger.info(f"   ⏭️  标签已存在: 英文 (ID: {tag_id_en})")
-        else:
-            cursor.execute("""
-                INSERT INTO tags (name, description, color, created_at, updated_at)
-                VALUES (?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            """, ('英文', '英文期刊', 'green'))
-            tag_id_en = cursor.lastrowid
-            logger.info(f"   ✅ 创建标签: 英文 (ID: {tag_id_en})")
-
-        # ============================
-        # Step 2: 迁移language字段到标签
-        # ============================
-        logger.info("\n📋 Step 2: 迁移language字段到标签")
-
-        # 查询所有期刊
-        cursor.execute("SELECT id, name, language FROM journals")
-        journals = cursor.fetchall()
-        logger.info(f"   📊 发现 {len(journals)} 个期刊需要迁移")
-
-        # 为每个期刊创建语言标签关联
-        migration_count = 0
-        for journal_id, journal_name, language in journals:
-            # 确定标签ID
-            if language == 'zh':
-                tag_id = tag_id_zh
-            elif language == 'en':
-                tag_id = tag_id_en
-            else:
-                # 处理异常情况，默认为中文
-                logger.warning(f"   ⚠️  期刊 {journal_name} (ID: {journal_id}) language值异常: '{language}'，默认设为中文")
-                tag_id = tag_id_zh
-
-            # 检查关联是否已存在
-            cursor.execute("""
-                SELECT 1 FROM journal_tags
-                WHERE journal_id = ? AND tag_id = ?
-            """, (journal_id, tag_id))
-
-            if not cursor.fetchone():
-                cursor.execute("""
-                    INSERT INTO journal_tags (journal_id, tag_id, created_at)
-                    VALUES (?, ?, CURRENT_TIMESTAMP)
-                """, (journal_id, tag_id))
-                migration_count += 1
-
-        logger.info(f"   ✅ 成功创建 {migration_count} 个期刊-语言标签关联")
-
-        # ============================
-        # Step 3: 重建journals表（删除language字段）
-        # ============================
-        logger.info("\n📋 Step 3: 重建journals表（删除language字段）")
-
-        # 读取现有数据（排除language字段）
+        # 读取现有数据（排除is_senior字段）
         cursor.execute("""
-            SELECT id, name, notes, created_at, updated_at
-            FROM journals
+            SELECT id, name, background, is_deleted, deleted_at, created_at, updated_at
+            FROM collaborators
         """)
-        journals_data = cursor.fetchall()
-        logger.info(f"   📊 读取到 {len(journals_data)} 条期刊数据")
+        collaborators_data = cursor.fetchall()
+        logger.info(f"   📊 读取到 {len(collaborators_data)} 条合作者数据")
 
         # 备份旧表
-        cursor.execute("DROP TABLE IF EXISTS journals_old")
-        cursor.execute("ALTER TABLE journals RENAME TO journals_old")
-        logger.info("   ✅ 备份旧表为 journals_old")
+        cursor.execute("DROP TABLE IF EXISTS collaborators_old")
+        cursor.execute("ALTER TABLE collaborators RENAME TO collaborators_old")
+        logger.info("   ✅ 备份旧表为 collaborators_old")
 
-        # 创建新表（不含language字段）
+        # 创建新表（不含is_senior字段）
         cursor.execute("""
-            CREATE TABLE journals (
+            CREATE TABLE collaborators (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                notes TEXT,
+                name TEXT NOT NULL,
+                background TEXT NOT NULL,
+                is_deleted INTEGER DEFAULT 0,
+                deleted_at DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
-        logger.info("   ✅ 创建新表: journals（不含language字段）")
+        logger.info("   ✅ 创建新表: collaborators（不含is_senior字段）")
 
         # 创建索引
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_journal_name ON journals(name)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_collaborators_name ON collaborators(name)")
         logger.info("   ✅ 创建索引")
 
         # 迁移数据
-        for row in journals_data:
+        for row in collaborators_data:
             cursor.execute("""
-                INSERT INTO journals (id, name, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO collaborators (id, name, background, is_deleted, deleted_at, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """, row)
-        logger.info(f"   ✅ 迁移 {len(journals_data)} 条数据到新表")
+        logger.info(f"   ✅ 迁移 {len(collaborators_data)} 条数据到新表")
 
-        # 重建journal_tags表（修复外键引用）
-        logger.info("   🔧 重建 journal_tags 表以修复外键引用...")
+        # 重建project_collaborators表（修复外键引用）
+        logger.info("   🔧 重建 project_collaborators 表以修复外键引用...")
 
-        # 读取现有的journal_tags数据
-        cursor.execute("SELECT journal_id, tag_id, created_at FROM journal_tags")
-        journal_tags_data = cursor.fetchall()
-        logger.info(f"   📊 读取到 {len(journal_tags_data)} 条journal_tags关联数据")
+        # 读取现有的project_collaborators数据
+        cursor.execute("SELECT project_id, collaborator_id FROM project_collaborators")
+        project_collaborators_data = cursor.fetchall()
+        logger.info(f"   📊 读取到 {len(project_collaborators_data)} 条project_collaborators关联数据")
 
-        # 删除旧的journal_tags表
-        cursor.execute("DROP TABLE IF EXISTS journal_tags")
+        # 删除旧的project_collaborators表
+        cursor.execute("DROP TABLE IF EXISTS project_collaborators")
 
-        # 重新创建journal_tags表（正确的外键引用）
+        # 重新创建project_collaborators表（正确的外键引用）
         cursor.execute("""
-            CREATE TABLE journal_tags (
-                journal_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                created_at DATETIME,
-                PRIMARY KEY (journal_id, tag_id),
-                FOREIGN KEY(journal_id) REFERENCES journals (id) ON DELETE CASCADE,
-                FOREIGN KEY(tag_id) REFERENCES tags (id) ON DELETE CASCADE
+            CREATE TABLE project_collaborators (
+                project_id INTEGER NOT NULL,
+                collaborator_id INTEGER NOT NULL,
+                PRIMARY KEY (project_id, collaborator_id),
+                FOREIGN KEY(project_id) REFERENCES research_projects (id),
+                FOREIGN KEY(collaborator_id) REFERENCES collaborators (id)
             )
         """)
-        logger.info("   ✅ 重建 journal_tags 表（外键指向journals）")
+        logger.info("   ✅ 重建 project_collaborators 表（外键指向collaborators）")
 
-        # 迁移journal_tags数据
-        for row in journal_tags_data:
+        # 迁移project_collaborators数据
+        for row in project_collaborators_data:
             cursor.execute("""
-                INSERT INTO journal_tags (journal_id, tag_id, created_at)
-                VALUES (?, ?, ?)
+                INSERT INTO project_collaborators (project_id, collaborator_id)
+                VALUES (?, ?)
             """, row)
-        logger.info(f"   ✅ 迁移 {len(journal_tags_data)} 条journal_tags数据")
+        logger.info(f"   ✅ 迁移 {len(project_collaborators_data)} 条project_collaborators数据")
+
+        # 重建ideas表的外键引用
+        logger.info("   🔧 更新 ideas 表的外键引用...")
+
+        # 读取现有的ideas数据
+        cursor.execute("SELECT id, project_name, project_description, research_method, source, reference_paper, reference_journal, target_journal, responsible_person_id, maturity, created_at, updated_at FROM ideas")
+        ideas_data = cursor.fetchall()
+        logger.info(f"   📊 读取到 {len(ideas_data)} 条ideas数据")
+
+        # 删除旧的ideas表
+        cursor.execute("DROP TABLE IF EXISTS ideas")
+
+        # 重新创建ideas表
+        cursor.execute("""
+            CREATE TABLE ideas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_name TEXT NOT NULL,
+                project_description TEXT NOT NULL,
+                research_method TEXT NOT NULL,
+                source TEXT,
+                reference_paper TEXT,
+                reference_journal TEXT,
+                target_journal TEXT,
+                responsible_person_id INTEGER NOT NULL,
+                maturity TEXT NOT NULL DEFAULT 'immature',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(responsible_person_id) REFERENCES collaborators (id)
+            )
+        """)
+        logger.info("   ✅ 重建 ideas 表（外键指向collaborators）")
+
+        # 创建索引
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ideas_maturity ON ideas(maturity)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ideas_responsible_person_id ON ideas(responsible_person_id)")
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_ideas_created_at ON ideas(created_at)")
+        logger.info("   ✅ 创建ideas索引")
+
+        # 迁移ideas数据
+        for row in ideas_data:
+            cursor.execute("""
+                INSERT INTO ideas (id, project_name, project_description, research_method, source, reference_paper, reference_journal, target_journal, responsible_person_id, maturity, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, row)
+        logger.info(f"   ✅ 迁移 {len(ideas_data)} 条ideas数据")
+
+        # 重建communication_logs表的外键引用
+        logger.info("   🔧 更新 communication_logs 表的外键引用...")
+
+        # 读取现有的communication_logs数据
+        cursor.execute("SELECT id, project_id, collaborator_id, communication_type, title, content, outcomes, communication_date, created_at, updated_at FROM communication_logs")
+        comm_logs_data = cursor.fetchall()
+        logger.info(f"   📊 读取到 {len(comm_logs_data)} 条communication_logs数据")
+
+        # 删除旧的communication_logs表
+        cursor.execute("DROP TABLE IF EXISTS communication_logs")
+
+        # 重新创建communication_logs表
+        cursor.execute("""
+            CREATE TABLE communication_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                project_id INTEGER NOT NULL,
+                collaborator_id INTEGER,
+                communication_type TEXT,
+                title TEXT NOT NULL,
+                content TEXT NOT NULL,
+                outcomes TEXT,
+                communication_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(project_id) REFERENCES research_projects (id),
+                FOREIGN KEY(collaborator_id) REFERENCES collaborators (id)
+            )
+        """)
+        logger.info("   ✅ 重建 communication_logs 表（外键指向collaborators）")
+
+        # 迁移communication_logs数据
+        for row in comm_logs_data:
+            cursor.execute("""
+                INSERT INTO communication_logs (id, project_id, collaborator_id, communication_type, title, content, outcomes, communication_date, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, row)
+        logger.info(f"   ✅ 迁移 {len(comm_logs_data)} 条communication_logs数据")
 
         # 删除旧表
-        cursor.execute("DROP TABLE IF EXISTS journals_old")
-        logger.info("   ✅ 删除旧表 journals_old")
+        cursor.execute("DROP TABLE IF EXISTS collaborators_old")
+        logger.info("   ✅ 删除旧表 collaborators_old")
 
         # ============================
-        # Step 4: 验证迁移结果
+        # Step 2: 验证迁移结果
         # ============================
-        logger.info("\n📋 Step 4: 验证迁移结果")
+        logger.info("\n📋 Step 2: 验证迁移结果")
 
-        # 验证journals表字段
-        journals_columns = get_table_columns(cursor, 'journals')
-        required_fields = ['id', 'name', 'notes', 'created_at', 'updated_at']
-        removed_fields = ['language']
+        # 验证collaborators表字段
+        collaborators_columns = get_table_columns(cursor, 'collaborators')
+        required_fields = ['id', 'name', 'background', 'is_deleted', 'deleted_at', 'created_at', 'updated_at']
+        removed_fields = ['is_senior']
 
         all_fields_ok = True
         for field in required_fields:
-            if field in journals_columns:
-                logger.info(f"   ✅ journals表.{field} 存在")
+            if field in collaborators_columns:
+                logger.info(f"   ✅ collaborators表.{field} 存在")
             else:
-                logger.error(f"   ❌ journals表.{field} 缺失！")
+                logger.error(f"   ❌ collaborators表.{field} 缺失！")
                 all_fields_ok = False
 
         for field in removed_fields:
-            if field not in journals_columns:
-                logger.info(f"   ✅ journals表.{field} 已删除")
+            if field not in collaborators_columns:
+                logger.info(f"   ✅ collaborators表.{field} 已删除")
             else:
-                logger.error(f"   ❌ journals表.{field} 仍然存在！")
+                logger.error(f"   ❌ collaborators表.{field} 仍然存在！")
                 all_fields_ok = False
-
-        if not all_fields_ok:
-            conn.rollback()
-            return False
-
-        # 验证语言标签关联数量
-        cursor.execute("""
-            SELECT COUNT(*) FROM journal_tags jt
-            JOIN tags t ON jt.tag_id = t.id
-            WHERE t.name IN ('中文', '英文')
-        """)
-        language_tag_count = cursor.fetchone()[0]
-        logger.info(f"   ✅ 语言标签关联: {language_tag_count} 条记录")
-
-        # 验证每个期刊都有语言标签
-        cursor.execute("""
-            SELECT COUNT(*) FROM journals j
-            WHERE NOT EXISTS (
-                SELECT 1 FROM journal_tags jt
-                JOIN tags t ON jt.tag_id = t.id
-                WHERE jt.journal_id = j.id AND t.name IN ('中文', '英文')
-            )
-        """)
-        journals_without_language = cursor.fetchone()[0]
-        if journals_without_language > 0:
-            logger.error(f"   ❌ 发现 {journals_without_language} 个期刊没有语言标签！")
-            all_fields_ok = False
-        else:
-            logger.info(f"   ✅ 所有期刊都有语言标签")
-
-        # 验证没有期刊有多个语言标签
-        cursor.execute("""
-            SELECT journal_id, COUNT(*) as count FROM journal_tags jt
-            JOIN tags t ON jt.tag_id = t.id
-            WHERE t.name IN ('中文', '英文')
-            GROUP BY journal_id
-            HAVING COUNT(*) > 1
-        """)
-        journals_with_multiple_languages = cursor.fetchall()
-        if journals_with_multiple_languages:
-            logger.error(f"   ❌ 发现 {len(journals_with_multiple_languages)} 个期刊有多个语言标签！")
-            all_fields_ok = False
-        else:
-            logger.info(f"   ✅ 没有期刊有多个语言标签")
 
         if not all_fields_ok:
             conn.rollback()
             return False
 
         # 验证数据完整性
-        cursor.execute("SELECT COUNT(*) FROM journals")
-        journals_count = cursor.fetchone()[0]
-        if journals_count == len(journals_data):
-            logger.info(f"   ✅ 数据完整性验证通过（{journals_count}条数据）")
+        cursor.execute("SELECT COUNT(*) FROM collaborators")
+        collaborators_count = cursor.fetchone()[0]
+        if collaborators_count == len(collaborators_data):
+            logger.info(f"   ✅ 数据完整性验证通过（{collaborators_count}条合作者数据）")
         else:
-            logger.error(f"   ❌ 数据丢失！原始数据{len(journals_data)}条，现在{journals_count}条")
+            logger.error(f"   ❌ 数据丢失！原始数据{len(collaborators_data)}条，现在{collaborators_count}条")
             conn.rollback()
             return False
+
+        # 验证外键约束
+        cursor.execute("SELECT COUNT(*) FROM project_collaborators")
+        pc_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ project_collaborators关联: {pc_count} 条")
+
+        cursor.execute("SELECT COUNT(*) FROM ideas")
+        ideas_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ ideas数据: {ideas_count} 条")
+
+        cursor.execute("SELECT COUNT(*) FROM communication_logs")
+        comm_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ communication_logs数据: {comm_count} 条")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v3.1 语言字段迁移完成！")
-        logger.info(f"✅ 创建语言标签: 中文(ID:{tag_id_zh}), 英文(ID:{tag_id_en})")
-        logger.info(f"✅ 迁移语言关联: {language_tag_count} 条")
-        logger.info(f"✅ 删除字段: language")
-        logger.info(f"✅ 保留数据: {journals_count} 条期刊")
-        logger.info("⚠️  下一步: 更新后端API和前端UI")
+        logger.info("🎉 v3.3 is_senior字段迁移完成！")
+        logger.info(f"✅ 删除字段: is_senior")
+        logger.info(f"✅ 保留数据: {collaborators_count} 条合作者")
+        logger.info(f"✅ 外键更新: project_collaborators({pc_count}), ideas({ideas_count}), communication_logs({comm_count})")
+        logger.info("⚠️  下一步: 更新后端模型和前端UI")
         logger.info("=" * 70)
 
         conn.close()

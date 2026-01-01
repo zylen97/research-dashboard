@@ -18,7 +18,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { ResearchProject, CommunicationLog, CommunicationLogCreate, Collaborator } from '../types';
-import { researchApi } from '../services/api';
+import { researchApi } from '../services/apiOptimized';
 import dayjs from 'dayjs';
 
 interface CommunicationFormValues {

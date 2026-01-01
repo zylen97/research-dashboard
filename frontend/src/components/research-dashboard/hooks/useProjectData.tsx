@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { researchApi, collaboratorApi } from '../../../services/api';
+import { researchApi, collaboratorApi } from '../../../services/apiOptimized';
 import { ResearchProject } from '../../../types';
 
 export interface TodoStatus {

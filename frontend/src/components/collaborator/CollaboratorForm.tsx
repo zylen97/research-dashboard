@@ -1,5 +1,5 @@
 import React from 'react';
-import { Form, Input, Switch, FormInstance } from 'antd';
+import { Form, Input, FormInstance } from 'antd';
 
 const { TextArea } = Input;
 
@@ -9,7 +9,7 @@ interface CollaboratorFormProps {
 
 /**
  * 合作者表单组件（简化版）
- * 只包含4个字段：姓名、背景信息、联系方式、高级合作者
+ * 只包含2个字段：姓名、背景信息
  */
 export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ form }) => {
   return (
@@ -31,22 +31,6 @@ export const CollaboratorForm: React.FC<CollaboratorFormProps> = ({ form }) => {
           rows={4}
           placeholder="请输入合作者的背景信息（如：专业、研究方向、特长等）"
         />
-      </Form.Item>
-
-      <Form.Item
-        name="contact_info"
-        label="联系方式"
-      >
-        <Input placeholder="请输入联系方式（可选）" />
-      </Form.Item>
-
-      <Form.Item
-        name="is_senior"
-        label="高级合作者"
-        valuePropName="checked"
-        initialValue={true}
-      >
-        <Switch />
       </Form.Item>
     </Form>
   );

@@ -177,11 +177,8 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
         <Space wrap>
           {(project.collaborators || [])
             .filter(c => c != null)
-            .sort((a, b) => (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0))
             .map((collaborator) => {
-              const visualConfig = collaborator.is_senior
-                ? COLLABORATOR_VISUAL_SYSTEM.senior
-                : COLLABORATOR_VISUAL_SYSTEM.regular;
+              const visualConfig = COLLABORATOR_VISUAL_SYSTEM.regular;
 
               return (
                 <span

@@ -18,7 +18,7 @@ import {
   Tag, TagCreate, TagUpdate
 } from '../types/journals';
 import { handleListResponse } from '../utils/dataFormatters';
-import { errorInterceptor } from '../utils/errorHandler';
+import { errorInterceptorOptimized } from '../utils/errorHandlerOptimized';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
 import { API_CONFIG } from '../config/api';
 import { ENV } from '../config/environment';
@@ -63,7 +63,7 @@ api.interceptors.response.use(
     
     return data;
   },
-  errorInterceptor
+  errorInterceptorOptimized
 );
 
 // 合作者API - 使用工厂函数创建基础CRUD，然后添加额外方法
@@ -73,10 +73,10 @@ export const collaboratorApi = {
     'API.getCollaborators'
   ),
   
-  // 重写delete方法以支持force参数
-  deleteCollaborator: async (id: number, force: boolean = false) => {
+  // 重写delete方法以支持permanent参数（与后端保持一致）
+  deleteCollaborator: async (id: number, permanent: boolean = false) => {
     const response = await api.delete(`/collaborators/${id}`, {
-      params: { force }
+      params: { permanent }
     });
     return response;
   },

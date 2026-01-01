@@ -73,11 +73,10 @@
   margin: 0;
 }
 
-/* 表格容器优化 - 包豪斯：用边框代替阴影 */
+/* 表格容器优化 - 包豪斯：移除边框，和其他页面统一 */
 .table-container {
   background: var(--ant-color-bg-container);
   border-radius: 4px;
-  border: 1px solid #E8E8E8;
 }
 
 /* 响应式断点优化 */

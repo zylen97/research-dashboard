@@ -9,8 +9,11 @@ import {
 import { ResearchProject } from '../../../types';
 import { GRAYSCALE_SYSTEM } from '../../../config/colors';
 import { STATUS_VISUAL_SYSTEM } from '../../../config/statusStyles';
-import { ROLE_VISUAL_SYSTEM } from '../../../config/roleStyles';
 import { COLLABORATOR_VISUAL_SYSTEM } from '../../../config/collaboratorStyles';
+import { StatusIcon } from '../StatusIcon';
+import { RoleIcon } from '../RoleIcon';
+import type { ProjectStatus } from '../../../config/statusStyles';
+import type { AuthorRole } from '../../../config/roleStyles';
 
 const { Text } = Typography;
 
@@ -163,29 +166,14 @@ export const createProjectColumns = ({
     title: '状态',
     dataIndex: 'status',
     key: 'status',
-    width: 70,
+    width: 120,
     render: (status: string) => {
       // 防御null/undefined
       if (!status || !STATUS_VISUAL_SYSTEM[status as keyof typeof STATUS_VISUAL_SYSTEM]) {
         return <span style={{ fontSize: '12px', color: GRAYSCALE_SYSTEM.tertiary }}>未知状态</span>;
       }
 
-      const config = STATUS_VISUAL_SYSTEM[status as keyof typeof STATUS_VISUAL_SYSTEM];
-      return (
-        <span
-          style={{
-            padding: '2px 8px',
-            fontSize: '12px',
-            fontWeight: config.textWeight,
-            border: `${config.borderWidth} ${config.borderStyle} ${config.borderColor}`,
-            borderRadius: '2px',
-            backgroundColor: config.backgroundColor,
-            color: GRAYSCALE_SYSTEM.primary,
-          }}
-        >
-          {config.icon} {config.label}
-        </span>
-      );
+      return <StatusIcon status={status as ProjectStatus} showLabel={true} />;
     },
   },
   // 🆕 我的身份列
@@ -193,25 +181,9 @@ export const createProjectColumns = ({
     title: '我的身份',
     dataIndex: 'my_role',
     key: 'my_role',
-    width: 100,
+    width: 120,
     render: (my_role: string) => {
-      const config = ROLE_VISUAL_SYSTEM[my_role as keyof typeof ROLE_VISUAL_SYSTEM] || ROLE_VISUAL_SYSTEM.other_author;
-
-      return (
-        <span
-          style={{
-            fontSize: config.fontSize,
-            fontWeight: config.fontWeight,
-            textTransform: config.textTransform,
-            letterSpacing: config.letterSpacing,
-            borderBottom: config.borderBottom,
-            color: config.color,
-            display: 'inline-block',
-          }}
-        >
-          {config.icon} {config.label}
-        </span>
-      );
+      return <RoleIcon role={(my_role as AuthorRole) || 'other_author'} showLabel={true} />;
     },
   },
   ...(isMobile ? [] : [{
@@ -220,17 +192,10 @@ export const createProjectColumns = ({
     key: 'collaborators',
     width: 180,
     render: (collaborators: any[]) => {
-      // 只按is_senior排序
-      const sortedCollaborators = collaborators.sort((a, b) =>
-        (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0)
-      );
-
       return (
         <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
-          {sortedCollaborators.map((collaborator, index) => {
-            const visualConfig = collaborator.is_senior
-              ? COLLABORATOR_VISUAL_SYSTEM.senior
-              : COLLABORATOR_VISUAL_SYSTEM.regular;
+          {collaborators.map((collaborator, index) => {
+            const visualConfig = COLLABORATOR_VISUAL_SYSTEM.regular;
 
             return (
               <span key={collaborator.id}>
@@ -247,7 +212,7 @@ export const createProjectColumns = ({
                   {visualConfig.icon && `${visualConfig.icon} `}
                   {collaborator.name}
                 </span>
-                {index < sortedCollaborators.length - 1 && ', '}
+                {index < collaborators.length - 1 && ', '}
               </span>
             );
           })}

@@ -126,11 +126,6 @@ class DataValidator:
             
             if invalid_ids:
                 errors.append(f"无效的合作者ID: {list(invalid_ids)}")
-            
-            # 检查高级合作者
-            senior_collaborators = [c for c in valid_collaborators if c.is_senior]
-            if not senior_collaborators:
-                warnings.append("项目中没有高级合作者")
         else:
             warnings.append("项目没有分配合作者")
         

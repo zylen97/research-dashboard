@@ -281,18 +281,7 @@ class SecurityValidator:
             errors.append("无效的性别值")
         if gender:
             sanitized_data['gender'] = gender
-        
-        # 验证布尔值字段
-        for bool_field in ['is_senior']:
-            value = data.get(bool_field)
-            if value is not None:
-                if isinstance(value, bool):
-                    sanitized_data[bool_field] = value
-                elif isinstance(value, str):
-                    sanitized_data[bool_field] = value.lower() in ['true', '1', 'yes']
-                else:
-                    sanitized_data[bool_field] = bool(value)
-        
+
         return {
             'valid': len(errors) == 0,
             'errors': errors,

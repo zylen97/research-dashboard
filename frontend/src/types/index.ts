@@ -17,12 +17,11 @@ export interface PaginationParams {
   limit?: number;
 }
 
-// 合作者类型（极简版 - 只保留3个业务字段）
+// 合作者类型（极简版 - 只保留2个业务字段）
 export interface Collaborator {
   id: number;
   name: string;           // 必填
   background: string;     // 必填
-  is_senior: boolean;     // 可选
 
   // 系统字段
   is_deleted: boolean;
@@ -35,13 +34,11 @@ export interface Collaborator {
 export interface CollaboratorCreate {
   name: string;
   background: string;
-  is_senior?: boolean;
 }
 
 export interface CollaboratorUpdate {
   name?: string;
   background?: string;
-  is_senior?: boolean;
 }
 
 // 研究项目类型
@@ -215,6 +212,32 @@ export interface AITestResponse {
   message: string;
   provider: string;
   response_time?: number;
-  response_content?: string;
+  response?: string;  // 与后端字段名保持一致
 }
+
+// 期刊库类型
+export interface Journal {
+  id: number;
+  name: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+  tags: Tag[];
+  reference_count: number;  // 作为参考期刊的引用次数
+  target_count: number;     // 作为拟投稿期刊的引用次数
+}
+
+export interface JournalCreate {
+  name: string;
+  notes?: string;
+  tag_ids?: number[];
+}
+
+export interface JournalUpdate {
+  name?: string;
+  notes?: string;
+  tag_ids?: number[];
+}
+
+// Tag 类型已移至 types/journals.ts，请使用统一的定义
 

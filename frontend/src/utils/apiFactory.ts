@@ -1,7 +1,7 @@
 /**
  * API CRUD 工厂函数 - 减少重复的CRUD代码
  */
-import api from '../services/api';
+import api from '../services/apiOptimized';
 import { handleListResponse } from './dataFormatters';
 import { PaginationParams } from '../types';
 
