@@ -29,7 +29,7 @@ interface CollaboratorTableProps {
 
 /**
  * 合作者表格组件（简化版）
- * 只显示：姓名、背景、联系方式、项目数、状态、操作
+ * 只显示：姓名、背景信息、项目数、操作
  */
 export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
   data,
@@ -77,7 +77,7 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       </div>
     ),
     filterIcon: (filtered: boolean) => (
-      <SearchOutlined style={{ color: filtered ? '#1890ff' : undefined }} />
+      <SearchOutlined style={{ color: filtered ? '#333333' : undefined }} />
     ),
     onFilter: (value, record) => {
       const fieldValue = (record as any)[dataIndex];
@@ -91,7 +91,7 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
     render: text =>
       searchedColumn === dataIndex ? (
         <Highlighter
-          highlightStyle={{ backgroundColor: '#ffc069', padding: 0 }}
+          highlightStyle={{ backgroundColor: '#E8E8E8', padding: 0 }}
           searchWords={[searchText]}
           autoEscape
           textToHighlight={text ? text.toString() : ''}
@@ -109,18 +109,16 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       width: 150,
       fixed: 'left',
       ...getColumnSearchProps('name'),
-      render: (text, record) => (
+      render: (text) => (
         <Space>
           <Avatar
             style={{
-              backgroundColor: record.is_senior ? '#f56a00' : '#87d068',
+              backgroundColor: '#BFBFBF',
             }}
             icon={<UserOutlined />}
             size="small"
           />
-          <span style={{ fontWeight: record.is_senior ? 'bold' : 'normal' }}>
-            {text}
-          </span>
+          <span>{text}</span>
         </Space>
       ),
     },
@@ -138,20 +136,13 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       key: 'project_count',
       width: 100,
       sorter: (a, b) => (a.project_count || 0) - (b.project_count || 0),
-      render: count => <Tag color="blue">{count || 0}</Tag>,
-    },
-    {
-      title: '状态',
-      key: 'status',
-      width: 150,
-      filters: [
-        { text: '高级合作者', value: true },
-        { text: '普通合作者', value: false },
-      ],
-      onFilter: (value, record) => record.is_senior === value,
-      render: (_, record) => (
-        <Tag color={record.is_senior ? 'gold' : 'green'}>
-          {record.is_senior ? '高级合作者' : '普通合作者'}
+      render: count => (
+        <Tag style={{
+          backgroundColor: '#E8E8E8',
+          color: '#333333',
+          borderColor: '#CCCCCC'
+        }}>
+          {count || 0}
         </Tag>
       ),
     },

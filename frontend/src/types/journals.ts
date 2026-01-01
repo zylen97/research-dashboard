@@ -8,7 +8,7 @@
 export interface TagBase {
   name: string;                // 标签名称（唯一）
   description?: string | null;  // 标签描述
-  color: string;               // 前端显示颜色（默认blue）
+  color?: string;              // 前端显示颜色（已废弃，保留字段以兼容后端）
 }
 
 // 完整的标签数据（从API返回）

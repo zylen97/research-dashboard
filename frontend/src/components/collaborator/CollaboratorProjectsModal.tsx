@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Modal, Table, Typography, Space, Tag, Button } from 'antd';
+import { Modal, Table, Typography, Space, Button } from 'antd';
 import { ProjectOutlined, TeamOutlined, EyeOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { collaboratorApi } from '../../services/apiOptimized';
@@ -101,11 +101,8 @@ export const CollaboratorProjectsModal: React.FC<CollaboratorProjectsModalProps>
       <Modal
         title={
           <Space>
-            <TeamOutlined style={{ color: '#1890ff' }} />
+            <TeamOutlined style={{ color: '#333333' }} />
             <span>{collaborator.name} 的相关项目</span>
-            <Tag color={collaborator.is_senior ? 'gold' : 'default'}>
-              {collaborator.is_senior ? '高级合作者' : '普通合作者'}
-            </Tag>
           </Space>
         }
         open={visible}

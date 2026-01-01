@@ -11,7 +11,7 @@ interface CollaboratorDetailModalProps {
 
 /**
  * 合作者详情模态框（简化版）
- * 只显示4个字段：姓名、背景信息、联系方式、高级合作者
+ * 只显示：姓名、背景信息、参与项目数、创建时间
  */
 export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = ({
   visible,
@@ -26,7 +26,7 @@ export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = (
         <Space>
           <Avatar
             style={{
-              backgroundColor: collaborator.is_senior ? '#f56a00' : '#87d068',
+              backgroundColor: '#BFBFBF',
             }}
             icon={<UserOutlined />}
           />
@@ -39,14 +39,8 @@ export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = (
       width={700}
     >
       <Descriptions bordered column={2}>
-        <Descriptions.Item label="姓名" span={1}>
+        <Descriptions.Item label="姓名" span={2}>
           {collaborator.name}
-        </Descriptions.Item>
-
-        <Descriptions.Item label="状态" span={1}>
-          <Tag color={collaborator.is_senior ? 'gold' : 'green'}>
-            {collaborator.is_senior ? '高级合作者' : '普通合作者'}
-          </Tag>
         </Descriptions.Item>
 
         <Descriptions.Item label="背景信息" span={2}>
@@ -56,7 +50,13 @@ export const CollaboratorDetailModal: React.FC<CollaboratorDetailModalProps> = (
         </Descriptions.Item>
 
         <Descriptions.Item label="参与项目数" span={1}>
-          <Tag color="blue">{collaborator.project_count || 0} 个</Tag>
+          <Tag style={{
+            backgroundColor: '#E8E8E8',
+            color: '#333333',
+            borderColor: '#CCCCCC'
+          }}>
+            {collaborator.project_count || 0} 个
+          </Tag>
         </Descriptions.Item>
 
         <Descriptions.Item label="创建时间" span={1}>

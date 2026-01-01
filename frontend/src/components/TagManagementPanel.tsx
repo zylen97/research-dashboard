@@ -4,37 +4,23 @@
  */
 import React, { useState } from 'react';
 import {
-  Table, Button, Space, message, Popconfirm, Modal, Form, Input, Select, Tag as AntTag
+  Table, Button, Space, message, Popconfirm, Modal, Form, Input, Tag
 } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tagApi } from '../services/apiOptimized';
-import { Tag, TagCreate, TagUpdate } from '../types/journals';
+import { Tag as TagType, TagCreate, TagUpdate } from '../types/journals';
 
 const { TextArea } = Input;
-const { Option } = Select;
-
-// 预定义的标签颜色
-const TAG_COLORS = [
-  { label: '蓝色', value: 'blue' },
-  { label: '绿色', value: 'green' },
-  { label: '橙色', value: 'orange' },
-  { label: '红色', value: 'red' },
-  { label: '紫色', value: 'purple' },
-  { label: '青色', value: 'cyan' },
-  { label: '洋红', value: 'magenta' },
-  { label: '金色', value: 'gold' },
-  { label: '灰色', value: 'default' },
-];
 
 export const TagManagementPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [editingTag, setEditingTag] = useState<TagType | null>(null);
   const queryClient = useQueryClient();
 
   // 查询标签列表
-  const { data: tags = [], isLoading } = useQuery<Tag[]>({
+  const { data: tags = [], isLoading } = useQuery<TagType[]>({
     queryKey: ['tags'],
     queryFn: () => tagApi.getTags(),
   });
@@ -78,18 +64,16 @@ export const TagManagementPanel: React.FC = () => {
   });
 
   // 打开创建/编辑模态框
-  const handleOpenModal = (tag?: Tag) => {
+  const handleOpenModal = (tag?: TagType) => {
     if (tag) {
       setEditingTag(tag);
       form.setFieldsValue({
         name: tag.name,
         description: tag.description,
-        color: tag.color,
       });
     } else {
       setEditingTag(null);
       form.resetFields();
-      form.setFieldsValue({ color: 'blue' }); // 默认蓝色
     }
     setIsModalVisible(true);
   };
@@ -108,7 +92,6 @@ export const TagManagementPanel: React.FC = () => {
       const tagData: TagCreate = {
         name: values.name.trim(),
         description: values.description?.trim() || null,
-        color: values.color,
       };
 
       if (editingTag) {
@@ -122,7 +105,7 @@ export const TagManagementPanel: React.FC = () => {
   };
 
   // 删除标签
-  const handleDelete = (tag: Tag) => {
+  const handleDelete = (tag: TagType) => {
     deleteMutation.mutate(tag.id);
   };
 
@@ -139,10 +122,15 @@ export const TagManagementPanel: React.FC = () => {
       dataIndex: 'name',
       key: 'name',
       width: 200,
-      render: (name: string, record: Tag) => (
-        <AntTag color={record.color} style={{ fontSize: '14px' }}>
+      render: (name: string) => (
+        <Tag style={{
+          backgroundColor: '#F5F5F5',
+          color: '#333333',
+          borderColor: '#E8E8E8',
+          fontSize: '14px'
+        }}>
           {name}
-        </AntTag>
+        </Tag>
       ),
     },
     {
@@ -157,7 +145,7 @@ export const TagManagementPanel: React.FC = () => {
       key: 'journal_count',
       width: 120,
       align: 'center' as const,
-      sorter: (a: Tag, b: Tag) => a.journal_count - b.journal_count,
+      sorter: (a: TagType, b: TagType) => a.journal_count - b.journal_count,
       render: (count: number) => (
         <span style={{ fontWeight: count > 0 ? 'bold' : 'normal' }}>
           {count}
@@ -176,7 +164,7 @@ export const TagManagementPanel: React.FC = () => {
       key: 'actions',
       width: 150,
       fixed: 'right' as const,
-      render: (_: any, record: Tag) => (
+      render: (_: any, record: TagType) => (
         <Space>
           <Button
             type="link"
@@ -261,16 +249,6 @@ export const TagManagementPanel: React.FC = () => {
             rules={[{ max: 200, message: '描述不能超过200个字符' }]}
           >
             <TextArea rows={3} placeholder="选填，描述该标签的用途或范围" />
-          </Form.Item>
-
-          <Form.Item name="color" label="标签颜色" initialValue="blue">
-            <Select>
-              {TAG_COLORS.map((color) => (
-                <Option key={color.value} value={color.value}>
-                  <AntTag color={color.value}>{color.label}</AntTag>
-                </Option>
-              ))}
-            </Select>
           </Form.Item>
         </Form>
       </Modal>
