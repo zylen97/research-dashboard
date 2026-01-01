@@ -14,7 +14,6 @@ export interface PaperStats {
   by_status: {
     pending: number;
     analyzed: number;
-    converted: number;
   };
 }
 
@@ -25,7 +24,6 @@ export interface JournalPaperStats {
   total_papers: number;
   pending_papers: number;
   analyzed_papers: number;
-  converted_papers: number;
 }
 
 interface PaperStatsCardsProps {
@@ -44,16 +42,15 @@ const PaperStatsCards: React.FC<PaperStatsCardsProps> = ({ stats, loading = fals
   const total = 'total' in stats ? stats.total : stats.total_papers;
   const pending = 'by_status' in stats ? stats.by_status.pending : stats.pending_papers;
   const analyzed = 'by_status' in stats ? stats.by_status.analyzed : stats.analyzed_papers;
-  const converted = 'by_status' in stats ? stats.by_status.converted : stats.converted_papers;
 
   return (
     <Row gutter={16} style={{ marginBottom: 16 }}>
-      <Col span={6}>
+      <Col span={8}>
         <Card loading={loading}>
           <Statistic title="总论文数" value={total} />
         </Card>
       </Col>
-      <Col span={6}>
+      <Col span={8}>
         <Card loading={loading}>
           <Statistic
             title="待分析"
@@ -62,21 +59,12 @@ const PaperStatsCards: React.FC<PaperStatsCardsProps> = ({ stats, loading = fals
           />
         </Card>
       </Col>
-      <Col span={6}>
+      <Col span={8}>
         <Card loading={loading}>
           <Statistic
             title="已分析"
             value={analyzed}
             valueStyle={{ color: '#333' }}
-          />
-        </Card>
-      </Col>
-      <Col span={6}>
-        <Card loading={loading}>
-          <Statistic
-            title="已转换"
-            value={converted}
-            valueStyle={{ color: '#1890ff' }}
           />
         </Card>
       </Col>

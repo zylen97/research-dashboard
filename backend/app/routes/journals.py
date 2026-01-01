@@ -20,6 +20,7 @@ from ..services.excel_import_service import ExcelImportService
 from ..services.ai_analysis_service import AIAnalysisService
 from ..utils.response import success_response, paginated_response
 from ..utils.crud_base import CRUDBase
+from ..utils.string_helpers import to_title_case
 
 logger = logging.getLogger(__name__)
 
@@ -281,12 +282,15 @@ async def create_journal(
 ):
     """创建新期刊"""
     try:
+        # 格式化期刊名称为Title Case
+        formatted_name = to_title_case(journal.name.strip())
+
         # 检查期刊名称是否已存在
-        existing = db.query(Journal).filter(Journal.name == journal.name).first()
+        existing = db.query(Journal).filter(Journal.name == formatted_name).first()
         if existing:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail=f"期刊 '{journal.name}' 已存在"
+                detail=f"期刊 '{formatted_name}' 已存在"
             )
 
         # 验证tag_ids（完全可选）
@@ -305,8 +309,9 @@ async def create_journal(
         else:
             existing_tags = []
 
-        # 创建期刊（不包含tag_ids字段）
+        # 创建期刊（不包含tag_ids字段，使用格式化后的名称）
         journal_data = journal.model_dump(exclude={'tag_ids'})
+        journal_data['name'] = formatted_name  # 使用格式化后的名称
         new_journal = Journal(**journal_data)
         db.add(new_journal)
         db.flush()  # 获取新期刊的ID
@@ -408,13 +413,14 @@ async def update_journal(
         if not db_journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
-        # 如果要更新名称，检查新名称是否已被使用
+        # 如果要更新名称，格式化并检查新名称是否已被使用
         if journal_update.name and journal_update.name != db_journal.name:
-            existing = db.query(Journal).filter(Journal.name == journal_update.name).first()
+            formatted_name = to_title_case(journal_update.name.strip())
+            existing = db.query(Journal).filter(Journal.name == formatted_name).first()
             if existing:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail=f"期刊名称 '{journal_update.name}' 已被使用"
+                    detail=f"期刊名称 '{formatted_name}' 已被使用"
                 )
 
         # 处理tag_ids更新（完全替换模式，标签完全可选）
@@ -451,7 +457,11 @@ async def update_journal(
         # 更新期刊基本信息（排除tag_ids）
         update_data = journal_update.model_dump(exclude_unset=True, exclude={'tag_ids'})
         for field, value in update_data.items():
-            setattr(db_journal, field, value)
+            # 如果是name字段，使用格式化后的名称
+            if field == 'name':
+                setattr(db_journal, field, to_title_case(str(value).strip()))
+            else:
+                setattr(db_journal, field, value)
 
         db.commit()
         db.refresh(db_journal)

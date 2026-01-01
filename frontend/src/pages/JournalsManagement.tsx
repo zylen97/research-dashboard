@@ -133,6 +133,9 @@ const JournalsManagement: React.FC = () => {
     onSuccess: () => {
       message.success('期刊更新成功');
       queryClient.invalidateQueries({ queryKey: ['journals'] });
+      // 刷新引用该期刊的论文列表
+      queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['journal-papers'] });
       setIsModalVisible(false);
       setEditingJournal(null);
       form.resetFields();
@@ -148,6 +151,9 @@ const JournalsManagement: React.FC = () => {
     onSuccess: () => {
       message.success('期刊删除成功');
       queryClient.invalidateQueries({ queryKey: ['journals'] });
+      // 刷新引用该期刊的论文列表
+      queryClient.invalidateQueries({ queryKey: ['papers'] });
+      queryClient.invalidateQueries({ queryKey: ['journal-papers'] });
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail;

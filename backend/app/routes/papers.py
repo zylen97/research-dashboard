@@ -213,6 +213,17 @@ async def delete_paper(
             detail=f"Cannot delete paper: {referencing_ideas} idea(s) reference this paper"
         )
 
+    # 检查是否有ResearchProject引用此论文（通过reference_paper字段）
+    from ..models.database import ResearchProject
+    referencing_projects = db.query(ResearchProject).filter(
+        ResearchProject.reference_paper == db_paper.title
+    ).count()
+    if referencing_projects > 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot delete paper: {referencing_projects} research project(s) reference this paper"
+        )
+
     # 记录审计日志
     old_values = AuditService.serialize_model_instance(db_paper)
     AuditService.log_delete(
@@ -490,34 +501,51 @@ async def convert_paper_to_idea(
             detail="No collaborator found to assign as responsible person"
         )
 
-    # 创建Idea
+    # 保存论文信息（在删除前）
+    paper_title = paper.title
+    paper_abstract = paper.abstract
+    paper_core_idea = paper.core_idea_summary
+    journal_name = paper.journal.name if paper.journal else None
+
+    # 记录审计日志（在删除前）
+    old_values = AuditService.serialize_model_instance(paper)
+
+    # 创建Idea（使用保存的值）
     idea = Idea(
-        project_name=paper.title[:200],  # 限制长度
-        project_description=paper.core_idea_summary or paper.abstract or "",
+        project_name=paper_title[:200],  # 限制长度
+        project_description=paper_core_idea or paper_abstract or "",
         research_method="待确定",
-        reference_paper=paper.title,
-        reference_journal=paper.journal.name if paper.journal else None,
+        reference_paper=paper_title,
+        reference_journal=journal_name,
         target_journal=None,
         responsible_person_id=default_collaborator.id,
         maturity="immature",
-        source_paper_id=paper_id
+        source_paper_id=paper_id  # 保留源论文ID作为引用
     )
 
     db.add(idea)
-    db.commit()
-    db.refresh(idea)
+    db.flush()  # 获取idea.id
 
-    # 更新论文状态
-    paper.status = "converted"
-    paper.updated_at = datetime.utcnow()
+    # 删除原论文（而不是更新状态）
+    db.delete(paper)
     db.commit()
+
+    # 记录审计日志
+    AuditService.log_delete(
+        db=db,
+        table_name="papers",
+        record_id=paper_id,
+        old_values=old_values,
+        extra_info=f"Converted to Idea (ID: {idea.id})"
+    )
 
     return success_response(
         data={
             "idea_id": idea.id,
-            "paper_id": paper_id
+            "paper_id": paper_id,
+            "deleted": True  # 标识论文已被删除
         },
-        message="Paper converted to idea successfully"
+        message="Paper converted to idea and deleted successfully"
     )
 
 

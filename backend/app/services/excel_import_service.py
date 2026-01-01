@@ -11,6 +11,7 @@ from datetime import datetime
 
 from ..models import Paper, Journal
 from ..models.schemas import PaperCreate
+from ..utils.string_helpers import to_title_case
 
 
 class ExcelImportService:
@@ -208,11 +209,13 @@ class ExcelImportService:
                     if 'journal_name' in mapped_columns:
                         journal_name = cls.clean_value(row[mapped_columns['journal_name']])
                         if journal_name:
-                            # 尝试查找期刊
-                            journal_id = cls.map_journal_name_to_id(journal_name, db)
-                            # 如果不存在，自动创建
+                            # 格式化期刊名称为Title Case
+                            formatted_journal_name = to_title_case(journal_name)
+                            # 尝试查找期刊（使用格式化后的名称）
+                            journal_id = cls.map_journal_name_to_id(formatted_journal_name, db)
+                            # 如果不存在，自动创建（使用格式化后的名称）
                             if journal_id is None:
-                                new_journal = Journal(name=journal_name)
+                                new_journal = Journal(name=formatted_journal_name)
                                 db.add(new_journal)
                                 db.flush()  # 获取新创建的期刊ID
                                 journal_id = new_journal.id

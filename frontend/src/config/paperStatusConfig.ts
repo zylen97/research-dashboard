@@ -6,7 +6,6 @@
 export const PAPER_STATUS_CONFIG: Record<string, { text: string; color: string }> = {
   pending: { text: '待分析', color: '#999' },
   analyzed: { text: '已分析', color: '#333' },
-  converted: { text: '已转换', color: '#1890ff' },
 };
 
 /**

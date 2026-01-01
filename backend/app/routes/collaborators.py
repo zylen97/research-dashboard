@@ -412,16 +412,34 @@ async def delete_collaborator(
     # 检查依赖关系（外键约束）
     dependencies = DataValidator.check_collaborator_dependencies(collaborator_id, db)
 
-    if not dependencies["can_delete"]:
-        # 有外键约束，无法删除
+    # 检查是否有Idea的负责人依赖（阻止任何删除，包括软删除）
+    if dependencies.get("responsible_ideas_count", 0) > 0:
         error_details = {
             "error": "无法删除该合作者",
-            "reason": "存在外键约束",
+            "reason": "该合作者是项目想法的负责人（外键约束）",
             "details": {
                 "responsible_ideas_count": dependencies.get("responsible_ideas_count", 0),
                 "responsible_idea_names": dependencies.get("responsible_idea_names", [])
             },
             "suggestion": "请先将这些项目想法的负责人更改为其他合作者，或删除这些项目想法后再尝试删除该合作者"
+        }
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=error_details
+        )
+
+    # 检查是否可以永久删除（有活跃项目或交流记录时只能软删除）
+    if permanent and not dependencies["can_delete"]:
+        error_details = {
+            "error": "无法永久删除该合作者",
+            "reason": "存在外键约束或活跃引用",
+            "details": {
+                "active_projects_count": dependencies.get("active_projects_count", 0),
+                "completed_projects_count": dependencies.get("completed_projects_count", 0),
+                "communication_logs_count": dependencies.get("communication_logs_count", 0),
+                "project_titles": dependencies.get("project_titles", [])
+            },
+            "suggestion": "该合作者有活跃项目或交流记录，请使用软删除功能"
         }
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

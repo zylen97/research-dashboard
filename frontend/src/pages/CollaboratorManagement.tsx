@@ -17,7 +17,7 @@ import {
   ReloadOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { collaboratorApi, researchApi, ideasApi } from '../services/apiOptimized';
 import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
@@ -42,6 +42,7 @@ const CollaboratorManagement: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [form] = Form.useForm();
+  const queryClient = useQueryClient();
 
   // 清理旧的localStorage小组标记数据（组件mount时执行一次）
   useEffect(() => {
@@ -98,6 +99,10 @@ const CollaboratorManagement: React.FC = () => {
       },
       onDeleteSuccess: () => {
         refetch();
+        // 刷新引用该合作者的相关数据
+        queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+        queryClient.invalidateQueries({ queryKey: ['ideas'] });
+        queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
       },
     }
   );
@@ -236,6 +241,10 @@ const CollaboratorManagement: React.FC = () => {
         onOk: async () => {
           await collaboratorApi.deleteCollaborator(collaborator.id, deleteTypeRef.current === 'hard');
           refetch();
+          // 刷新引用该合作者的相关数据
+          queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+          queryClient.invalidateQueries({ queryKey: ['ideas'] });
+          queryClient.invalidateQueries({ queryKey: ['communication-logs'] });
         },
       });
     },

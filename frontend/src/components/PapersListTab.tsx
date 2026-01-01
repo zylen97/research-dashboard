@@ -130,11 +130,32 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     return papers.filter(p => p.journal_id && journalFilter.includes(p.journal_id));
   }, [papers, journalFilter]);
 
-  // 查询论文统计
+  // 查询论文统计（全局）
   const { data: stats } = useQuery({
     queryKey: ['papers-stats'],
     queryFn: () => paperApi.getStats(),
   });
+
+  // 计算筛选后的统计（当有筛选条件时使用）
+  const filteredStats = useMemo(() => {
+    // 无筛选时使用全局统计
+    if (journalFilter.length === 0 && !statusFilter && tagFilter.length === 0) {
+      return stats;
+    }
+
+    // 计算筛选后的统计数据
+    const filteredPapersList = journalFilter.length <= 1
+      ? papers  // 后端已筛选（单选或无筛选）
+      : papers.filter(p => p.journal_id && journalFilter.includes(p.journal_id));  // 多选时前端筛选
+
+    return {
+      total: filteredPapersList.length,
+      by_status: {
+        pending: filteredPapersList.filter(p => p.status === 'pending').length,
+        analyzed: filteredPapersList.filter(p => p.status === 'analyzed').length,
+      },
+    };
+  }, [papers, journalFilter, statusFilter, tagFilter, stats]);
 
   // 删除论文
   const deleteMutation = useMutation({
@@ -297,17 +318,17 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
           >
             详情
           </Button>
-          {record.status === 'analyzed' && (
-            <Popconfirm
-              title="确认转换？"
-              description="将此论文转换为Idea"
-              onConfirm={() => convertMutation.mutate(record.id)}
-            >
-              <Button type="link" size="small" icon={<RocketOutlined />}>
-                转换
-              </Button>
-            </Popconfirm>
-          )}
+          <Popconfirm
+            title="确认转换？"
+            description={record.status === 'analyzed'
+              ? "将此论文转换为Idea"
+              : "论文尚未分析，确定要转换吗？转换后描述可能不完整"}
+            onConfirm={() => convertMutation.mutate(record.id)}
+          >
+            <Button type="link" size="small" icon={<RocketOutlined />}>
+              转换
+            </Button>
+          </Popconfirm>
           <Popconfirm
             title="确认删除？"
             description="删除后无法恢复"
@@ -327,7 +348,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
   return (
     <div>
       {/* 统计卡片 */}
-      <PaperStatsCards stats={stats} loading={isLoading} />
+      <PaperStatsCards stats={filteredStats} loading={isLoading} />
 
       {/* 筛选和操作栏 */}
       <div style={{ padding: '8px 0', marginBottom: 16 }}>
@@ -399,7 +420,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
             >
               <Select.Option value="pending">待分析</Select.Option>
               <Select.Option value="analyzed">已分析</Select.Option>
-              <Select.Option value="converted">已转换</Select.Option>
             </Select>
             <Search
               placeholder="搜索"

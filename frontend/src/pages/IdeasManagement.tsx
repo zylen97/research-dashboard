@@ -161,6 +161,9 @@ const IdeasManagementPage: React.FC = () => {
     onSuccess: () => {
       message.success('Ideas删除成功');
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
+      // 刷新可能引用该Idea的项目列表和待办状态
+      queryClient.invalidateQueries({ queryKey: ['research-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['user-todos'] });
     },
     onError: (error: any) => {
       message.error(error.response?.data?.detail || '删除失败');

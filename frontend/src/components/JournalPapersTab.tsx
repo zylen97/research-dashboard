@@ -227,17 +227,17 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
           >
             详情
           </Button>
-          {record.status === 'analyzed' && (
-            <Popconfirm
-              title="确认转换？"
-              description="将此论文转换为Idea"
-              onConfirm={() => convertMutation.mutate(record.id)}
-            >
-              <Button type="link" size="small" icon={<RocketOutlined />}>
-                转换
-              </Button>
-            </Popconfirm>
-          )}
+          <Popconfirm
+            title="确认转换？"
+            description={record.status === 'analyzed'
+              ? "将此论文转换为Idea"
+              : "论文尚未分析，确定要转换吗？转换后描述可能不完整"}
+            onConfirm={() => convertMutation.mutate(record.id)}
+          >
+            <Button type="link" size="small" icon={<RocketOutlined />}>
+              转换
+            </Button>
+          </Popconfirm>
           <Popconfirm
             title="确认删除？"
             description="删除后无法恢复"
@@ -304,7 +304,6 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
             >
               <Select.Option value="pending">待分析</Select.Option>
               <Select.Option value="analyzed">已分析</Select.Option>
-              <Select.Option value="converted">已转换</Select.Option>
             </Select>
             <Input.Search
               placeholder="搜索"

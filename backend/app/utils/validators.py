@@ -54,6 +54,7 @@ class DataValidator:
         # 检查参与的项目
         projects = collaborator.projects
         active_projects = [p for p in projects if p.status in ["active", "reviewing", "revising"]]
+        completed_projects = [p for p in projects if p.status == "completed"]
 
         # 检查交流日志
         communication_logs = db.query(CommunicationLog).filter(
@@ -66,15 +67,19 @@ class DataValidator:
         ).all()
 
         warnings = []
-        can_delete = True
+        can_hard_delete = True  # 是否可以永久删除
 
         if active_projects:
             warnings.append(f"合作者仍参与 {len(active_projects)} 个活跃项目")
+            can_hard_delete = False  # 有活跃项目，不能永久删除
+        if completed_projects:
+            warnings.append(f"合作者参与了 {len(completed_projects)} 个已完成项目")
         if communication_logs > 0:
             warnings.append(f"合作者有 {communication_logs} 条交流记录")
+            can_hard_delete = False  # 有交流记录，不能永久删除（外键约束）
         if responsible_ideas:
             warnings.append(f"合作者是 {len(responsible_ideas)} 个项目想法的负责人")
-            can_delete = False  # 有外键约束，不能删除
+            can_hard_delete = False  # 有外键约束，不能删除（包括软删除）
 
         return {
             "exists": True,
@@ -82,13 +87,14 @@ class DataValidator:
             "collaborator_name": collaborator.name,
             "projects_count": len(projects),
             "active_projects_count": len(active_projects),
+            "completed_projects_count": len(completed_projects),
             "project_titles": [p.title for p in projects],
             "communication_logs_count": communication_logs,
             "responsible_ideas_count": len(responsible_ideas),
             "responsible_idea_names": [idea.project_name for idea in responsible_ideas],
-            "can_delete": can_delete,
+            "can_delete": can_hard_delete,  # 是否可以永久删除
             "warnings": warnings,
-            "recommendation": "cannot_delete" if responsible_ideas else ("soft_delete" if warnings else "safe_to_delete")
+            "recommendation": "cannot_delete" if responsible_ideas else ("soft_delete_only" if (active_projects or communication_logs) else "safe_to_delete")
         }
     
     @staticmethod
