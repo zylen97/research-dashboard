@@ -13,7 +13,6 @@ import {
   Select,
   Space,
   Popconfirm,
-  Card,
   Typography,
   Tag,
   message,
@@ -443,7 +442,7 @@ const IdeasManagementPage: React.FC = () => {
 
   return (
     <div style={{ padding: '24px' }}>
-      <Card>
+      <div className="table-container">
         <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
             <BulbOutlined style={{ marginRight: '8px', color: '#faad14' }} />
@@ -482,12 +481,12 @@ const IdeasManagementPage: React.FC = () => {
           }}
           // 添加空状态和错误状态处理
           locale={{
-            emptyText: error 
-              ? `数据加载失败: ${error.message || '请检查网络连接'}` 
+            emptyText: error
+              ? `数据加载失败: ${error.message || '请检查网络连接'}`
               : '暂无数据'
           }}
         />
-      </Card>
+      </div>
 
       {/* 创建/编辑模态框 */}
       <Modal

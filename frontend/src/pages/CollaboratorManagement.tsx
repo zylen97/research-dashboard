@@ -16,7 +16,6 @@ import {
   DeleteOutlined,
   UserOutlined,
   TeamOutlined,
-  EyeOutlined,
   ReloadOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
@@ -27,7 +26,6 @@ import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { Collaborator, CollaboratorCreate } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
-import CollaboratorDetailModal from '../components/collaborator/CollaboratorDetailModal';
 import CollaboratorProjectsModal from '../components/collaborator/CollaboratorProjectsModal';
 import { safeForEach, safeFilter } from '../utils/arrayHelpers';
 import { handleListResponse } from '../utils/dataFormatters';
@@ -40,10 +38,8 @@ const { Title, Text } = Typography;
  */
 const CollaboratorManagement: React.FC = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [isProjectsModalVisible, setIsProjectsModalVisible] = useState(false);
   const [editingCollaborator, setEditingCollaborator] = useState<Collaborator | null>(null);
-  const [selectedCollaborator, setSelectedCollaborator] = useState<Collaborator | null>(null);
   const [selectedCollaboratorForProjects, setSelectedCollaboratorForProjects] = useState<Collaborator | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
@@ -262,12 +258,6 @@ const CollaboratorManagement: React.FC = () => {
     setIsModalVisible(true);
   };
 
-  // 查看详情
-  const showDetail = (collaborator: Collaborator) => {
-    setSelectedCollaborator(collaborator);
-    setIsDetailModalVisible(true);
-  };
-
   // 查看相关项目
   const showProjects = (collaborator: Collaborator) => {
     setSelectedCollaboratorForProjects(collaborator);
@@ -411,12 +401,6 @@ const CollaboratorManagement: React.FC = () => {
                 <Space size="small">
                   <Button
                     type="text"
-                    icon={<EyeOutlined />}
-                    onClick={() => showDetail(collaborator)}
-                    title="查看详情"
-                  />
-                  <Button
-                    type="text"
                     icon={<ProjectOutlined />}
                     onClick={() => showProjects(collaborator)}
                     title="查看相关项目"
@@ -449,16 +433,6 @@ const CollaboratorManagement: React.FC = () => {
         form={form}
         onSubmit={handleSubmit}
         confirmLoading={isCreating || isUpdating}
-      />
-
-      {/* 合作者详情模态框 */}
-      <CollaboratorDetailModal
-        visible={isDetailModalVisible}
-        collaborator={selectedCollaborator}
-        onClose={() => {
-          setIsDetailModalVisible(false);
-          setSelectedCollaborator(null);
-        }}
       />
 
       {/* 合作者相关项目模态框 */}

@@ -43,6 +43,7 @@ import {
   Tag as JournalTag,
 } from '../types/journals';
 import { TagManagementPanel } from '../components/TagManagementPanel';
+import { GRAYSCALE_SYSTEM } from '../config/colors';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -236,7 +237,7 @@ const JournalsManagement: React.FC = () => {
       render: (tags: JournalTag[]) => (
         <>
           {tags?.map((tag) => (
-            <Tag key={tag.id} color={tag.color}>
+            <Tag key={tag.id} style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, border: `1px solid ${GRAYSCALE_SYSTEM.border_light}` }}>
               {tag.name}
             </Tag>
           ))}
@@ -258,7 +259,16 @@ const JournalsManagement: React.FC = () => {
       key: 'reference_count',
       width: 100,
       render: (count: number) => (
-        <Tag color={count > 0 ? 'cyan' : 'default'}>{count}</Tag>
+        <Tag
+          style={{
+            backgroundColor: count > 0 ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
+            color: count > 0 ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.tertiary,
+            fontWeight: count > 0 ? 600 : 400,
+            border: count > 0 ? `1px solid ${GRAYSCALE_SYSTEM.border_strong}` : `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
+          }}
+        >
+          {count}
+        </Tag>
       ),
     },
     {
@@ -267,7 +277,16 @@ const JournalsManagement: React.FC = () => {
       key: 'target_count',
       width: 110,
       render: (count: number) => (
-        <Tag color={count > 0 ? 'orange' : 'default'}>{count}</Tag>
+        <Tag
+          style={{
+            backgroundColor: count > 0 ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
+            color: count > 0 ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.tertiary,
+            fontWeight: count > 0 ? 600 : 400,
+            border: count > 0 ? `1px solid ${GRAYSCALE_SYSTEM.border_strong}` : `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
+          }}
+        >
+          {count}
+        </Tag>
       ),
     },
     {
@@ -318,7 +337,9 @@ const JournalsManagement: React.FC = () => {
             <GlobalOutlined style={{ marginRight: 8 }} />
             期刊库管理
           </Title>
-          <Tag color="blue">{journals.length} 个期刊</Tag>
+          <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}>
+            {journals.length} 个期刊
+          </Tag>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Button
@@ -372,7 +393,7 @@ const JournalsManagement: React.FC = () => {
             >
               {tags.map((tag) => (
                 <Option key={tag.id} value={tag.id}>
-                  <Tag color={tag.color}>{tag.name}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary }}>{tag.name}</Tag>
                 </Option>
               ))}
             </Select>
@@ -454,7 +475,7 @@ const JournalsManagement: React.FC = () => {
             >
               {tags.map((tag) => (
                 <Option key={tag.id} value={tag.id}>
-                  <Tag color={tag.color}>{tag.name}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary }}>{tag.name}</Tag>
                 </Option>
               ))}
             </Select>
@@ -495,7 +516,7 @@ const JournalsManagement: React.FC = () => {
                 </Descriptions.Item>
                 <Descriptions.Item label="标签">
                   {journalStats.journal.tags?.map((tag: { id: number; name: string; color: string }) => (
-                    <Tag key={tag.id} color={tag.color}>
+                    <Tag key={tag.id} style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary }}>
                       {tag.name}
                     </Tag>
                   ))}
@@ -519,7 +540,7 @@ const JournalsManagement: React.FC = () => {
                   <Statistic
                     title="参考期刊引用"
                     value={journalStats.stats.reference_count}
-                    valueStyle={{ color: '#1890ff' }}
+                    valueStyle={{ color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}
                     suffix="次"
                   />
                 </Col>
@@ -527,7 +548,7 @@ const JournalsManagement: React.FC = () => {
                   <Statistic
                     title="拟投稿期刊引用"
                     value={journalStats.stats.target_count}
-                    valueStyle={{ color: '#faad14' }}
+                    valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
                     suffix="次"
                   />
                 </Col>
@@ -537,16 +558,24 @@ const JournalsManagement: React.FC = () => {
 
               <Descriptions column={2} size="small">
                 <Descriptions.Item label="参考Ideas">
-                  <Tag color="cyan">{journalStats.breakdown.reference_ideas_count}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 500 }}>
+                    {journalStats.breakdown.reference_ideas_count}
+                  </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="参考Projects">
-                  <Tag color="blue">{journalStats.breakdown.reference_projects_count}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_tertiary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}>
+                    {journalStats.breakdown.reference_projects_count}
+                  </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="拟投稿Ideas">
-                  <Tag color="orange">{journalStats.breakdown.target_ideas_count}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}>
+                    {journalStats.breakdown.target_ideas_count}
+                  </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="拟投稿Projects">
-                  <Tag color="gold">{journalStats.breakdown.target_projects_count}</Tag>
+                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_tertiary, color: GRAYSCALE_SYSTEM.secondary, fontWeight: 600 }}>
+                    {journalStats.breakdown.target_projects_count}
+                  </Tag>
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -575,7 +604,14 @@ const JournalsManagement: React.FC = () => {
                             description={
                               <Space>
                                 <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
-                                <Tag color={item.maturity === 'mature' ? 'green' : 'orange'}>
+                                <Tag
+                                  style={{
+                                    backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
+                                    color: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.secondary,
+                                    fontWeight: item.maturity === 'mature' ? 600 : 400,
+                                    border: `1px solid ${item.maturity === 'mature' ? GRAYSCALE_SYSTEM.border_strong : GRAYSCALE_SYSTEM.border_light}`,
+                                  }}
+                                >
                                   {item.maturity === 'mature' ? '成熟' : '不成熟'}
                                 </Tag>
                               </Space>
@@ -600,7 +636,9 @@ const JournalsManagement: React.FC = () => {
                           <List.Item.Meta
                             title={item.title}
                             description={
-                              <Tag color="blue">{item.status}</Tag>
+                              <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 500 }}>
+                                {item.status}
+                              </Tag>
                             }
                           />
                         </List.Item>
@@ -624,7 +662,14 @@ const JournalsManagement: React.FC = () => {
                             description={
                               <Space>
                                 <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
-                                <Tag color={item.maturity === 'mature' ? 'green' : 'orange'}>
+                                <Tag
+                                  style={{
+                                    backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
+                                    color: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.secondary,
+                                    fontWeight: item.maturity === 'mature' ? 600 : 400,
+                                    border: `1px solid ${item.maturity === 'mature' ? GRAYSCALE_SYSTEM.border_strong : GRAYSCALE_SYSTEM.border_light}`,
+                                  }}
+                                >
                                   {item.maturity === 'mature' ? '成熟' : '不成熟'}
                                 </Tag>
                               </Space>
@@ -649,7 +694,9 @@ const JournalsManagement: React.FC = () => {
                           <List.Item.Meta
                             title={item.title}
                             description={
-                              <Tag color="blue">{item.status}</Tag>
+                              <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 500 }}>
+                                {item.status}
+                              </Tag>
                             }
                           />
                         </List.Item>

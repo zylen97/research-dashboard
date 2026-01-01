@@ -1,12 +1,16 @@
-import { Button, Tag, Space, Typography } from 'antd';
-import { 
-  EditOutlined, 
-  DeleteOutlined, 
-  MessageOutlined, 
+import { Button, Space, Typography } from 'antd';
+import {
+  EditOutlined,
+  DeleteOutlined,
+  MessageOutlined,
   FlagOutlined,
-  EyeOutlined 
+  EyeOutlined
 } from '@ant-design/icons';
 import { ResearchProject } from '../../../types';
+import { GRAYSCALE_SYSTEM } from '../../../config/colors';
+import { STATUS_VISUAL_SYSTEM } from '../../../config/statusStyles';
+import { ROLE_VISUAL_SYSTEM } from '../../../config/roleStyles';
+import { COLLABORATOR_VISUAL_SYSTEM } from '../../../config/collaboratorStyles';
 
 const { Text } = Typography;
 
@@ -30,18 +34,7 @@ export interface ProjectColumnProps {
   pageSize: number;
 }
 
-// 状态颜色映射
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    active: 'processing',      // 撰写中 - 蓝色
-    completed: 'default',      // 已发表 - 灰色
-    paused: 'warning',         // 暂停 - 黄色
-    reviewing: 'purple',       // 审稿中 - 紫色
-    revising: 'error',         // 返修中 - 红色
-  };
-  return colors[status] || 'default';
-};
-
+// 包豪斯：删除彩色映射函数，使用STATUS_VISUAL_SYSTEM
 
 export const createProjectColumns = ({
   actions,
@@ -173,17 +166,25 @@ export const createProjectColumns = ({
     width: 70,
     render: (status: string) => {
       // 防御null/undefined
-      if (!status) {
-        return <Tag color="default">未知状态</Tag>;
+      if (!status || !STATUS_VISUAL_SYSTEM[status as keyof typeof STATUS_VISUAL_SYSTEM]) {
+        return <span style={{ fontSize: '12px', color: GRAYSCALE_SYSTEM.tertiary }}>未知状态</span>;
       }
+
+      const config = STATUS_VISUAL_SYSTEM[status as keyof typeof STATUS_VISUAL_SYSTEM];
       return (
-        <Tag color={getStatusColor(status)}>
-          {status === 'active' ? '撰写中' :
-           status === 'completed' ? '已发表' :
-           status === 'paused' ? '暂停' :
-           status === 'reviewing' ? '审稿中' :
-           status === 'revising' ? '返修中' : status}
-        </Tag>
+        <span
+          style={{
+            padding: '2px 8px',
+            fontSize: '12px',
+            fontWeight: config.textWeight,
+            border: `${config.borderWidth} ${config.borderStyle} ${config.borderColor}`,
+            borderRadius: '2px',
+            backgroundColor: config.backgroundColor,
+            color: GRAYSCALE_SYSTEM.primary,
+          }}
+        >
+          {config.icon} {config.label}
+        </span>
       );
     },
   },
@@ -194,17 +195,22 @@ export const createProjectColumns = ({
     key: 'my_role',
     width: 100,
     render: (my_role: string) => {
-      const roleConfig = {
-        first_author: { text: '第一作者', color: 'red', icon: '🥇' },
-        corresponding_author: { text: '通讯作者', color: 'blue', icon: '✉️' },
-        other_author: { text: '其他作者', color: 'default', icon: '👥' },
-      };
-      const config = roleConfig[my_role as keyof typeof roleConfig] || roleConfig.other_author;
+      const config = ROLE_VISUAL_SYSTEM[my_role as keyof typeof ROLE_VISUAL_SYSTEM] || ROLE_VISUAL_SYSTEM.other_author;
 
       return (
-        <Tag color={config.color} style={{ fontWeight: 'bold', fontSize: '12px' }}>
-          {config.icon} {config.text}
-        </Tag>
+        <span
+          style={{
+            fontSize: config.fontSize,
+            fontWeight: config.fontWeight,
+            textTransform: config.textTransform,
+            letterSpacing: config.letterSpacing,
+            borderBottom: config.borderBottom,
+            color: config.color,
+            display: 'inline-block',
+          }}
+        >
+          {config.icon} {config.label}
+        </span>
       );
     },
   },
@@ -222,13 +228,24 @@ export const createProjectColumns = ({
       return (
         <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
           {sortedCollaborators.map((collaborator, index) => {
-            const color = collaborator.is_senior ? '#1890ff' : '#666';
+            const visualConfig = collaborator.is_senior
+              ? COLLABORATOR_VISUAL_SYSTEM.senior
+              : COLLABORATOR_VISUAL_SYSTEM.regular;
 
             return (
               <span key={collaborator.id}>
-                <span style={{ color }}>
+                <span
+                  style={{
+                    fontWeight: visualConfig.fontWeight,
+                    fontSize: visualConfig.fontSize,
+                    color: visualConfig.color,
+                    backgroundColor: visualConfig.backgroundColor,
+                    padding: visualConfig.padding,
+                    borderRadius: visualConfig.borderRadius,
+                  }}
+                >
+                  {visualConfig.icon && `${visualConfig.icon} `}
                   {collaborator.name}
-                  {collaborator.is_senior && ' ⭐'}
                 </span>
                 {index < sortedCollaborators.length - 1 && ', '}
               </span>
@@ -255,7 +272,7 @@ export const createProjectColumns = ({
         const latestLog = sortedLogs[0];
         if (!latestLog) {
           return (
-            <Text style={{ fontSize: '13px', color: '#999' }}>
+            <Text style={{ fontSize: '13px', color: GRAYSCALE_SYSTEM.tertiary }}>
               暂无进度记录
             </Text>
           );
@@ -269,8 +286,8 @@ export const createProjectColumns = ({
         }).replace(/\//g, '-');
         const displayText = `${dateStr}: ${latestLog.title}`;
         return (
-          <div 
-            style={{ 
+          <div
+            style={{
               fontSize: '13px',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',
@@ -278,13 +295,13 @@ export const createProjectColumns = ({
             }}
             title={`${displayText} (共${logs.length}条记录)`}
           >
-            <MessageOutlined style={{ marginRight: 4, color: '#1890ff' }} />
+            <MessageOutlined style={{ marginRight: 4, color: GRAYSCALE_SYSTEM.secondary }} />
             {displayText}
           </div>
         );
       }
       return (
-        <Text style={{ fontSize: '13px', color: '#999' }}>
+        <Text style={{ fontSize: '13px', color: GRAYSCALE_SYSTEM.tertiary }}>
           暂无进度记录
         </Text>
       );
@@ -311,7 +328,8 @@ export const createProjectColumns = ({
             onClick={() => actions.onToggleTodo(project)}
             title={todoStatus.is_todo ? "取消待办标记" : "标记为待办"}
             style={{
-              color: todoStatus.is_todo ? '#ff4d4f' : '#8c8c8c',
+              color: todoStatus.is_todo ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.tertiary,
+              fontWeight: todoStatus.is_todo ? 700 : 400,
             }}
           />
           <Button

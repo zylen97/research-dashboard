@@ -1,5 +1,5 @@
 import React from 'react';
-import { Modal, Descriptions, Tag, Space, Typography } from 'antd';
+import { Modal, Descriptions, Space, Typography } from 'antd';
 import { ResearchProject } from '../../types';
 import {
   TeamOutlined,
@@ -11,6 +11,10 @@ import {
   FlagOutlined,
   UserOutlined
 } from '@ant-design/icons';
+import { GRAYSCALE_SYSTEM } from '../../config/colors';
+import { STATUS_VISUAL_SYSTEM } from '../../config/statusStyles';
+import { ROLE_VISUAL_SYSTEM } from '../../config/roleStyles';
+import { COLLABORATOR_VISUAL_SYSTEM } from '../../config/collaboratorStyles';
 
 const { Title, Text } = Typography;
 
@@ -20,30 +24,7 @@ interface ProjectPreviewModalProps {
   onClose: () => void;
 }
 
-// 状态颜色映射
-const getStatusColor = (status: string) => {
-  const colors: Record<string, string> = {
-    active: 'processing',      // 撰写中 - 蓝色
-    completed: 'default',      // 已发表 - 灰色
-    paused: 'warning',         // 暂停 - 黄色
-    reviewing: 'purple',       // 审稿中 - 紫色
-    revising: 'error',         // 返修中 - 红色
-  };
-  return colors[status] || 'default';
-};
-
-// 状态文本映射
-const getStatusText = (status: string) => {
-  const statusMap: Record<string, string> = {
-    active: '撰写中',
-    completed: '已发表',
-    paused: '暂停',
-    reviewing: '审稿中',
-    revising: '返修中',
-  };
-  return statusMap[status] || status;
-};
-
+// 包豪斯：删除彩色映射，使用STATUS_VISUAL_SYSTEM
 
 const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({ 
   visible, 
@@ -70,16 +51,34 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
     >
       {/* 项目标题 */}
       <Title level={3} style={{ marginBottom: 16 }}>
-        {project.is_todo && <FlagOutlined style={{ color: '#ff4d4f', marginRight: 8 }} />}
+        {project.is_todo && <FlagOutlined style={{ color: GRAYSCALE_SYSTEM.primary, fontWeight: 700, marginRight: 8 }} />}
         {project.title}
       </Title>
 
       {/* 基本信息 */}
       <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
         <Descriptions.Item label="状态" span={1}>
-          <Tag color={getStatusColor(project.status)}>
-            {getStatusText(project.status)}
-          </Tag>
+          {(() => {
+            const config = STATUS_VISUAL_SYSTEM[project.status as keyof typeof STATUS_VISUAL_SYSTEM];
+            if (!config) {
+              return <span style={{ color: GRAYSCALE_SYSTEM.tertiary }}>未知状态</span>;
+            }
+            return (
+              <span
+                style={{
+                  padding: '2px 8px',
+                  fontSize: '12px',
+                  fontWeight: config.textWeight,
+                  border: `${config.borderWidth} ${config.borderStyle} ${config.borderColor}`,
+                  borderRadius: '2px',
+                  backgroundColor: config.backgroundColor,
+                  color: GRAYSCALE_SYSTEM.primary,
+                }}
+              >
+                {config.icon} {config.label}
+              </span>
+            );
+          })()}
         </Descriptions.Item>
         <Descriptions.Item label="开始时间" span={1}>
           <Space>
@@ -149,17 +148,23 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
           <UserOutlined /> 我的身份
         </Title>
         {(() => {
-          const roleConfig = {
-            first_author: { text: '第一作者', color: 'red', icon: '🥇' },
-            corresponding_author: { text: '通讯作者', color: 'blue', icon: '✉️' },
-            other_author: { text: '其他作者', color: 'default', icon: '👥' },
-          };
-          const config = roleConfig[project.my_role as keyof typeof roleConfig] || roleConfig.other_author;
+          const config = ROLE_VISUAL_SYSTEM[project.my_role as keyof typeof ROLE_VISUAL_SYSTEM] || ROLE_VISUAL_SYSTEM.other_author;
 
           return (
-            <Tag color={config.color} style={{ fontSize: '14px', padding: '4px 12px' }}>
-              {config.icon} {config.text}
-            </Tag>
+            <span
+              style={{
+                fontSize: config.fontSize,
+                fontWeight: config.fontWeight,
+                textTransform: config.textTransform,
+                letterSpacing: config.letterSpacing,
+                borderBottom: config.borderBottom,
+                color: config.color,
+                display: 'inline-block',
+                padding: '4px 12px',
+              }}
+            >
+              {config.icon} {config.label}
+            </span>
           );
         })()}
       </div>
@@ -167,21 +172,36 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
       {/* 合作者 */}
       <div style={{ marginBottom: 24 }}>
         <Title level={5}>
-          <TeamOutlined /> 合作者 ({project.collaborators.length})
+          <TeamOutlined /> 合作者 ({project.collaborators?.length || 0})
         </Title>
         <Space wrap>
-          {project.collaborators
+          {(project.collaborators || [])
+            .filter(c => c != null)
             .sort((a, b) => (b.is_senior ? 1 : 0) - (a.is_senior ? 1 : 0))
-            .map((collaborator) => (
-              <Tag
-                key={collaborator.id}
-                color={collaborator.is_senior ? 'gold' : 'default'}
-                style={{ margin: '2px' }}
-              >
-                {collaborator.name}
-                {collaborator.is_senior && ' ⭐'}
-              </Tag>
-            ))}
+            .map((collaborator) => {
+              const visualConfig = collaborator.is_senior
+                ? COLLABORATOR_VISUAL_SYSTEM.senior
+                : COLLABORATOR_VISUAL_SYSTEM.regular;
+
+              return (
+                <span
+                  key={collaborator.id}
+                  style={{
+                    fontWeight: visualConfig.fontWeight,
+                    fontSize: visualConfig.fontSize,
+                    color: visualConfig.color,
+                    backgroundColor: visualConfig.backgroundColor,
+                    padding: visualConfig.padding,
+                    borderRadius: visualConfig.borderRadius,
+                    margin: '2px',
+                    display: 'inline-block',
+                  }}
+                >
+                  {visualConfig.icon && `${visualConfig.icon} `}
+                  {collaborator.name}
+                </span>
+              );
+            })}
         </Space>
       </div>
 

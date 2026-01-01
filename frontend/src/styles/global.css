@@ -73,11 +73,11 @@
   margin: 0;
 }
 
-/* 表格容器优化 */
+/* 表格容器优化 - 包豪斯：用边框代替阴影 */
 .table-container {
   background: var(--ant-color-bg-container);
-  border-radius: 8px;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02);
+  border-radius: 4px;
+  border: 1px solid #E8E8E8;
 }
 
 /* 响应式断点优化 */
@@ -159,33 +159,16 @@
   transition: opacity 300ms, transform 300ms;
 }
 
-/* 悬浮效果优化 */
-.hover-shadow {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* 悬浮效果优化 - 包豪斯：仅背景变化，无阴影 */
+.hover-shadow:hover,
+.ant-card:hover {
+  background-color: #FAFAFA;
+  transition: background-color 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.hover-shadow:hover {
-  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 6px 10px -5px rgba(0,0,0,0.04);
-  transform: translateY(-3px);
-}
-
-/* 按钮悬浮效果 */
+/* 按钮悬浮效果 - 移除阴影和位移 */
 .ant-btn {
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ant-btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.35);
-}
-
-/* 卡片悬浮效果 */
-.ant-card {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.ant-card:hover {
-  box-shadow: 0 8px 16px -4px rgba(0,0,0,0.08), 0 4px 8px -2px rgba(0,0,0,0.04);
 }
 
 /* 表格行悬浮效果 */
@@ -197,31 +180,22 @@
   background: var(--ant-color-bg-textHover) !important;
 }
 
-/* 输入框聚焦效果 */
+/* 输入框聚焦效果 - 包豪斯：粗边框代替彩色光晕 */
 .ant-input:focus,
 .ant-input-focused {
-  border-color: var(--ant-color-primary);
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+  border-color: #333333;
+  box-shadow: none;
+  border-width: 2px;
 }
 
 /* 选择框聚焦效果 */
 .ant-select-focused .ant-select-selector {
-  border-color: var(--ant-color-primary) !important;
-  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1) !important;
+  border-color: #333333 !important;
+  box-shadow: none !important;
+  border-width: 2px !important;
 }
 
-/* 标签渐变背景 */
-.ant-tag-purple {
-  background: linear-gradient(135deg, #722ed1 0%, #9254de 100%);
-  border: none;
-  color: white;
-}
-
-.ant-tag-gold {
-  background: linear-gradient(135deg, #faad14 0%, #ffc53d 100%);
-  border: none;
-  color: white;
-}
+/* 标签渐变背景 - 包豪斯：移除所有渐变 */
 
 /* 统计数字动画 */
 .ant-statistic-content-value {
@@ -284,12 +258,7 @@
   font-size: 12px;
 }
 
-/* 输入框焦点效果 */
-.ant-input:focus,
-.ant-input-focused,
-.ant-select-focused .ant-select-selector {
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
+/* 输入框焦点效果 - 已在上方Line 184-196统一定义，此处删除重复 */
 
 /* 优化移动端间距 */
 @media (max-width: 576px) {

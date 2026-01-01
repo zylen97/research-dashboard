@@ -25,8 +25,8 @@
 }
 
 .hover-lift:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  background-color: #FAFAFA;
+  /* 包豪斯：移除阴影和位移，仅背景变化 */
 }
 
 .hover-scale {
@@ -76,8 +76,8 @@
 }
 
 .card-hover:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  background-color: #FAFAFA;
+  /* 包豪斯：移除阴影和位移，仅背景变化 */
 }
 
 /* 表格行动画 */
@@ -86,8 +86,8 @@
 }
 
 .table-row-animate:hover {
-  background-color: rgba(24, 144, 255, 0.05);
-  transform: scale(1.005);
+  background-color: #F5F5F5;
+  /* 包豪斯：移除蓝色和缩放，改为灰色背景 */
 }
 
 /* 模态框动画 */
@@ -95,9 +95,9 @@
   animation: modalSlideIn 0.3s ease-out;
 }
 
-/* 待办项目特殊动画 */
+/* 待办项目特殊动画 - 包豪斯：移除彩色发光，改用透明度脉冲 */
 .todo-highlight {
-  animation: todoGlow 2s ease-in-out infinite alternate;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 /* 加载动画 */
@@ -180,13 +180,13 @@
 
 @keyframes pulse {
   0% {
-    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.7);
+    opacity: 1;
   }
-  70% {
-    box-shadow: 0 0 0 10px rgba(24, 144, 255, 0);
+  50% {
+    opacity: 0.6;
   }
   100% {
-    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+    opacity: 1;
   }
 }
 
@@ -212,14 +212,7 @@
   }
 }
 
-@keyframes todoGlow {
-  from {
-    box-shadow: 0 0 5px rgba(250, 173, 20, 0.3);
-  }
-  to {
-    box-shadow: 0 0 20px rgba(250, 173, 20, 0.6);
-  }
-}
+/* 包豪斯：删除橙色发光动画，已被pulse替代 */
 
 @keyframes skeleton {
   from {
@@ -257,8 +250,8 @@
 }
 
 .stats-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  background-color: #FAFAFA;
+  /* 包豪斯：移除阴影和位移，仅背景变化 */
 }
 
 /* 按钮组动画 */
