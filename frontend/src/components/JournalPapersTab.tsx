@@ -41,7 +41,6 @@ import {
 } from './papers';
 import PaperStatsCards from './papers/PaperStatsCards';
 import ColumnFilter from './papers/ColumnFilter';
-import { FilterSection } from '../styles/components';
 
 const { Text, Paragraph } = Typography;
 const { Dragger } = Upload;
@@ -319,81 +318,82 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
       {/* 统计卡片 */}
       <PaperStatsCards stats={paperStats} loading={isLoading} />
 
-      {/* 操作栏 */}
-      <Card style={{ marginBottom: 16 }}>
-        <FilterSection
-          actionButtons={
-            <>
-              <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
-                刷新
-              </Button>
+      {/* 筛选和操作栏 */}
+      <div style={{ padding: '8px 0', marginBottom: 16 }}>
+        <Space size="middle" style={{ width: '100%' }}>
+          {/* 左侧操作按钮 */}
+          <Space size="small">
+            <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<UploadOutlined />}
+              onClick={() => setIsImportModalVisible(true)}
+            >
+              导入
+            </Button>
+            <Button
+              icon={<RocketOutlined />}
+              onClick={handleBatchAnalyze}
+              loading={analyzeMutation.isPending}
+            >
+              分析
+            </Button>
+            {selectedRowKeys.length > 0 && (
               <Button
-                type="primary"
-                icon={<UploadOutlined />}
-                onClick={() => setIsImportModalVisible(true)}
-              >
-                导入Excel
-              </Button>
-              <Button
-                icon={<RocketOutlined />}
-                onClick={handleBatchAnalyze}
-                loading={analyzeMutation.isPending}
-              >
-                批量分析
-              </Button>
-              {selectedRowKeys.length > 0 && (
-                <Button
-                  danger
-                  icon={<DeleteOutlined />}
-                  loading={batchDeleteMutation.isPending}
-                  onClick={() => {
-                    Modal.confirm({
-                      title: '确认批量删除',
-                      content: `确定要删除选中的 ${selectedRowKeys.length} 篇论文吗？删除后无法恢复。`,
-                      onOk: () => batchDeleteMutation.mutate(selectedRowKeys),
-                    });
-                  }}
-                >
-                  批量删除 ({selectedRowKeys.length})
-                </Button>
-              )}
-            </>
-          }
-          filterControls={
-            <Space size="small">
-              <Select
-                placeholder="筛选状态"
-                allowClear
-                style={{ width: 120 }}
-                onChange={(value) => {
-                  setStatusFilter(value);
-                  setCurrentPage(1);
+                danger
+                icon={<DeleteOutlined />}
+                loading={batchDeleteMutation.isPending}
+                onClick={() => {
+                  Modal.confirm({
+                    title: '确认批量删除',
+                    content: `确定要删除选中的 ${selectedRowKeys.length} 篇论文吗？删除后无法恢复。`,
+                    onOk: () => batchDeleteMutation.mutate(selectedRowKeys),
+                  });
                 }}
-                value={statusFilter}
               >
-                <Select.Option value="pending">待分析</Select.Option>
-                <Select.Option value="analyzed">已分析</Select.Option>
-                <Select.Option value="converted">已转换</Select.Option>
-              </Select>
-              <Input.Search
-                placeholder="搜索标题、作者"
-                allowClear
-                style={{ width: 180 }}
-                onSearch={(value) => {
-                  setSearchText(value);
-                  setCurrentPage(1);
-                }}
-              />
-              <ColumnFilter
-                availableColumns={AVAILABLE_COLUMNS}
-                visibleColumns={visibleColumns}
-                onChange={setVisibleColumns}
-                storageKey={COLUMN_VISIBILITY_KEYS.JOURNAL_PAPERS}
-              />
-            </Space>
-          }
-        />
-      </Card>
+                删除 ({selectedRowKeys.length})
+              </Button>
+            )}
+          </Space>
+
+          <Divider type="vertical" style={{ margin: 0 }} />
+
+          {/* 右侧筛选控件 */}
+          <Space size="small" style={{ flex: 1 }}>
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: 100 }}
+              onChange={(value) => {
+                setStatusFilter(value);
+                setCurrentPage(1);
+              }}
+              value={statusFilter}
+            >
+              <Select.Option value="pending">待分析</Select.Option>
+              <Select.Option value="analyzed">已分析</Select.Option>
+              <Select.Option value="converted">已转换</Select.Option>
+            </Select>
+            <Input.Search
+              placeholder="搜索"
+              allowClear
+              style={{ width: 160 }}
+              onSearch={(value) => {
+                setSearchText(value);
+                setCurrentPage(1);
+              }}
+            />
+            <ColumnFilter
+              availableColumns={AVAILABLE_COLUMNS}
+              visibleColumns={visibleColumns}
+              onChange={setVisibleColumns}
+              storageKey={COLUMN_VISIBILITY_KEYS.JOURNAL_PAPERS}
+            />
+          </Space>
+        </Space>
+      </div>
 
       {/* 论文列表 */}
       <Table
