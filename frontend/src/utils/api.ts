@@ -3,7 +3,7 @@
  */
 
 import { message } from 'antd';
-import { shouldRetry, parseError } from './errorHandler';
+import { shouldRetry, parseError } from './errorHandlerOptimized';
 
 /**
  * API响应数据格式化

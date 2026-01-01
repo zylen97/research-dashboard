@@ -203,3 +203,25 @@ export function useErrorHandler() {
     withErrorHandler,
   };
 }
+
+/**
+ * 解析错误对象
+ */
+export function parseError(error: any): { message: string; code?: string } {
+  return {
+    message: extractErrorMessage(error),
+    code: error.response?.status?.toString()
+  };
+}
+
+/**
+ * 判断是否应该重试
+ */
+export function shouldRetry(apiError: { message: string; code?: string }): boolean {
+  // 网络错误或超时可以重试
+  const retryableMessages = ['Network Error', 'timeout'];
+  const retryableCodes = ['502', '503', '504'];
+
+  return retryableMessages.some(msg => apiError.message.includes(msg)) ||
+    Boolean(apiError.code && retryableCodes.includes(apiError.code));
+}

@@ -118,62 +118,53 @@ export const collaboratorApi = {
     
   checkCollaboratorDependencies: (id: number) =>
     api.get(`/collaborators/${id}/check-dependencies`),
+
+  // 方法别名，保持向后兼容
+  getCollaborators: () => api.get('/collaborators/'),
 };
 
-// 研究项目API
-export const researchApi = createExtendedCRUDApi<
-  ResearchProject,
-  ResearchProjectCreate, 
-  ResearchProjectUpdate,
-  {
-    getCommunicationLogs: (id: number) => Promise<CommunicationLog[]>;
-    createCommunicationLog: (projectId: number, data: CommunicationLogCreate) => Promise<CommunicationLog>;
-    updateCommunicationLog: (projectId: number, logId: number, data: CommunicationLogUpdate) => Promise<CommunicationLog>;
-    deleteCommunicationLog: (projectId: number, logId: number) => Promise<{ message: string }>;
-    updateProgress: (id: number, progress: number) => Promise<{ message: string; progress: number }>;
-    getUserTodos: () => Promise<ResearchProject[]>;
-    markAsTodo: (projectId: number, priority?: number, notes?: string) => Promise<{ message: string }>;
-    unmarkTodo: (projectId: number) => Promise<{ message: string }>;
-    getTodoStatus: (projectId: number) => Promise<any>;
-    checkProjectDependencies: (id: number) => Promise<any>;
-  }
->(
-  '/research',
-  'API.getProjects',
-  (basePath) => ({
-    getCommunicationLogs: (id: number) =>
-      api.get(`${basePath}/${id}/logs`),
-      
-    createCommunicationLog: (projectId: number, data: CommunicationLogCreate) =>
-      api.post(`${basePath}/${projectId}/logs`, data),
-      
-    updateCommunicationLog: (projectId: number, logId: number, data: CommunicationLogUpdate) =>
-      api.put(`${basePath}/${projectId}/logs/${logId}`, data),
-      
-    deleteCommunicationLog: (projectId: number, logId: number) =>
-      api.delete(`${basePath}/${projectId}/logs/${logId}`),
-      
-    updateProgress: (id: number, progress: number) =>
-      api.put(`${basePath}/${id}/progress`, null, { params: { progress } }),
-      
-    getUserTodos: async () => {
-      const response = await api.get(`${basePath}/todos`);
-      return handleListResponse<ResearchProject>(response, 'API.getUserTodos');
-    },
-    
-    markAsTodo: (projectId: number, priority?: number, notes?: string) =>
-      api.post(`${basePath}/${projectId}/todo`, { priority, notes }),
-      
-    unmarkTodo: (projectId: number) =>
-      api.delete(`${basePath}/${projectId}/todo`),
-      
-    getTodoStatus: (projectId: number) =>
-      api.get(`${basePath}/${projectId}/todo-status`),
-      
-    checkProjectDependencies: (id: number) =>
-      api.get(`${basePath}/${id}/check-dependencies`),
-  })
-);
+// 研究项目API - 手动定义以包含所有方法别名
+export const researchApi = {
+  // 基础CRUD操作（向后兼容别名）
+  getProjects: () => api.get('/research/'),
+  getList: (params?: any) => api.get('/research/', { params }),
+  getById: (id: number) => api.get(`/research/${id}`),
+  createProject: (data: ResearchProjectCreate) => api.post('/research/', data),
+  create: (data: ResearchProjectCreate) => api.post('/research/', data),
+  updateProject: (id: number, data: ResearchProjectUpdate) => api.put(`/research/${id}`, data),
+  update: (id: number, data: ResearchProjectUpdate) => api.put(`/research/${id}`, data),
+  deleteProject: (id: number) => api.delete(`/research/${id}`),
+  delete: (id: number) => api.delete(`/research/${id}`),
+
+  // 论文进度相关
+  getCommunicationLogs: async (id: number): Promise<CommunicationLog[]> => {
+    const response = await api.get(`/research/${id}/logs`);
+    return handleListResponse<CommunicationLog>(response, 'API.getCommunicationLogs');
+  },
+  createCommunicationLog: (projectId: number, data: CommunicationLogCreate) =>
+    api.post(`/research/${projectId}/logs`, data),
+  updateCommunicationLog: (projectId: number, logId: number, data: CommunicationLogUpdate) =>
+    api.put(`/research/${projectId}/logs/${logId}`, data),
+  deleteCommunicationLog: (projectId: number, logId: number) =>
+    api.delete(`/research/${projectId}/logs/${logId}`),
+
+  // 进度更新
+  updateProgress: (id: number, progress: number) =>
+    api.put(`/research/${id}/progress`, null, { params: { progress } }),
+
+  // 待办事项
+  getUserTodos: async (): Promise<ResearchProject[]> => {
+    const response = await api.get('/research/todos');
+    return handleListResponse<ResearchProject>(response, 'API.getUserTodos');
+  },
+  markAsTodo: (projectId: number, priority?: number, notes?: string) =>
+    api.post(`/research/${projectId}/todo`, { priority, notes }),
+  unmarkTodo: (projectId: number) => api.delete(`/research/${projectId}/todo`),
+  getTodoStatus: (projectId: number) => api.get(`/research/${projectId}/todo-status`),
+
+  // 依赖检查
+  checkProjectDependencies: (id: number) => api.get(`/research/${id}/check-dependencies`),
+};
 
 // 已移除认证系统 - authApi 已删除
 

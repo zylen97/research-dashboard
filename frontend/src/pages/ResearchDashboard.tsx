@@ -145,7 +145,7 @@ const ResearchDashboard: React.FC = () => {
       return sortedProjects;
     }
     // 默认过滤掉存档（completed）状态的项目
-    return sortedProjects.filter(project => project.status !== 'completed');
+    return sortedProjects.filter((project: ResearchProject) => project.status !== 'completed');
   }, [sortedProjects, showArchived]);
 
   // 处理显示存档开关变化

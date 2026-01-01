@@ -2,6 +2,9 @@
 export * from './api';
 // 导出Ideas相关类型
 export * from './ideas';
+// 导出Tag类型（从journals.ts导入）
+import type { Tag } from './journals';
+export type { Tag } from './journals';
 
 // API响应类型 - 统一后端响应格式
 export interface ApiResponse<T> {
