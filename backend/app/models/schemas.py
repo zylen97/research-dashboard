@@ -370,6 +370,11 @@ class Journal(JournalBase):
     created_at: datetime
     updated_at: datetime
 
+    # v3.6 期卷号跟踪字段
+    latest_volume: Optional[str] = Field(None, description="最新卷号")
+    latest_issue: Optional[str] = Field(None, description="最新期号")
+    paper_count: int = Field(default=0, description="论文总数")
+
     # 关联的标签
     tags: List[Tag] = Field(default=[], description="关联的标签列表")
 
@@ -382,3 +387,98 @@ class Journal(JournalBase):
 
 # Update forward references
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
+
+
+# Paper schemas - 论文管理
+class PaperStatus(str, Enum):
+    """论文状态枚举"""
+    PENDING = "pending"       # 待分析
+    ANALYZED = "analyzed"     # 已分析
+    CONVERTED = "converted"   # 已转换为Idea
+
+class PaperBase(BaseModel):
+    """论文基础数据模型"""
+    title: str = Field(..., min_length=1, max_length=500, description="论文标题")
+    authors: Optional[str] = Field(None, description="作者列表")
+    abstract: Optional[str] = Field(None, description="摘要")
+    keywords: Optional[str] = Field(None, description="关键词")
+    year: Optional[int] = Field(None, ge=1900, le=2100, description="发表年份")
+    volume: Optional[str] = Field(None, max_length=50, description="卷")
+    issue: Optional[str] = Field(None, max_length=50, description="期")
+    pages: Optional[str] = Field(None, max_length=50, description="页码")
+    doi: Optional[str] = Field(None, max_length=200, description="DOI")
+    journal_id: Optional[int] = Field(None, description="关联期刊ID")
+    # 翻译字段 (v3.5)
+    link: Optional[str] = Field(None, max_length=1000, description="文献预览URL")
+    title_translation: Optional[str] = Field(None, description="标题翻译")
+    abstract_translation: Optional[str] = Field(None, description="摘要翻译")
+    abstract_summary: Optional[str] = Field(None, description="摘要总结")
+
+class PaperCreate(PaperBase):
+    """创建论文的数据模型"""
+    pass
+
+class PaperUpdate(BaseModel):
+    """更新论文的数据模型"""
+    title: Optional[str] = Field(None, min_length=1, max_length=500)
+    authors: Optional[str] = None
+    abstract: Optional[str] = None
+    keywords: Optional[str] = None
+    year: Optional[int] = Field(None, ge=1900, le=2100)
+    volume: Optional[str] = None
+    issue: Optional[str] = None
+    pages: Optional[str] = None
+    doi: Optional[str] = None
+    journal_id: Optional[int] = None
+    status: Optional[PaperStatus] = None
+    # 翻译字段 (v3.5)
+    link: Optional[str] = None
+    title_translation: Optional[str] = None
+    abstract_translation: Optional[str] = None
+    abstract_summary: Optional[str] = None
+
+class Paper(PaperBase):
+    """完整的论文数据模型"""
+    id: int
+    # AI分析字段
+    ai_analysis_result: Optional[str] = None
+    migration_potential: Optional[str] = Field(None, description="迁移潜力: high/medium/low")
+    core_idea_summary: Optional[str] = None
+    innovation_points: Optional[str] = None
+    ai_analyzed_at: Optional[datetime] = None
+    # 状态管理
+    source: str = Field(default="cnki", description="来源")
+    import_batch_id: Optional[str] = None
+    status: PaperStatus = Field(default=PaperStatus.PENDING, description="状态")
+    # 系统字段
+    created_at: datetime
+    updated_at: datetime
+    created_by: int = Field(default=1)
+
+    # 关联的期刊
+    journal: Optional[Journal] = None
+
+    class Config:
+        from_attributes = True
+
+PaperSchema = Paper  # 别名
+
+
+# ===== 批量操作 Schemas =====
+
+class BatchDeleteRequest(BaseModel):
+    """批量删除请求模型"""
+    ids: List[int] = Field(..., min_items=1, description="要删除的记录ID列表")
+
+
+class BatchUpdateMaturityRequest(BaseModel):
+    """批量更新成熟度请求模型"""
+    ids: List[int] = Field(..., min_items=1, description="要更新的记录ID列表")
+    maturity: str = Field(..., description="新的成熟度：mature/immature")
+
+    @field_validator('maturity')
+    @classmethod
+    def validate_maturity(cls, v):
+        if v not in ['mature', 'immature']:
+            raise ValueError('maturity must be either "mature" or "immature"')
+        return v

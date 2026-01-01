@@ -6,11 +6,13 @@ Ideas管理路由 - 负责人外键化版本
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import func
 from typing import List, Optional
 from datetime import datetime
 import logging
 
 from ..models import get_db, Idea, ResearchProject, IdeaCreate, IdeaUpdate, IdeaSchema
+from ..models.schemas import BatchDeleteRequest, BatchUpdateMaturityRequest
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
 from ..utils.response import success_response
@@ -85,16 +87,15 @@ async def create_idea(
         
         # 记录审计日志
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_create(
+                db,
                 table_name="ideas",
-                action="CREATE",
                 record_id=new_idea.id,
                 new_values=idea.model_dump()
             )
         except Exception as audit_error:
             # 审计日志失败不应该影响数据创建
-            print(f"审计日志记录失败: {audit_error}")
+            logger.warning(f"审计日志记录失败: {audit_error}")
         
         return new_idea
         
@@ -103,7 +104,7 @@ async def create_idea(
         raise
     except Exception as e:
         # 捕获其他所有异常并返回详细错误信息
-        print(f"创建Idea时发生错误: {e}")
+        logger.error(f"创建Idea时发生错误: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"创建Idea失败: {str(e)}"
@@ -142,17 +143,16 @@ async def update_idea(
         
         # 记录审计日志
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_update(
+                db,
                 table_name="ideas",
-                action="UPDATE",
                 record_id=idea_id,
                 old_values=old_values,
                 new_values=idea_update.model_dump(exclude_unset=True)
             )
         except Exception as audit_error:
-            print(f"审计日志记录失败: {audit_error}")
-        
+            logger.warning(f"审计日志记录失败: {audit_error}")
+
         return updated_idea
         
     except HTTPException:
@@ -188,16 +188,15 @@ async def delete_idea(
         
         # 记录审计日志
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_delete(
+                db,
                 table_name="ideas",
-                action="DELETE",
                 record_id=idea_id,
                 old_values=old_values
             )
         except Exception as audit_error:
-            print(f"审计日志记录失败: {audit_error}")
-        
+            logger.warning(f"审计日志记录失败: {audit_error}")
+
         return success_response(message="Idea deleted successfully")
         
     except HTTPException:
@@ -249,17 +248,21 @@ async def convert_to_project(
         db.commit()
         db.refresh(new_project)
 
-        # 记录审计日志
+        # 记录审计日志（CONVERT 视为 DELETE，附加转换信息）
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_delete(
+                db,
                 table_name="ideas",
-                action="CONVERT",
                 record_id=idea_id,
-                new_values={
+                old_values={
+                    "action": "CONVERT",
                     "converted_to_project_id": new_project.id,
                     "project_title": new_project.title,
-                    "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None
+                    "responsible_person_added": responsible_collaborator.name if responsible_collaborator else None,
+                    "original_idea": {
+                        "project_name": idea.project_name,
+                        "project_description": idea.project_description
+                    }
                 }
             )
         except Exception as audit_error:
@@ -278,3 +281,124 @@ async def convert_to_project(
         db.rollback()
         logger.error(f"转化为研究项目失败: {e}")
         raise HTTPException(status_code=500, detail=f"转化为研究项目失败: {str(e)}")
+
+
+@router.post("/batch-delete")
+async def batch_delete_ideas(
+    request_data: BatchDeleteRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """批量删除Ideas"""
+    try:
+        # 获取所有要删除的记录
+        ideas_to_delete = db.query(Idea).filter(Idea.id.in_(request_data.ids)).all()
+        deleted_count = len(ideas_to_delete)
+
+        # 记录审计日志
+        for idea in ideas_to_delete:
+            try:
+                AuditService.log_delete(
+                    db,
+                    table_name="ideas",
+                    record_id=idea.id,
+                    old_values={
+                        "project_name": idea.project_name,
+                        "project_description": idea.project_description,
+                        "maturity": idea.maturity
+                    }
+                )
+            except Exception as audit_error:
+                logger.warning(f"审计日志记录失败: {audit_error}")
+
+        # 批量删除
+        db.query(Idea).filter(Idea.id.in_(request_data.ids)).delete(synchronize_session=False)
+        db.commit()
+
+        return success_response(
+            message=f"Successfully deleted {deleted_count} ideas",
+            data={"deleted_count": deleted_count}
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"批量删除失败: {e}")
+        raise HTTPException(status_code=500, detail=f"批量删除失败: {str(e)}")
+
+
+@router.post("/batch-update-maturity")
+async def batch_update_maturity(
+    request_data: BatchUpdateMaturityRequest,
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """批量更新Ideas成熟度"""
+    try:
+        # 获取现有记录用于审计
+        existing_ideas = db.query(Idea).filter(Idea.id.in_(request_data.ids)).all()
+
+        # 记录审计日志
+        for idea in existing_ideas:
+            try:
+                AuditService.log_update(
+                    db,
+                    table_name="ideas",
+                    record_id=idea.id,
+                    old_values={"maturity": idea.maturity},
+                    new_values={"maturity": request_data.maturity}
+                )
+            except Exception as audit_error:
+                logger.warning(f"审计日志记录失败: {audit_error}")
+
+        # 批量更新
+        updated_count = db.query(Idea).filter(
+            Idea.id.in_(request_data.ids)
+        ).update(
+            {"maturity": request_data.maturity},
+            synchronize_session=False
+        )
+        db.commit()
+
+        return success_response(
+            message=f"Successfully updated {updated_count} ideas",
+            data={"updated_count": updated_count, "new_maturity": request_data.maturity}
+        )
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"批量更新成熟度失败: {e}")
+        raise HTTPException(status_code=500, detail=f"批量更新成熟度失败: {str(e)}")
+
+
+@router.get("/stats")
+async def get_ideas_stats(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """获取Ideas统计信息"""
+    try:
+        total = db.query(Idea).count()
+        mature = db.query(Idea).filter(Idea.maturity == 'mature').count()
+        immature = db.query(Idea).filter(Idea.maturity == 'immature').count()
+
+        # 按负责人统计
+        responsible_stats = db.query(
+            Idea.responsible_person_id,
+            func.count(Idea.id).label('count')
+        ).group_by(Idea.responsible_person_id).all()
+
+        return {
+            "total": total,
+            "by_maturity": {
+                "mature": mature,
+                "immature": immature
+            },
+            "by_responsible": [
+                {"responsible_person_id": item[0], "count": item[1]}
+                for item in responsible_stats
+            ]
+        }
+
+    except Exception as e:
+        logger.error(f"获取统计信息失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取统计信息失败: {str(e)}")

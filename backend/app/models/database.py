@@ -143,6 +143,62 @@ class SystemConfig(Base):
     )
 
 
+class Paper(Base):
+    """论文模型 - 用于从知网等来源导入的论文，支持AI分析"""
+    __tablename__ = "papers"
+
+    # 主键
+    id = Column(Integer, primary_key=True, index=True)
+
+    # 关联期刊
+    journal_id = Column(Integer, ForeignKey('journals.id', ondelete='SET NULL'), nullable=True, comment="关联期刊ID")
+
+    # 论文基础信息
+    title = Column(String(500), nullable=False, index=True, comment="论文标题")
+    authors = Column(Text, nullable=True, comment="作者列表")
+    abstract = Column(Text, nullable=True, comment="摘要")
+    keywords = Column(Text, nullable=True, comment="关键词")
+    year = Column(Integer, nullable=True, comment="发表年份")
+    volume = Column(String(50), nullable=True, comment="卷")
+    issue = Column(String(50), nullable=True, comment="期")
+    pages = Column(String(50), nullable=True, comment="页码")
+    doi = Column(String(200), nullable=True, comment="DOI")
+
+    # 翻译字段 (v3.5)
+    link = Column(String(1000), nullable=True, comment="文献预览URL")
+    title_translation = Column(Text, nullable=True, comment="标题翻译")
+    abstract_translation = Column(Text, nullable=True, comment="摘要翻译")
+    abstract_summary = Column(Text, nullable=True, comment="摘要总结")
+
+    # AI分析字段
+    ai_analysis_result = Column(Text, nullable=True, comment="AI分析完整结果（JSON格式）")
+    migration_potential = Column(String(20), nullable=True, index=True, comment="迁移潜力: high/medium/low")
+    core_idea_summary = Column(Text, nullable=True, comment="核心idea摘要")
+    innovation_points = Column(Text, nullable=True, comment="创新点（JSON数组）")
+    ai_analyzed_at = Column(DateTime, nullable=True, comment="AI分析时间")
+
+    # 状态管理
+    source = Column(String(50), nullable=False, default='cnki', comment="来源: cnki/manual/etc")
+    import_batch_id = Column(String(100), nullable=True, index=True, comment="导入批次ID")
+    status = Column(String(20), nullable=False, default='pending', index=True, comment="状态: pending/analyzed/converted")
+
+    # 系统字段
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+    created_by = Column(Integer, nullable=False, default=1, comment="创建者ID")
+
+    # 关系属性
+    journal = relationship("Journal", foreign_keys=[journal_id])
+
+    # 索引优化
+    __table_args__ = (
+        Index('idx_papers_journal_id', 'journal_id'),
+        Index('idx_papers_status', 'status'),
+        Index('idx_papers_potential', 'migration_potential'),
+        Index('idx_papers_batch_id', 'import_batch_id'),
+    )
+
+
 class Idea(Base):
     """Ideas管理模型 - 负责人外键化版本"""
     __tablename__ = "ideas"
@@ -157,11 +213,13 @@ class Idea(Base):
     target_journal = Column(Text, nullable=True, comment="拟投稿期刊")
     responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=False, comment="负责人ID")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
+    source_paper_id = Column(Integer, ForeignKey('papers.id', ondelete='SET NULL'), nullable=True, comment="来源论文ID")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
     # 关系属性
     responsible_person = relationship("Collaborator", foreign_keys=[responsible_person_id])
+    source_paper = relationship("Paper", foreign_keys=[source_paper_id])
 
     # 索引优化
     __table_args__ = (
@@ -200,12 +258,21 @@ class Journal(Base):
     # 额外信息
     notes = Column(Text, nullable=True, comment="备注")
 
+    # 期卷号跟踪字段（v3.6）
+    latest_volume = Column(String(50), nullable=True, comment="最新卷号")
+    latest_issue = Column(String(50), nullable=True, comment="最新期号")
+    paper_count = Column(Integer, default=0, comment="论文总数")
+
     # 系统字段
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
 
     # 关联关系
     tags = relationship("Tag", secondary="journal_tags", back_populates="journals")
+
+    # Pydantic 配置，启用 ORM 模式
+    class Config:
+        from_attributes = True
 
 
 # Create database tables

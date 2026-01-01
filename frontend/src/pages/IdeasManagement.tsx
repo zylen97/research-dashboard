@@ -29,16 +29,19 @@ import {
   BulbOutlined,
   SwapRightOutlined,
   ReloadOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
 import { ideasApi, collaboratorApi, journalApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
+import { PageContainer, PageHeader, TableContainer } from '../styles/components';
 
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+const { Link } = Typography;
 
 const IdeasManagementPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -345,6 +348,30 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
+      title: '来源论文',
+      key: 'source_paper',
+      width: 120,
+      render: (_, record: Idea) => {
+        if (record.source_paper_id) {
+          return (
+            <Tooltip title="查看来源论文">
+              <Link
+                href={`/papers`}
+                onClick={(e) => {
+                  e.preventDefault();
+                  // 可以在这里添加跳转到论文详情页面的逻辑
+                }}
+                style={{ cursor: 'pointer' }}
+              >
+                <FileTextOutlined style={{ fontSize: 16 }} />
+              </Link>
+            </Tooltip>
+          );
+        }
+        return '-';
+      },
+    },
+    {
       title: '负责人',
       dataIndex: 'responsible_person',
       key: 'responsible_person',
@@ -437,9 +464,9 @@ const IdeasManagementPage: React.FC = () => {
   ];
 
   return (
-    <div style={{ padding: '24px' }}>
+    <PageContainer>
       {/* 统计卡片 */}
-      <Row gutter={16} style={{ marginBottom: '24px' }}>
+      <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col span={8}>
           <Card className="statistics-card hover-shadow">
             <Statistic
@@ -469,12 +496,13 @@ const IdeasManagementPage: React.FC = () => {
         </Col>
       </Row>
 
-      <div className="table-container">
-        <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-            <BulbOutlined style={{ marginRight: '8px', color: '#666666' }} />
-            Idea面板
-          </Title>
+      {/* 页面标题和操作区 */}
+      <PageHeader
+        title={<Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
+          <BulbOutlined style={{ marginRight: 8, color: '#666666' }} />
+          Idea面板
+        </Title>}
+        actions={
           <Space>
             <Button
               icon={<ReloadOutlined />}
@@ -491,8 +519,11 @@ const IdeasManagementPage: React.FC = () => {
               新增Idea
             </Button>
           </Space>
-        </div>
+        }
+      />
 
+      {/* 表格区域 */}
+      <TableContainer>
         <Table
           columns={columns}
           dataSource={ideas}
@@ -506,14 +537,13 @@ const IdeasManagementPage: React.FC = () => {
             defaultPageSize: 10,
             pageSizeOptions: ['10', '20', '50'],
           }}
-          // 添加空状态和错误状态处理
           locale={{
             emptyText: error
               ? `数据加载失败: ${error.message || '请检查网络连接'}`
               : '暂无数据'
           }}
         />
-      </div>
+      </TableContainer>
 
       {/* 创建/编辑模态框 */}
       <Modal
@@ -663,7 +693,7 @@ const IdeasManagementPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </PageContainer>
   );
 };
 

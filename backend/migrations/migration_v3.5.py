@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-通用数据库迁移脚本
-- 每次数据库修改时，更新此文件内容
-- 执行完成后自动标记为已完成
-- 下次部署时如无新迁移则跳过
+v3.5 迁移: 为papers表添加翻译字段
+- link: 文献预览URL
+- title_translation: 标题翻译
+- abstract_translation: 摘要翻译
+- abstract_summary: 摘要总结
 """
 
 import sqlite3
 import sys
 import os
 import logging
-import re
 from datetime import datetime
 
 # 修复模块路径问题
@@ -21,8 +21,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 移除未使用状态
-MIGRATION_VERSION = "v3.7_remove_unused_statuses"
+# 迁移版本号
+MIGRATION_VERSION = "v3.5_add_paper_translation_fields"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,111 +85,93 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 移除未使用的状态（approved, rejected），简化为3个状态')
+        logger.info('🎯 目标: 为papers表添加翻译字段以支持知网Excel导入')
         logger.info("=" * 70)
-
-        # ===========================================
-        # 🔧 v3.7迁移任务：移除未使用状态
-        # 变更：
-        # 1. 将 approved 状态转换为 analyzed
-        # 2. 将 rejected 状态转换为 pending
-        # 3. 更新期刊的 paper_count
-        # ===========================================
 
         # ============================
         # Step 1: 检查papers表是否存在
         # ============================
-        logger.info("\n📋 Step 1: 检查papers表")
+        logger.info("\n📋 Step 1: 检查papers表是否存在")
 
         if not table_exists(cursor, 'papers'):
-            logger.error("   ❌ papers表不存在！无法继续迁移。")
+            logger.error("   ❌ papers表不存在！请先运行v3.4迁移创建papers表")
             conn.rollback()
             return False
+
+        logger.info("   ✅ papers表存在")
+
+        # ============================
+        # Step 2: 添加新字段
+        # ============================
+        logger.info("\n📋 Step 2: 添加翻译字段到papers表")
+
+        papers_columns = get_table_columns(cursor, 'papers')
+
+        # 添加link字段
+        if 'link' not in papers_columns:
+            cursor.execute("ALTER TABLE papers ADD COLUMN link TEXT")
+            logger.info("   ✅ 已添加link字段")
         else:
-            logger.info("   ✅ papers表存在")
+            logger.info("   ✓ link字段已存在，跳过")
 
-        # ============================
-        # Step 2: 统计当前状态分布
-        # ============================
-        logger.info("\n📋 Step 2: 统计当前论文状态分布")
-
-        cursor.execute("SELECT status, COUNT(*) FROM papers GROUP BY status ORDER BY status")
-        status_counts = cursor.fetchall()
-
-        logger.info("   当前状态分布:")
-        for status, count in status_counts:
-            logger.info(f"     - {status}: {count} 篇")
-
-        # ============================
-        # Step 3: 转换 approved 状态
-        # ============================
-        logger.info("\n📋 Step 3: 转换 approved 状态为 analyzed")
-
-        cursor.execute("SELECT COUNT(*) FROM papers WHERE status = 'approved'")
-        approved_count = cursor.fetchone()[0]
-
-        if approved_count > 0:
-            cursor.execute("""
-                UPDATE papers
-                SET status = 'analyzed'
-                WHERE status = 'approved'
-            """)
-            logger.info(f"   ✅ 已将 {approved_count} 篇论文从 approved 转换为 analyzed")
+        # 添加title_translation字段
+        if 'title_translation' not in papers_columns:
+            cursor.execute("ALTER TABLE papers ADD COLUMN title_translation TEXT")
+            logger.info("   ✅ 已添加title_translation字段")
         else:
-            logger.info("   ✓ 没有 approved 状态的论文，跳过")
+            logger.info("   ✓ title_translation字段已存在，跳过")
 
-        # ============================
-        # Step 4: 转换 rejected 状态
-        # ============================
-        logger.info("\n📋 Step 4: 转换 rejected 状态为 pending")
-
-        cursor.execute("SELECT COUNT(*) FROM papers WHERE status = 'rejected'")
-        rejected_count = cursor.fetchone()[0]
-
-        if rejected_count > 0:
-            cursor.execute("""
-                UPDATE papers
-                SET status = 'pending'
-                WHERE status = 'rejected'
-            """)
-            logger.info(f"   ✅ 已将 {rejected_count} 篇论文从 rejected 转换为 pending")
+        # 添加abstract_translation字段
+        if 'abstract_translation' not in papers_columns:
+            cursor.execute("ALTER TABLE papers ADD COLUMN abstract_translation TEXT")
+            logger.info("   ✅ 已添加abstract_translation字段")
         else:
-            logger.info("   ✓ 没有 rejected 状态的论文，跳过")
+            logger.info("   ✓ abstract_translation字段已存在，跳过")
+
+        # 添加abstract_summary字段
+        if 'abstract_summary' not in papers_columns:
+            cursor.execute("ALTER TABLE papers ADD COLUMN abstract_summary TEXT")
+            logger.info("   ✅ 已添加abstract_summary字段")
+        else:
+            logger.info("   ✓ abstract_summary字段已存在，跳过")
 
         # ============================
-        # Step 5: 更新期刊的 paper_count
+        # Step 3: 验证迁移结果
         # ============================
-        logger.info("\n📋 Step 5: 更新期刊的论文计数")
+        logger.info("\n📋 Step 3: 验证迁移结果")
 
-        cursor.execute("SELECT id, name FROM journals")
-        journals = cursor.fetchall()
+        papers_columns = get_table_columns(cursor, 'papers')
+        new_fields = ['link', 'title_translation', 'abstract_translation', 'abstract_summary']
 
-        updated_count = 0
-        for journal_id, journal_name in journals:
-            cursor.execute("""
-                SELECT COUNT(*) FROM papers WHERE journal_id = ?
-            """, (journal_id,))
-            paper_count = cursor.fetchone()[0]
+        all_fields_ok = True
+        for field in new_fields:
+            if field in papers_columns:
+                logger.info(f"   ✅ papers表.{field} 存在")
+            else:
+                logger.error(f"   ❌ papers表.{field} 缺失！")
+                all_fields_ok = False
 
-            cursor.execute("""
-                UPDATE journals
-                SET paper_count = ?
-                WHERE id = ?
-            """, (paper_count, journal_id))
-            updated_count += 1
+        if not all_fields_ok:
+            conn.rollback()
+            return False
 
-        logger.info(f"   ✅ 已更新 {updated_count} 个期刊的论文计数")
+        # 统计数据
+        cursor.execute("SELECT COUNT(*) FROM papers")
+        papers_count = cursor.fetchone()[0]
+        logger.info(f"   ✅ 现有papers数据: {papers_count} 条")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v3.7 移除未使用状态迁移完成！")
-        logger.info(f"✅ 转换 approved → analyzed: {approved_count} 篇")
-        logger.info(f"✅ 转换 rejected → pending: {rejected_count} 篇")
-        logger.info(f"✅ 更新期刊论文计数: {updated_count} 个期刊")
-        logger.info("⚠️  下一步: 更新后端和前端的 PaperStatus 枚举定义")
+        logger.info("🎉 v3.5 翻译字段迁移完成！")
+        logger.info(f"✅ 添加字段: papers.link")
+        logger.info(f"✅ 添加字段: papers.title_translation")
+        logger.info(f"✅ 添加字段: papers.abstract_translation")
+        logger.info(f"✅ 添加字段: papers.abstract_summary")
+        logger.info(f"✅ 现有数据: papers({papers_count}) 条")
+        logger.info("⚠️  下一步: 更新后端模型和Excel导入服务")
         logger.info("=" * 70)
 
         conn.close()
@@ -227,11 +209,11 @@ if __name__ == "__main__":
 
         if success:
             logger.info("✅ 迁移执行成功")
-            print("Migration completed successfully")
+            print("Migration v3.5 completed successfully")
             sys.exit(0)
         else:
             logger.error("❌ 迁移执行失败")
-            print("Migration failed")
+            print("Migration v3.5 failed")
             sys.exit(1)
 
     except KeyboardInterrupt:

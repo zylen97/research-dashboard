@@ -283,7 +283,7 @@ const CollaboratorManagement: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
+    <div style={{ padding: '16px' }}>
       {/* 页面标题和操作按钮 */}
       <div className="page-header">
         <div>

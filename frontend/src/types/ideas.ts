@@ -22,6 +22,7 @@ export interface Idea extends IdeaBase {
   id: number;
   created_at: string;
   updated_at: string;
+  source_paper_id?: number | null;  // 来源论文ID（从论文转换而来）
 
   // 关联的负责人对象（从后端返回完整的Collaborator对象）
   responsible_person: Collaborator;

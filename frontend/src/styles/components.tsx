@@ -74,6 +74,28 @@ export const ActionButtons: React.FC<{
   </Space>
 );
 
+// 统一的筛选区域组件
+export const FilterSection: React.FC<{
+  actionButtons?: React.ReactNode;
+  filterControls: React.ReactNode;
+  style?: React.CSSProperties;
+}> = ({ actionButtons, filterControls, style }) => (
+  <div
+    className="filter-section"
+    style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: styleConstants.spacing.md,
+      flexWrap: 'wrap',
+      ...style
+    }}
+  >
+    {actionButtons && <ActionButtons>{actionButtons}</ActionButtons>}
+    <FilterBar>{filterControls}</FilterBar>
+  </div>
+);
+
 // 悬浮按钮
 export const FloatButton: React.FC<{
   icon: React.ReactNode;
@@ -167,6 +189,7 @@ export default {
   TableContainer,
   FilterBar,
   ActionButtons,
+  FilterSection,
   FloatButton,
   EmptyState,
   LoadingSkeleton,

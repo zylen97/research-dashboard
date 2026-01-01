@@ -8,6 +8,7 @@ import ResearchDashboard from './pages/ResearchDashboard';
 import CollaboratorManagement from './pages/CollaboratorManagement';
 import IdeasManagement from './pages/IdeasManagement';
 import JournalsManagement from './pages/JournalsManagement';
+import PapersManagement from './pages/PapersManagement';
 import DatabaseBackup from './pages/DatabaseBackup';
 
 const App: React.FC = () => {
@@ -21,6 +22,7 @@ const App: React.FC = () => {
           <Route path="/collaborators" element={<CollaboratorManagement />} />
           <Route path="/ideas-management" element={<IdeasManagement />} />
           <Route path="/journals" element={<JournalsManagement />} />
+          <Route path="/papers" element={<PapersManagement />} />
           <Route path="/backup" element={<DatabaseBackup />} />
         </Routes>
       </MainLayout>

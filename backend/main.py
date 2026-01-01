@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.routes import research, collaborators, validation, audit, backup, config
-from app.routes import ideas, journals, tags
+from app.routes import ideas, journals, tags, papers, ai_config
 from app.models.database import init_db
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
 from app.middleware.error_handler import setup_exception_handlers
@@ -77,6 +77,8 @@ app.include_router(config.router, prefix="/api/config", tags=["configuration"])
 app.include_router(ideas.router, prefix="/api/ideas", tags=["ideas"])
 app.include_router(journals.router, prefix="/api/journals", tags=["journals"])
 app.include_router(tags.router, prefix="/api/tags", tags=["tags"])
+app.include_router(papers.router, prefix="/api/papers", tags=["papers"])
+app.include_router(ai_config.router, prefix="/api", tags=["AI Config"])
 
 @app.get("/")
 async def root():

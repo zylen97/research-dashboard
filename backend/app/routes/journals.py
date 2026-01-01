@@ -3,7 +3,7 @@
 提供期刊CRUD、统计查询、引用追踪、批量导入等功能
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, func
 from typing import List, Optional, Dict, Any
@@ -11,12 +11,15 @@ from datetime import datetime
 import logging
 
 from ..models import (
-    get_db, Journal, Idea, ResearchProject, Tag, journal_tags,
+    get_db, Journal, Idea, ResearchProject, Tag, Paper, journal_tags,
     JournalCreate, JournalUpdate, JournalSchema
 )
+from ..models.schemas import BatchDeleteRequest
 from ..services.audit import AuditService
+from ..services.excel_import_service import ExcelImportService
+from ..services.ai_analysis_service import AIAnalysisService
+from ..utils.response import success_response, paginated_response
 from ..utils.crud_base import CRUDBase
-from ..utils.response import success_response
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +33,7 @@ journal_crud = CRUDBase[Journal, JournalCreate, JournalUpdate](Journal)
 
 def calculate_journal_stats(db: Session, journal_name: str) -> Dict[str, int]:
     """
-    计算期刊的引用统计
+    计算期刊的引用统计（单个期刊，用于详情页）
 
     Args:
         db: 数据库会话
@@ -56,6 +59,77 @@ def calculate_journal_stats(db: Session, journal_name: str) -> Dict[str, int]:
         "target_count": target_count,
         "total_count": reference_count + target_count
     }
+
+
+def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict[str, Dict[str, int]]:
+    """
+    批量计算多个期刊的引用统计（避免N+1查询）
+
+    Args:
+        db: 数据库会话
+        journal_names: 期刊名称列表
+
+    Returns:
+        字典，key为期刊名称，value为统计字典
+    """
+    if not journal_names:
+        return {}
+
+    # 批量统计所有期刊的参考引用
+    idea_ref_counts = (
+        db.query(Idea.reference_journal, func.count(Idea.id))
+        .filter(Idea.reference_journal.in_(journal_names))
+        .group_by(Idea.reference_journal)
+        .all()
+    )
+
+    project_ref_counts = (
+        db.query(ResearchProject.reference_journal, func.count(ResearchProject.id))
+        .filter(ResearchProject.reference_journal.in_(journal_names))
+        .group_by(ResearchProject.reference_journal)
+        .all()
+    )
+
+    # 批量统计所有期刊的目标引用
+    idea_target_counts = (
+        db.query(Idea.target_journal, func.count(Idea.id))
+        .filter(Idea.target_journal.in_(journal_names))
+        .group_by(Idea.target_journal)
+        .all()
+    )
+
+    project_target_counts = (
+        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
+        .filter(ResearchProject.target_journal.in_(journal_names))
+        .group_by(ResearchProject.target_journal)
+        .all()
+    )
+
+    # 转换为字典方便查找
+    ref_counts = {}
+    for name, count in idea_ref_counts:
+        ref_counts[name] = ref_counts.get(name, 0) + count
+    for name, count in project_ref_counts:
+        ref_counts[name] = ref_counts.get(name, 0) + count
+
+    target_counts = {}
+    for name, count in idea_target_counts:
+        target_counts[name] = target_counts.get(name, 0) + count
+    for name, count in project_target_counts:
+        target_counts[name] = target_counts.get(name, 0) + count
+
+    # 组装结果
+    result = {}
+    for name in journal_names:
+        ref = ref_counts.get(name, 0)
+        target = target_counts.get(name, 0)
+        result[name] = {
+            "reference_count": ref,
+            "target_count": target,
+            "total_count": ref + target
+        }
+
+    return result
 
 
 def get_journal_references(db: Session, journal_name: str, ref_type: Optional[str] = None) -> Dict[str, Any]:
@@ -179,9 +253,16 @@ async def get_journals(
 
         journals = query.offset(skip).limit(limit).all()
 
-        # 为每个期刊添加统计信息和标签列表
+        # 批量计算统计信息（避免N+1查询）
+        journal_names = [j.name for j in journals]
+        all_stats = batch_calculate_journal_stats(db, journal_names)
+
         for journal in journals:
-            stats = calculate_journal_stats(db, journal.name)
+            stats = all_stats.get(journal.name, {
+                "reference_count": 0,
+                "target_count": 0,
+                "total_count": 0
+            })
             journal.reference_count = stats["reference_count"]
             journal.target_count = stats["target_count"]
 
@@ -242,10 +323,9 @@ async def create_journal(
 
         # 记录审计日志
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_create(
+                db,
                 table_name="journals",
-                action="CREATE",
                 record_id=new_journal.id,
                 new_values=journal.model_dump()
             )
@@ -267,25 +347,45 @@ async def create_journal(
         raise HTTPException(status_code=500, detail=f"创建期刊失败: {str(e)}")
 
 
-@router.get("/{journal_id}", response_model=JournalSchema)
+@router.get("/{journal_id}")
 async def get_journal(
     journal_id: int,
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """获取单个期刊详情（含统计信息）"""
+    """获取单个期刊详情（含统计信息和论文统计）"""
     try:
         journal = journal_crud.get(db, id=journal_id)
         if not journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
-        # 添加统计信息
+        # 添加引用统计信息
         stats = calculate_journal_stats(db, journal.name)
         journal.reference_count = stats["reference_count"]
         journal.target_count = stats["target_count"]
         journal.total_count = stats["total_count"]
 
-        return journal
+        # 添加论文统计信息
+        paper_stats = {
+            "total_papers": db.query(Paper).filter(Paper.journal_id == journal_id).count(),
+            "pending_papers": db.query(Paper).filter(
+                Paper.journal_id == journal_id,
+                Paper.status == "pending"
+            ).count(),
+            "analyzed_papers": db.query(Paper).filter(
+                Paper.journal_id == journal_id,
+                Paper.status == "analyzed"
+            ).count(),
+            "converted_papers": db.query(Paper).filter(
+                Paper.journal_id == journal_id,
+                Paper.status == "converted"
+            ).count(),
+        }
+
+        return {
+            **JournalSchema.model_validate(journal).model_dump(),
+            "paper_stats": paper_stats
+        }
 
     except HTTPException:
         raise
@@ -358,10 +458,9 @@ async def update_journal(
 
         # 记录审计日志
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_update(
+                db,
                 table_name="journals",
-                action="UPDATE",
                 record_id=journal_id,
                 old_values=old_values,
                 new_values=journal_update.model_dump(exclude_unset=True)
@@ -431,10 +530,9 @@ async def delete_journal(
         }
 
         try:
-            audit_service = AuditService(db)
-            audit_service.log_action(
+            AuditService.log_delete(
+                db,
                 table_name="journals",
-                action="DELETE",
                 record_id=journal_id,
                 old_values=old_values
             )
@@ -599,3 +697,343 @@ async def batch_import_journals(
         db.rollback()
         logger.error(f"批量导入期刊失败: {e}")
         raise HTTPException(status_code=500, detail=f"批量导入期刊失败: {str(e)}")
+
+
+# ===== 论文管理路由（整合到期刊） =====
+
+@router.get("/{journal_id}/papers")
+async def get_journal_papers(
+    journal_id: int,
+    skip: int = 0,
+    limit: int = 50,
+    status: Optional[str] = None,
+    year: Optional[int] = None,
+    search: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """获取指定期刊下的论文列表"""
+    # 验证期刊存在
+    journal = db.query(Journal).filter(Journal.id == journal_id).first()
+    if not journal:
+        raise HTTPException(status_code=404, detail="期刊不存在")
+
+    # 构建查询
+    query = db.query(Paper).filter(Paper.journal_id == journal_id)
+
+    # 状态筛选
+    if status:
+        query = query.filter(Paper.status == status)
+
+    # 年份筛选
+    if year:
+        query = query.filter(Paper.year == year)
+
+    # 搜索（标题、作者）
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Paper.title.like(search_pattern),
+                Paper.authors.like(search_pattern)
+            )
+        )
+
+    # 获取总数
+    total = query.count()
+
+    # 按创建时间倒序
+    query = query.order_by(Paper.created_at.desc())
+
+    papers = query.offset(skip).limit(limit).all()
+
+    return paginated_response(
+        items=papers,
+        total=total,
+        page=(skip // limit) + 1 if limit > 0 else 1,
+        page_size=limit
+    )
+
+
+@router.post("/{journal_id}/papers/import")
+async def import_papers_to_journal(
+    journal_id: int,
+    file: UploadFile,
+    db: Session = Depends(get_db)
+):
+    """
+    向指定期刊导入Excel论文
+
+    处理逻辑：
+    1. 验证期刊存在
+    2. 读取Excel文件
+    3. 根据期刊名称匹配，自动创建不存在的期刊
+    4. 论文关联到对应期刊
+    """
+    # 验证期刊存在
+    journal = db.query(Journal).filter(Journal.id == journal_id).first()
+    if not journal:
+        raise HTTPException(status_code=404, detail="期刊不存在")
+
+    # 验证文件格式
+    if not file.filename.endswith(('.xlsx', '.xls')):
+        raise HTTPException(status_code=400, detail="只支持Excel文件 (.xlsx, .xls)")
+
+    try:
+        contents = await file.read()
+        imported_count, errors, batch_id = ExcelImportService.import_papers_from_excel(
+            file_content=contents,
+            db=db
+        )
+
+        return success_response(
+            data={
+                "imported_count": imported_count,
+                "errors": errors,
+                "batch_id": batch_id,
+                "journal_id": journal_id,
+                "journal_name": journal.name
+            },
+            message=f"成功导入 {imported_count} 篇论文"
+        )
+
+    except Exception as e:
+        logger.error(f"期刊论文导入失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"导入失败: {str(e)}")
+
+
+@router.post("/{journal_id}/papers/analyze")
+async def analyze_journal_papers(
+    journal_id: int,
+    ai_config: Optional[Dict[str, Any]] = None,
+    status_filter: Optional[str] = "pending",
+    max_concurrent: int = 3,
+    db: Session = Depends(get_db)
+):
+    """
+    对期刊下的论文进行批量AI分析
+
+    参数：
+    - ai_config: 可选的AI配置（覆盖默认配置）
+    - status_filter: 只分析指定状态的论文，默认为"pending"
+    - max_concurrent: 最大并发数
+    """
+    # 验证期刊存在
+    journal = db.query(Journal).filter(Journal.id == journal_id).first()
+    if not journal:
+        raise HTTPException(status_code=404, detail="期刊不存在")
+
+    # 获取待分析的论文
+    query = db.query(Paper).filter(Paper.journal_id == journal_id)
+    if status_filter:
+        query = query.filter(Paper.status == status_filter)
+
+    papers = query.all()
+    paper_ids = [p.id for p in papers]
+
+    if not paper_ids:
+        raise HTTPException(
+            status_code=400,
+            detail=f"期刊 '{journal.name}' 下没有状态为 '{status_filter}' 的论文"
+        )
+
+    try:
+        # 使用AI分析服务进行批量分析
+        results = await AIAnalysisService.batch_analyze_papers(
+            paper_ids=paper_ids,
+            db=db,
+            max_concurrent=max_concurrent,
+            config=ai_config  # 传入自定义配置
+        )
+
+        return success_response(
+            data={
+                "journal_id": journal_id,
+                "journal_name": journal.name,
+                "analyzed_count": results.get("success", 0),
+                "failed_count": results.get("total", 0) - results.get("success", 0),
+                "details": results
+            },
+            message=f"分析完成：{results.get('success', 0)}/{results.get('total', 0)} 篇成功"
+        )
+
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.error(f"批量分析失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"分析失败: {str(e)}")
+
+
+@router.post("/{journal_id}/papers/batch-delete")
+async def batch_delete_journal_papers(
+    journal_id: int,
+    request_data: BatchDeleteRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    批量删除指定期刊的论文
+
+    参数：
+    - ids: 要删除的论文ID列表
+
+    返回：
+    - deleted_count: 成功删除的数量
+    - errors: 错误信息列表
+    """
+    try:
+        # 验证期刊存在
+        journal = db.query(Journal).filter(Journal.id == journal_id).first()
+        if not journal:
+            raise HTTPException(status_code=404, detail="期刊不存在")
+
+        # 验证论文属于该期刊
+        papers_to_delete = db.query(Paper).filter(
+            Paper.id.in_(request_data.ids),
+            Paper.journal_id == journal_id
+        ).all()
+
+        if len(papers_to_delete) != len(request_data.ids):
+            found_ids = {p.id for p in papers_to_delete}
+            missing_ids = set(request_data.ids) - found_ids
+            raise HTTPException(
+                status_code=400,
+                detail=f"以下论文不存在或不属于该期刊: {missing_ids}"
+            )
+
+        # 检查是否有论文被 Ideas 引用
+        from ..models.database import Idea
+        referenced_papers = db.query(Idea).filter(
+            Idea.reference_paper.in_(request_data.ids)
+        ).all()
+
+        if referenced_papers:
+            ref_titles = [idea.reference_paper for idea in referenced_papers]
+            raise HTTPException(
+                status_code=400,
+                detail=f"无法删除：以下论文已被 Idea 引用: {ref_titles}"
+            )
+
+        # 记录审计日志
+        for paper in papers_to_delete:
+            try:
+                AuditService.log_delete(
+                    db,
+                    table_name="papers",
+                    record_id=paper.id,
+                    old_values={
+                        "title": paper.title,
+                        "journal_id": paper.journal_id,
+                        "status": paper.status
+                    }
+                )
+            except Exception as audit_error:
+                logger.warning(f"审计日志记录失败: {audit_error}")
+
+        # 执行删除
+        deleted_count = db.query(Paper).filter(
+            Paper.id.in_(request_data.ids),
+            Paper.journal_id == journal_id
+        ).delete(synchronize_session=False)
+
+        db.commit()
+
+        return success_response(
+            data={
+                "deleted_count": deleted_count,
+                "errors": []
+            },
+            message=f"成功删除 {deleted_count} 篇论文"
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"批量删除失败: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"批量删除失败: {str(e)}")
+
+
+# ===== 期卷号统计路由（v3.6）=====
+
+@router.get("/{journal_id}/volume-stats")
+async def get_journal_volume_stats(
+    journal_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    获取期刊期卷号详细统计（v3.6）
+
+    返回：
+    - total_papers: 总论文数
+    - volumes: 每个卷号的论文数统计
+    - issues: 每个期号的论文数统计
+    - latest_volume: 最新卷号
+    - latest_issue: 最新期号
+    - total_volumes: 总卷数
+    - total_issues: 总期数
+    """
+    try:
+        # 验证期刊存在
+        journal = db.query(Journal).filter(Journal.id == journal_id).first()
+        if not journal:
+            raise HTTPException(status_code=404, detail="期刊不存在")
+
+        # 获取该期刊的所有论文
+        papers = db.query(Paper).filter(Paper.journal_id == journal_id).all()
+
+        # 统计卷号和期号
+        volumes = {}
+        issues = {}
+        latest_volume = None
+        latest_issue = None
+
+        for paper in papers:
+            # 统计卷号
+            if paper.volume:
+                try:
+                    vol_num = int(paper.volume)
+                    volumes[paper.volume] = volumes.get(paper.volume, 0) + 1
+                    if latest_volume is None or vol_num > int(latest_volume or 0):
+                        latest_volume = paper.volume
+                except ValueError:
+                    # 卷号不是纯数字，直接使用字符串比较
+                    volumes[paper.volume] = volumes.get(paper.volume, 0) + 1
+                    if latest_volume is None or paper.volume > (latest_volume or ""):
+                        latest_volume = paper.volume
+
+            # 统计期号
+            if paper.issue:
+                try:
+                    issue_num = int(paper.issue)
+                    issues[paper.issue] = issues.get(paper.issue, 0) + 1
+                    if latest_issue is None or issue_num > int(latest_issue or 0):
+                        latest_issue = paper.issue
+                except ValueError:
+                    issues[paper.issue] = issues.get(paper.issue, 0) + 1
+                    if latest_issue is None or paper.issue > (latest_issue or ""):
+                        latest_issue = paper.issue
+
+        # 计算总卷数和总期数（去重）
+        total_volumes = len(volumes)
+        total_issues = len(issues)
+
+        return success_response(data={
+            "journal_id": journal_id,
+            "journal_name": journal.name,
+            "total_papers": len(papers),
+            "volumes": volumes,
+            "issues": issues,
+            "latest_volume": latest_volume,
+            "latest_issue": latest_issue,
+            "total_volumes": total_volumes,
+            "total_issues": total_issues,
+            # 数据库字段（v3.6）
+            "db_latest_volume": journal.latest_volume,
+            "db_latest_issue": journal.latest_issue,
+            "db_paper_count": journal.paper_count
+        })
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"获取期刊期卷号统计失败: {e}")
+        raise HTTPException(status_code=500, detail=f"获取期卷号统计失败: {str(e)}")

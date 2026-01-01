@@ -43,14 +43,6 @@ export const API_ENDPOINTS = {
     SEARCH: '/ideas/search',
     CONVERT_TO_PROJECT: (id: number) => `/ideas/${id}/convert-to-project`,
   },
-  // 想法管理
-  IDEAS_MANAGEMENT: {
-    LIST: '/ideas-management',
-    CREATE: '/ideas-management',
-    UPDATE: (id: number) => `/ideas-management/${id}`,
-    DELETE: (id: number) => `/ideas-management/${id}`,
-    HEALTH: '/ideas-management/health',
-  },
   // 系统配置
   CONFIG: {
     LIST: '/config',

@@ -25,6 +25,14 @@ export const styleConstants = {
     md: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
     lg: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
   },
+
+  // 控件宽度
+  controlWidths: {
+    SELECT_NORMAL: 200,    // 普通下拉框
+    SELECT_SMALL: 120,     // 小型下拉框（状态）
+    SEARCH: 250,           // 搜索框
+    INPUT_NORMAL: 200,     // 普通输入框
+  },
 };
 
 // 通用样式

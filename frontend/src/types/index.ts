@@ -2,6 +2,8 @@
 export * from './api';
 // 导出Ideas相关类型
 export * from './ideas';
+// 导出Papers相关类型
+export * from './papers';
 // 导出Tag类型（从journals.ts导入）
 import type { Tag } from './journals';
 export type { Tag } from './journals';
@@ -115,7 +117,7 @@ export interface CommunicationLog {
   id: number;
   project_id: number;
   collaborator_id?: number;
-  communication_type: string;
+  communication_type?: string;  // 后端有默认值 'meeting'
   title: string;
   content: string;
   outcomes?: string;
@@ -127,7 +129,7 @@ export interface CommunicationLog {
 
 export interface CommunicationLogCreate {
   collaborator_id?: number;
-  communication_type: string;
+  communication_type?: string;  // 后端有默认值 'meeting'
   title: string;
   content: string;
   outcomes?: string;
