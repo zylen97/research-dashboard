@@ -357,12 +357,6 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <ColumnFilter
-                availableColumns={AVAILABLE_COLUMNS}
-                visibleColumns={visibleColumns}
-                onChange={setVisibleColumns}
-                storageKey={COLUMN_VISIBILITY_KEYS.JOURNAL_PAPERS}
-              />
             </>
           }
           filterControls={
@@ -389,6 +383,12 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
                   setSearchText(value);
                   setCurrentPage(1);
                 }}
+              />
+              <ColumnFilter
+                availableColumns={AVAILABLE_COLUMNS}
+                visibleColumns={visibleColumns}
+                onChange={setVisibleColumns}
+                storageKey={COLUMN_VISIBILITY_KEYS.JOURNAL_PAPERS}
               />
             </Space>
           }

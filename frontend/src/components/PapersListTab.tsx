@@ -331,12 +331,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
                   批量删除 ({selectedRowKeys.length})
                 </Button>
               )}
-              <ColumnFilter
-                availableColumns={AVAILABLE_COLUMNS}
-                visibleColumns={visibleColumns}
-                onChange={setVisibleColumns}
-                storageKey={COLUMN_VISIBILITY_KEYS.PAPERS_LIST}
-              />
             </>
           }
           filterControls={
@@ -384,6 +378,12 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
                   setSearchText(value);
                   setCurrentPage(1);
                 }}
+              />
+              <ColumnFilter
+                availableColumns={AVAILABLE_COLUMNS}
+                visibleColumns={visibleColumns}
+                onChange={setVisibleColumns}
+                storageKey={COLUMN_VISIBILITY_KEYS.PAPERS_LIST}
               />
             </Space>
           }
