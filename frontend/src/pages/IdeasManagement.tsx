@@ -177,10 +177,12 @@ const IdeasManagementPage: React.FC = () => {
   // 打开编辑模态框
   const openEditModal = (idea: Idea) => {
     setEditingIdea(idea);
-    // 回填数据时，从responsible_person对象提取ID
+    // 回填数据时，优先使用 responsible_persons，如果没有则使用 responsible_person
     form.setFieldsValue({
       ...idea,
-      responsible_person_id: idea.responsible_person?.id,
+      responsible_person_ids: Array.isArray(idea.responsible_persons)
+        ? idea.responsible_persons.map(p => p.id)
+        : (idea.responsible_person ? [idea.responsible_person.id] : []),
     });
     setModalVisible(true);
   };
@@ -302,10 +304,19 @@ const IdeasManagementPage: React.FC = () => {
     },
     {
       title: '负责人',
-      dataIndex: 'responsible_person',
-      key: 'responsible_person',
-      width: 120,
-      render: (responsible_person: any) => responsible_person?.name || '-',
+      dataIndex: 'responsible_persons',
+      key: 'responsible_persons',
+      width: 150,
+      render: (persons: any[]) => {
+        if (!persons || persons.length === 0) return '-';
+        if (persons.length === 1) return persons[0].name;
+        const names = persons.map(p => p.name);
+        return (
+          <Tooltip title={names.join(', ')}>
+            <span>{names.slice(0, 2).join(', ')}{names.length > 2 ? '...' : ''}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '成熟度',
@@ -556,14 +567,15 @@ const IdeasManagementPage: React.FC = () => {
           </Form.Item>
 
           <Form.Item
-            name="responsible_person_id"
+            name="responsible_person_ids"
             label="负责人"
             rules={[
               { required: true, message: '请选择负责人' },
             ]}
           >
             <Select
-              placeholder="选择负责人"
+              mode="multiple"
+              placeholder="选择负责人（可多选）"
               showSearch
               filterOption={(input, option) =>
                 (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0

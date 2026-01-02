@@ -254,7 +254,8 @@ class IdeaBase(BaseModel):
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
     target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
-    responsible_person_id: int = Field(..., description="负责人ID（外键关联collaborators表）")
+    responsible_person_id: Optional[int] = Field(None, description="负责人ID（主负责人，可选）")
+    responsible_person_ids: List[int] = Field(default_factory=list, description="负责人ID列表（多选）")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
 
     @field_validator('maturity')
@@ -278,6 +279,7 @@ class IdeaUpdate(BaseModel):
     reference_journal: Optional[str] = Field(None, max_length=200)
     target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
     responsible_person_id: Optional[int] = Field(None, description="负责人ID")
+    responsible_person_ids: Optional[List[int]] = Field(None, description="负责人ID列表（多选）")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
 
     @field_validator('maturity')
@@ -294,7 +296,8 @@ class Idea(IdeaBase):
     updated_at: datetime
 
     # 关联的负责人对象
-    responsible_person: Collaborator = Field(..., description="负责人对象（包含name等信息）")
+    responsible_person: Optional[Collaborator] = Field(None, description="主负责人对象")
+    responsible_persons: List[Collaborator] = Field(default_factory=list, description="所有负责人对象列表")
 
     class Config:
         from_attributes = True

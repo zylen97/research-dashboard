@@ -13,7 +13,8 @@ export interface IdeaBase {
   reference_paper?: string;       // 参考论文（可选）
   reference_journal?: string;     // 参考期刊（可选）
   target_journal?: string;        // (拟)投稿期刊（可选）
-  responsible_person_id: number;  // 负责人ID（外键关联collaborators表）
+  responsible_person_id?: number;  // 负责人ID（主负责人，可选）
+  responsible_person_ids?: number[];  // 负责人ID列表（多选）
   maturity: 'mature' | 'immature'; // 成熟度
 }
 
@@ -25,7 +26,8 @@ export interface Idea extends IdeaBase {
   source_paper_id?: number | null;  // 来源论文ID（从论文转换而来）
 
   // 关联的负责人对象（从后端返回完整的Collaborator对象）
-  responsible_person: Collaborator;
+  responsible_person?: Collaborator;
+  responsible_persons?: Collaborator[];  // 所有负责人对象列表
 }
 
 // 创建Idea的数据

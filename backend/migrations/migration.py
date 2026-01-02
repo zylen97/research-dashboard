@@ -21,8 +21,8 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 
 logger = setup_migration_logging()
 
-# 迁移版本号 - 移除未使用状态
-MIGRATION_VERSION = "v3.7_remove_unused_statuses"
+# 迁移版本号
+MIGRATION_VERSION = "v3.9_idea_multiple_responsible_persons"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,111 +85,97 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 移除未使用的状态（approved, rejected），简化为3个状态')
+        logger.info('🎯 目标: Idea 支持多选负责人')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v3.7迁移任务：移除未使用状态
+        # 🔧 v3.9迁移任务：Idea 多选负责人
         # 变更：
-        # 1. 将 approved 状态转换为 analyzed
-        # 2. 将 rejected 状态转换为 pending
-        # 3. 更新期刊的 paper_count
+        # 1. 创建 idea_responsible_persons 中间表
+        # 2. 迁移现有 responsible_person_id 数据到新表
+        # 3. responsible_person_id 改为可选
         # ===========================================
 
         # ============================
-        # Step 1: 检查papers表是否存在
+        # Step 1: 检查 ideas 表是否存在
         # ============================
-        logger.info("\n📋 Step 1: 检查papers表")
+        logger.info("\n📋 Step 1: 检查 ideas 表")
 
-        if not table_exists(cursor, 'papers'):
-            logger.error("   ❌ papers表不存在！无法继续迁移。")
+        if not table_exists(cursor, 'ideas'):
+            logger.error("   ❌ ideas表不存在！无法继续迁移。")
             conn.rollback()
             return False
         else:
-            logger.info("   ✅ papers表存在")
+            logger.info("   ✅ ideas表存在")
 
         # ============================
-        # Step 2: 统计当前状态分布
+        # Step 2: 创建 idea_responsible_persons 中间表
         # ============================
-        logger.info("\n📋 Step 2: 统计当前论文状态分布")
+        logger.info("\n📋 Step 2: 创建 idea_responsible_persons 中间表")
 
-        cursor.execute("SELECT status, COUNT(*) FROM papers GROUP BY status ORDER BY status")
-        status_counts = cursor.fetchall()
-
-        logger.info("   当前状态分布:")
-        for status, count in status_counts:
-            logger.info(f"     - {status}: {count} 篇")
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS idea_responsible_persons (
+                idea_id INTEGER NOT NULL,
+                collaborator_id INTEGER NOT NULL,
+                PRIMARY KEY (idea_id, collaborator_id),
+                FOREIGN KEY (idea_id) REFERENCES ideas(id) ON DELETE CASCADE,
+                FOREIGN KEY (collaborator_id) REFERENCES collaborators(id)
+            )
+        """)
+        logger.info("   ✅ idea_responsible_persons 表已创建")
 
         # ============================
-        # Step 3: 转换 approved 状态
+        # Step 3: 统计当前有负责人的 Ideas
         # ============================
-        logger.info("\n📋 Step 3: 转换 approved 状态为 analyzed")
+        logger.info("\n📋 Step 3: 统计当前有负责人的 Ideas")
 
-        cursor.execute("SELECT COUNT(*) FROM papers WHERE status = 'approved'")
-        approved_count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(*) FROM ideas WHERE responsible_person_id IS NOT NULL")
+        ideas_with_responsible_count = cursor.fetchone()[0]
 
-        if approved_count > 0:
+        logger.info(f"   当前有负责人的 Ideas: {ideas_with_responsible_count} 个")
+
+        # ============================
+        # Step 4: 迁移现有数据到新表
+        # ============================
+        logger.info("\n📋 Step 4: 迁移现有数据到新表")
+
+        if ideas_with_responsible_count > 0:
             cursor.execute("""
-                UPDATE papers
-                SET status = 'analyzed'
-                WHERE status = 'approved'
+                INSERT OR IGNORE INTO idea_responsible_persons (idea_id, collaborator_id)
+                SELECT id, responsible_person_id
+                FROM ideas
+                WHERE responsible_person_id IS NOT NULL
             """)
-            logger.info(f"   ✅ 已将 {approved_count} 篇论文从 approved 转换为 analyzed")
+            migrated_count = cursor.rowcount
+            logger.info(f"   ✅ 已迁移 {migrated_count} 条负责人关系到新表")
         else:
-            logger.info("   ✓ 没有 approved 状态的论文，跳过")
+            logger.info("   ✓ 没有需要迁移的数据")
 
         # ============================
-        # Step 4: 转换 rejected 状态
+        # Step 5: 将 responsible_person_id 改为可选
         # ============================
-        logger.info("\n📋 Step 4: 转换 rejected 状态为 pending")
+        logger.info("\n📋 Step 5: 确保 responsible_person_id 可为 NULL")
 
-        cursor.execute("SELECT COUNT(*) FROM papers WHERE status = 'rejected'")
-        rejected_count = cursor.fetchone()[0]
-
-        if rejected_count > 0:
-            cursor.execute("""
-                UPDATE papers
-                SET status = 'pending'
-                WHERE status = 'rejected'
-            """)
-            logger.info(f"   ✅ 已将 {rejected_count} 篇论文从 rejected 转换为 pending")
-        else:
-            logger.info("   ✓ 没有 rejected 状态的论文，跳过")
-
-        # ============================
-        # Step 5: 更新期刊的 paper_count
-        # ============================
-        logger.info("\n📋 Step 5: 更新期刊的论文计数")
-
-        cursor.execute("SELECT id, name FROM journals")
-        journals = cursor.fetchall()
-
-        updated_count = 0
-        for journal_id, journal_name in journals:
-            cursor.execute("""
-                SELECT COUNT(*) FROM papers WHERE journal_id = ?
-            """, (journal_id,))
-            paper_count = cursor.fetchone()[0]
-
-            cursor.execute("""
-                UPDATE journals
-                SET paper_count = ?
-                WHERE id = ?
-            """, (paper_count, journal_id))
-            updated_count += 1
-
-        logger.info(f"   ✅ 已更新 {updated_count} 个期刊的论文计数")
+        # SQLite 不直接支持 ALTER COLUMN，但我们可以通过重建表来达到目的
+        # 但由于我们在创建表时已经定义为 nullable，所以这里只需要确认一下
+        cursor.execute("PRAGMA table_info(ideas)")
+        columns = cursor.fetchall()
+        for col in columns:
+            if col[1] == 'responsible_person_id':
+                if col[3] == 0:  # 0 表示 not null
+                    logger.warning("   ⚠️  responsible_person_id 字段为 NOT NULL，建议手动修改")
+                else:
+                    logger.info("   ✅ responsible_person_id 已支持 NULL")
+                break
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v3.7 移除未使用状态迁移完成！")
-        logger.info(f"✅ 转换 approved → analyzed: {approved_count} 篇")
-        logger.info(f"✅ 转换 rejected → pending: {rejected_count} 篇")
-        logger.info(f"✅ 更新期刊论文计数: {updated_count} 个期刊")
-        logger.info("⚠️  下一步: 更新后端和前端的 PaperStatus 枚举定义")
+        logger.info("🎉 v3.9 Idea 多选负责人迁移完成！")
+        logger.info(f"✅ 创建中间表: idea_responsible_persons")
+        logger.info(f"✅ 迁移数据: {ideas_with_responsible_count} 条")
         logger.info("=" * 70)
 
         conn.close()

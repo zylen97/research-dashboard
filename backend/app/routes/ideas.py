@@ -11,7 +11,7 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from ..models import get_db, Idea, ResearchProject, IdeaCreate, IdeaUpdate, IdeaSchema
+from ..models import get_db, Idea, ResearchProject, IdeaCreate, IdeaUpdate, IdeaSchema, Collaborator
 from ..models.schemas import BatchDeleteRequest, BatchUpdateMaturityRequest
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
@@ -35,8 +35,11 @@ async def get_ideas(
 ):
     """获取Ideas列表（预加载负责人信息）"""
     try:
-        # 使用joinedload预加载responsible_person关系，避免N+1查询
-        query = db.query(Idea).options(joinedload(Idea.responsible_person))
+        # 使用joinedload预加载responsible_person和responsible_persons关系，避免N+1查询
+        query = db.query(Idea).options(
+            joinedload(Idea.responsible_person),
+            joinedload(Idea.responsible_persons)
+        )
 
         if maturity:
             query = query.filter(Idea.maturity == maturity)
@@ -81,10 +84,30 @@ async def create_idea(
         # 验证maturity值
         if idea.maturity not in ['mature', 'immature']:
             raise HTTPException(status_code=400, detail="Maturity must be 'mature' or 'immature'")
-        
-        # 使用CRUD基类创建
-        new_idea = idea_crud.create(db, obj_in=idea)
-        
+
+        # 提取负责人ID列表
+        responsible_person_ids = idea.responsible_person_ids if hasattr(idea, 'responsible_person_ids') else []
+
+        # 先创建 Idea 主体（不含 responsible_person_ids）
+        idea_data = idea.model_dump(exclude={'responsible_person_ids'})
+        new_idea = Idea(**idea_data)
+        db.add(new_idea)
+        db.flush()  # 获取 Idea ID
+
+        # 添加负责人关系
+        if responsible_person_ids:
+            persons = db.query(Collaborator).filter(
+                Collaborator.id.in_(responsible_person_ids)
+            ).all()
+            new_idea.responsible_persons = persons
+
+            # 如果有多个负责人，将第一个设为主负责人
+            if persons and not new_idea.responsible_person_id:
+                new_idea.responsible_person_id = persons[0].id
+
+        db.commit()
+        db.refresh(new_idea)
+
         # 记录审计日志
         try:
             AuditService.log_create(
@@ -96,7 +119,7 @@ async def create_idea(
         except Exception as audit_error:
             # 审计日志失败不应该影响数据创建
             logger.warning(f"审计日志记录失败: {audit_error}")
-        
+
         return new_idea
         
     except HTTPException:
@@ -120,14 +143,14 @@ async def update_idea(
     """更新Idea"""
     try:
         # 获取现有记录
-        db_idea = idea_crud.get(db, id=idea_id)
+        db_idea = db.query(Idea).filter(Idea.id == idea_id).first()
         if not db_idea:
             raise HTTPException(status_code=404, detail="Idea not found")
-        
+
         # 验证maturity值（如果提供）
         if idea_update.maturity and idea_update.maturity not in ['mature', 'immature']:
             raise HTTPException(status_code=400, detail="Maturity must be 'mature' or 'immature'")
-        
+
         # 记录原始值用于审计
         old_values = {
             "project_name": db_idea.project_name,
@@ -137,10 +160,29 @@ async def update_idea(
             "responsible_person_id": db_idea.responsible_person_id,
             "maturity": db_idea.maturity
         }
-        
-        # 使用CRUD基类更新
-        updated_idea = idea_crud.update(db, db_obj=db_idea, obj_in=idea_update)
-        
+
+        # 提取负责人ID列表（如果提供）
+        update_data = idea_update.model_dump(exclude_unset=True, exclude={'responsible_person_ids'})
+        responsible_person_ids = idea_update.responsible_person_ids if hasattr(idea_update, 'responsible_person_ids') and idea_update.responsible_person_ids is not None else None
+
+        # 更新 Idea 主体字段
+        for field, value in update_data.items():
+            setattr(db_idea, field, value)
+
+        # 更新负责人关系（如果提供）
+        if responsible_person_ids is not None:
+            persons = db.query(Collaborator).filter(
+                Collaborator.id.in_(responsible_person_ids)
+            ).all()
+            db_idea.responsible_persons = persons
+
+            # 如果有多个负责人且没有主负责人，将第一个设为主负责人
+            if persons and not db_idea.responsible_person_id:
+                db_idea.responsible_person_id = persons[0].id
+
+        db.commit()
+        db.refresh(db_idea)
+
         # 记录审计日志
         try:
             AuditService.log_update(
@@ -153,7 +195,7 @@ async def update_idea(
         except Exception as audit_error:
             logger.warning(f"审计日志记录失败: {audit_error}")
 
-        return updated_idea
+        return db_idea
         
     except HTTPException:
         raise

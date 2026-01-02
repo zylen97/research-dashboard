@@ -27,6 +27,14 @@ project_collaborators = Table(
     Column('collaborator_id', Integer, ForeignKey('collaborators.id'))
 )
 
+# Association table for many-to-many relationship between ideas and collaborators
+idea_responsible_persons = Table(
+    'idea_responsible_persons',
+    Base.metadata,
+    Column('idea_id', Integer, ForeignKey('ideas.id', ondelete='CASCADE')),
+    Column('collaborator_id', Integer, ForeignKey('collaborators.id'))
+)
+
 # Association table for many-to-many relationship between journals and tags
 journal_tags = Table(
     'journal_tags',
@@ -54,6 +62,7 @@ class Collaborator(Base):
 
     # Relationships
     projects = relationship("ResearchProject", secondary=project_collaborators, back_populates="collaborators")
+    ideas = relationship("Idea", secondary=idea_responsible_persons, back_populates="responsible_persons")
 
 class ResearchProject(Base):
     """研究项目模型"""
@@ -211,7 +220,7 @@ class Idea(Base):
     reference_paper = Column(Text, nullable=True, comment="参考论文")
     reference_journal = Column(Text, nullable=True, comment="参考期刊")
     target_journal = Column(Text, nullable=True, comment="拟投稿期刊")
-    responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=False, comment="负责人ID")
+    responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=True, comment="负责人ID（主负责人，可选）")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
     source_paper_id = Column(Integer, ForeignKey('papers.id', ondelete='SET NULL'), nullable=True, comment="来源论文ID")
     created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
@@ -219,6 +228,7 @@ class Idea(Base):
 
     # 关系属性
     responsible_person = relationship("Collaborator", foreign_keys=[responsible_person_id])
+    responsible_persons = relationship("Collaborator", secondary=idea_responsible_persons, back_populates="ideas")
     source_paper = relationship("Paper", foreign_keys=[source_paper_id])
 
     # 索引优化
