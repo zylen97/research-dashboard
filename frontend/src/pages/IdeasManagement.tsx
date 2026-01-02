@@ -17,10 +17,6 @@ import {
   Tag,
   message,
   Tooltip,
-  Row,
-  Col,
-  Card,
-  Statistic,
 } from 'antd';
 import {
   PlusOutlined,
@@ -405,37 +401,6 @@ const IdeasManagementPage: React.FC = () => {
 
   return (
     <PageContainer>
-      {/* 统计卡片 */}
-      <Row gutter={12} style={{ marginBottom: 16 }}>
-        <Col span={8}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic
-              title="想法总数"
-              value={ideas?.length || 0}
-              valueStyle={{ color: '#333333' }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic
-              title="成熟想法"
-              value={ideas?.filter((idea: Idea) => idea.maturity === 'mature').length || 0}
-              valueStyle={{ color: '#333333' }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card className="statistics-card hover-shadow">
-            <Statistic
-              title="待评估"
-              value={ideas?.filter((idea: Idea) => !idea.maturity || idea.maturity === 'immature').length || 0}
-              valueStyle={{ color: '#666666' }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
       {/* 页面标题和操作区 */}
       <PageHeader
         title={<Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>

@@ -22,7 +22,6 @@ import { collaboratorApi, researchApi, ideasApi } from '../services/apiOptimized
 import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { Collaborator, CollaboratorCreate, ResearchProject, Idea } from '../types';
-import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
 import CollaboratorProjectsModal from '../components/collaborator/CollaboratorProjectsModal';
 import { safeForEach, safeFilter } from '../utils/arrayHelpers';
@@ -331,9 +330,6 @@ const CollaboratorManagement: React.FC = () => {
           </Space>
         }
       />
-
-      {/* 统计卡片 */}
-      <CollaboratorStatistics collaborators={collaborators} />
 
       {/* 合作者列表 */}
       <div className="table-container">
