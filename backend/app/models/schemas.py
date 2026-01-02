@@ -43,7 +43,7 @@ class ResearchProjectBase(BaseModel):
     source: Optional[str] = Field(None, deprecated=True, description="来源（已废弃）")
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
-    target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
+    target_journal: Optional[str] = Field(None, description="投稿期刊")
     status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, description="项目状态")
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
@@ -72,7 +72,7 @@ class ResearchProjectUpdate(BaseModel):
     source: Optional[str] = Field(None, deprecated=True)
     reference_paper: Optional[str] = Field(None, max_length=1000)
     reference_journal: Optional[str] = Field(None, max_length=200)
-    target_journal: Optional[str] = Field(None, description="(拟)投稿期刊")
+    target_journal: Optional[str] = Field(None, description="投稿期刊")
     status: Optional[ProjectStatus] = Field(None, description="项目状态")
     progress: Optional[float] = Field(None, ge=0, le=100)
     expected_completion: Optional[datetime] = None
@@ -253,7 +253,7 @@ class IdeaBase(BaseModel):
     source: Optional[str] = Field(None, max_length=500, deprecated=True, description="来源信息（已废弃）")
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
-    target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
+    target_journal: Optional[str] = Field(None, max_length=200, description="投稿期刊")
     responsible_person_id: Optional[int] = Field(None, description="负责人ID（主负责人，可选）")
     responsible_person_ids: List[int] = Field(default_factory=list, description="负责人ID列表（多选）")
     maturity: str = Field(default="immature", description="成熟度：mature/immature")
@@ -277,7 +277,7 @@ class IdeaUpdate(BaseModel):
     source: Optional[str] = Field(None, max_length=500, deprecated=True)
     reference_paper: Optional[str] = Field(None, max_length=1000)
     reference_journal: Optional[str] = Field(None, max_length=200)
-    target_journal: Optional[str] = Field(None, max_length=200, description="(拟)投稿期刊")
+    target_journal: Optional[str] = Field(None, max_length=200, description="投稿期刊")
     responsible_person_id: Optional[int] = Field(None, description="负责人ID")
     responsible_person_ids: Optional[List[int]] = Field(None, description="负责人ID列表（多选）")
     maturity: Optional[str] = Field(None, description="成熟度：mature/immature")
@@ -383,7 +383,7 @@ class Journal(JournalBase):
 
     # 统计字段（API返回时动态计算）
     reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
-    target_count: int = Field(default=0, description="作为拟投稿期刊的引用次数")
+    target_count: int = Field(default=0, description="作为投稿期刊的引用次数")
 
     class Config:
         from_attributes = True

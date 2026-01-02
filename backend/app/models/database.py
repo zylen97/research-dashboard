@@ -75,7 +75,7 @@ class ResearchProject(Base):
     source = Column(Text, nullable=True)  # 来源（已废弃，使用reference_paper和reference_journal）
     reference_paper = Column(Text, nullable=True)  # 参考论文
     reference_journal = Column(Text, nullable=True)  # 参考期刊
-    target_journal = Column(Text, nullable=True)  # (拟)投稿期刊
+    target_journal = Column(Text, nullable=True)  # 投稿期刊
     status = Column(String(50), default="active", nullable=False)  # active, completed, paused, reviewing, revising
     progress = Column(Float, default=0.0)  # 进展百分比
     start_date = Column(DateTime, default=datetime.utcnow)
@@ -219,7 +219,7 @@ class Idea(Base):
     source = Column(Text, nullable=True, comment="来源信息（已废弃，使用reference_paper和reference_journal）")
     reference_paper = Column(Text, nullable=True, comment="参考论文")
     reference_journal = Column(Text, nullable=True, comment="参考期刊")
-    target_journal = Column(Text, nullable=True, comment="拟投稿期刊")
+    target_journal = Column(Text, nullable=True, comment="投稿期刊")
     responsible_person_id = Column(Integer, ForeignKey('collaborators.id'), nullable=True, comment="负责人ID（主负责人，可选）")
     maturity = Column(String(20), nullable=False, default='immature', comment="成熟度: mature/immature")
     source_paper_id = Column(Integer, ForeignKey('papers.id', ondelete='SET NULL'), nullable=True, comment="来源论文ID")

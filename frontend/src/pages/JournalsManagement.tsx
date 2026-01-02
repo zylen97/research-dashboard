@@ -517,7 +517,7 @@ const JournalsManagement: React.FC = () => {
                 </Col>
                 <Col span={12}>
                   <Statistic
-                    title="拟投稿期刊引用"
+                    title="投稿期刊引用"
                     value={journalStats.stats.target_count}
                     valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
                     suffix="次"
@@ -768,10 +768,10 @@ const JournalsManagement: React.FC = () => {
                   </>
                 )}
 
-                {/* 作为拟投稿期刊的Ideas */}
+                {/* 作为投稿期刊的Ideas */}
                 {journalReferences.references.target_ideas.length > 0 && (
                   <>
-                    <Title level={5}>作为拟投稿期刊的Ideas</Title>
+                    <Title level={5}>作为投稿期刊的Ideas</Title>
                     <List
                       size="small"
                       dataSource={journalReferences.references.target_ideas}
@@ -802,10 +802,10 @@ const JournalsManagement: React.FC = () => {
                   </>
                 )}
 
-                {/* 作为拟投稿期刊的Projects */}
+                {/* 作为投稿期刊的Projects */}
                 {journalReferences.references.target_projects.length > 0 && (
                   <>
-                    <Title level={5}>作为拟投稿期刊的研究项目</Title>
+                    <Title level={5}>作为投稿期刊的研究项目</Title>
                     <List
                       size="small"
                       dataSource={journalReferences.references.target_projects}
@@ -1070,7 +1070,7 @@ const JournalsManagement: React.FC = () => {
                 </Col>
                 <Col span={12}>
                   <Statistic
-                    title="拟投稿期刊引用"
+                    title="投稿期刊引用"
                     value={journalStats.stats.target_count}
                     valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
                     suffix="次"
@@ -1321,10 +1321,10 @@ const JournalsManagement: React.FC = () => {
                   </>
                 )}
 
-                {/* 作为拟投稿期刊的Ideas */}
+                {/* 作为投稿期刊的Ideas */}
                 {journalReferences.references.target_ideas.length > 0 && (
                   <>
-                    <Title level={5}>作为拟投稿期刊的Ideas</Title>
+                    <Title level={5}>作为投稿期刊的Ideas</Title>
                     <List
                       size="small"
                       dataSource={journalReferences.references.target_ideas}
@@ -1355,10 +1355,10 @@ const JournalsManagement: React.FC = () => {
                   </>
                 )}
 
-                {/* 作为拟投稿期刊的Projects */}
+                {/* 作为投稿期刊的Projects */}
                 {journalReferences.references.target_projects.length > 0 && (
                   <>
-                    <Title level={5}>作为拟投稿期刊的研究项目</Title>
+                    <Title level={5}>作为投稿期刊的研究项目</Title>
                     <List
                       size="small"
                       dataSource={journalReferences.references.target_projects}

@@ -289,7 +289,7 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
-      title: '拟投稿期刊',
+      title: '投稿期刊',
       dataIndex: 'target_journal',
       key: 'target_journal',
       width: 150,
@@ -560,8 +560,8 @@ const IdeasManagementPage: React.FC = () => {
 
           <Form.Item
             name="target_journal"
-            label="拟投稿期刊（可选）"
-            rules={[{ max: 200, message: '拟投稿期刊不能超过200字符' }]}
+            label="投稿期刊（可选）"
+            rules={[{ max: 200, message: '投稿期刊不能超过200字符' }]}
           >
             <JournalSelect placeholder="从期刊库选择" />
           </Form.Item>

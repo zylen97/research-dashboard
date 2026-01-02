@@ -377,7 +377,7 @@ const ResearchDashboard: React.FC = () => {
 
           <Form.Item
             name="target_journal"
-            label="(拟)投稿期刊"
+            label="投稿期刊"
           >
             <JournalSelect placeholder="从期刊库选择" />
           </Form.Item>

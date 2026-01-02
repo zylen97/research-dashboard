@@ -81,7 +81,7 @@ export const createProjectColumns = ({
     },
   },
   ...(isMobile ? [] : [{
-    title: '(拟)投稿期刊',
+    title: '投稿期刊',
     dataIndex: 'target_journal',
     key: 'target_journal',
     width: 150,

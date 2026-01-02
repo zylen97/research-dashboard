@@ -48,7 +48,7 @@ export interface Journal extends JournalBase {
 
   // 统计字段（动态计算）
   reference_count: number;  // 作为参考期刊的引用次数
-  target_count: number;     // 作为拟投稿期刊的引用次数
+  target_count: number;     // 作为投稿期刊的引用次数
 
   // 论文统计（可选字段，仅在详情时返回）
   paper_stats?: {

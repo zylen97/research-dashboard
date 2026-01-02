@@ -49,7 +49,7 @@ def calculate_journal_stats(db: Session, journal_name: str) -> Dict[str, int]:
         db.query(ResearchProject).filter(func.lower(ResearchProject.reference_journal) == func.lower(journal_name)).count()
     )
 
-    # 统计作为拟投稿期刊的次数（大小写不敏感）
+    # 统计作为投稿期刊的次数（大小写不敏感）
     target_count = (
         db.query(Idea).filter(func.lower(Idea.target_journal) == func.lower(journal_name)).count() +
         db.query(ResearchProject).filter(func.lower(ResearchProject.target_journal) == func.lower(journal_name)).count()
@@ -182,7 +182,7 @@ def get_journal_references(db: Session, journal_name: str, ref_type: Optional[st
             for project in reference_projects
         ]
 
-    # 查询作为拟投稿期刊的Ideas
+    # 查询作为投稿期刊的Ideas
     if ref_type in [None, 'target']:
         target_ideas = db.query(Idea).filter(
             Idea.target_journal == journal_name
@@ -198,7 +198,7 @@ def get_journal_references(db: Session, journal_name: str, ref_type: Optional[st
             for idea in target_ideas
         ]
 
-        # 查询作为拟投稿期刊的Projects
+        # 查询作为投稿期刊的Projects
         target_projects = db.query(ResearchProject).filter(
             ResearchProject.target_journal == journal_name
         ).all()
@@ -640,7 +640,7 @@ async def get_journal_reference_details(
     获取引用该期刊的所有Ideas和Projects的详细列表
 
     参数:
-    - ref_type: 'reference'(参考期刊) 或 'target'(拟投稿期刊)，None表示全部
+    - ref_type: 'reference'(参考期刊) 或 'target'(投稿期刊)，None表示全部
     """
     try:
         # 检查期刊是否存在

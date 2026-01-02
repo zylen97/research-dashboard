@@ -12,7 +12,7 @@ export interface IdeaBase {
   source?: string;               // 来源信息（已废弃，使用reference_paper和reference_journal）
   reference_paper?: string;       // 参考论文（可选）
   reference_journal?: string;     // 参考期刊（可选）
-  target_journal?: string;        // (拟)投稿期刊（可选）
+  target_journal?: string;        // 投稿期刊（可选）
   responsible_person_id?: number;  // 负责人ID（主负责人，可选）
   responsible_person_ids?: number[];  // 负责人ID列表（多选）
   maturity: 'mature' | 'immature'; // 成熟度

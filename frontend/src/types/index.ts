@@ -55,7 +55,7 @@ export interface ResearchProject {
   source?: string; // 来源（已废弃，从Ideas转化而来）
   reference_paper?: string; // 参考论文
   reference_journal?: string; // 参考期刊
-  target_journal?: string; // (拟)投稿期刊
+  target_journal?: string; // 投稿期刊
   status: string;
   progress: number;
   start_date: string;
@@ -80,7 +80,7 @@ export interface ResearchProjectCreate {
   source?: string; // 已废弃
   reference_paper?: string;
   reference_journal?: string;
-  target_journal?: string; // (拟)投稿期刊
+  target_journal?: string; // 投稿期刊
   status?: string;
   progress?: number;
   expected_completion?: string;
@@ -99,7 +99,7 @@ export interface ResearchProjectUpdate {
   source?: string; // 已废弃
   reference_paper?: string;
   reference_journal?: string;
-  target_journal?: string; // (拟)投稿期刊
+  target_journal?: string; // 投稿期刊
   status?: string;
   progress?: number;
   expected_completion?: string;
@@ -229,7 +229,7 @@ export interface Journal {
   updated_at: string;
   tags: Tag[];
   reference_count: number;  // 作为参考期刊的引用次数
-  target_count: number;     // 作为拟投稿期刊的引用次数
+  target_count: number;     // 作为投稿期刊的引用次数
 }
 
 export interface JournalCreate {
