@@ -66,6 +66,14 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     """
     批量计算多个期刊的引用统计（避免N+1查询）
 
+    新计数设计：
+    - 参考：Idea + ResearchProject 中 reference_journal 的合计
+    - idea中：Idea 中 target_journal 的合计
+    - 撰写中：ResearchProject 状态为"writing"且 target_journal 的合计
+    - 投稿中：ResearchProject 状态为"reviewing"+"revising"且 target_journal 的合计
+    - 已发表：ResearchProject 状态为"published"且 target_journal 的合计
+    - 论文：Papers 中该期刊的论文总数
+
     Args:
         db: 数据库会话
         journal_names: 期刊名称列表
@@ -76,7 +84,8 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     if not journal_names:
         return {}
 
-    # 批量统计所有期刊的参考引用
+    # ========== 参考期刊统计 ==========
+    # Idea中的参考期刊
     idea_ref_counts = (
         db.query(Idea.reference_journal, func.count(Idea.id))
         .filter(Idea.reference_journal.in_(journal_names))
@@ -84,6 +93,7 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
         .all()
     )
 
+    # ResearchProject中的参考期刊
     project_ref_counts = (
         db.query(ResearchProject.reference_journal, func.count(ResearchProject.id))
         .filter(ResearchProject.reference_journal.in_(journal_names))
@@ -91,7 +101,8 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
         .all()
     )
 
-    # 批量统计所有期刊的目标引用
+    # ========== 目标期刊统计（按状态细分） ==========
+    # Idea中的目标期刊（idea中）
     idea_target_counts = (
         db.query(Idea.target_journal, func.count(Idea.id))
         .filter(Idea.target_journal.in_(journal_names))
@@ -99,35 +110,100 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
         .all()
     )
 
-    project_target_counts = (
+    # ResearchProject中的目标期刊 - 撰写中
+    writing_target_counts = (
         db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
-        .filter(ResearchProject.target_journal.in_(journal_names))
+        .filter(
+            ResearchProject.target_journal.in_(journal_names),
+            ResearchProject.status == 'writing'
+        )
         .group_by(ResearchProject.target_journal)
         .all()
     )
 
-    # 转换为字典方便查找
+    # ResearchProject中的目标期刊 - 审稿中
+    reviewing_target_counts = (
+        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
+        .filter(
+            ResearchProject.target_journal.in_(journal_names),
+            ResearchProject.status == 'reviewing'
+        )
+        .group_by(ResearchProject.target_journal)
+        .all()
+    )
+
+    # ResearchProject中的目标期刊 - 返修中
+    revising_target_counts = (
+        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
+        .filter(
+            ResearchProject.target_journal.in_(journal_names),
+            ResearchProject.status == 'revising'
+        )
+        .group_by(ResearchProject.target_journal)
+        .all()
+    )
+
+    # ResearchProject中的目标期刊 - 已发表
+    published_target_counts = (
+        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
+        .filter(
+            ResearchProject.target_journal.in_(journal_names),
+            ResearchProject.status == 'published'
+        )
+        .group_by(ResearchProject.target_journal)
+        .all()
+    )
+
+    # ========== 论文统计 ==========
+    # 获取期刊ID到名称的映射
+    journal_id_to_name = {
+        j.id: j.name
+        for j in db.query(Journal).filter(Journal.name.in_(journal_names)).all()
+    }
+
+    paper_counts = (
+        db.query(Paper.journal_id, func.count(Paper.id))
+        .filter(Paper.journal_id.in_(list(journal_id_to_name.keys())))
+        .group_by(Paper.journal_id)
+        .all()
+    )
+
+    # ========== 转换为字典方便查找 ==========
+    # 参考计数
     ref_counts = {}
     for name, count in idea_ref_counts:
         ref_counts[name] = ref_counts.get(name, 0) + count
     for name, count in project_ref_counts:
         ref_counts[name] = ref_counts.get(name, 0) + count
 
-    target_counts = {}
-    for name, count in idea_target_counts:
-        target_counts[name] = target_counts.get(name, 0) + count
-    for name, count in project_target_counts:
-        target_counts[name] = target_counts.get(name, 0) + count
+    # idea中计数
+    idea_target_dict = {name: count for name, count in idea_target_counts}
 
-    # 组装结果
+    # 各状态项目计数
+    writing_dict = {name: count for name, count in writing_target_counts}
+    reviewing_dict = {name: count for name, count in reviewing_target_counts}
+    revising_dict = {name: count for name, count in revising_target_counts}
+    published_dict = {name: count for name, count in published_target_counts}
+
+    # 论文计数（按journal_id转换为journal_name）
+    paper_dict = {}
+    for journal_id, count in paper_counts:
+        name = journal_id_to_name.get(journal_id)
+        if name:
+            paper_dict[name] = count
+
+    # ========== 组装结果 ==========
     result = {}
     for name in journal_names:
-        ref = ref_counts.get(name, 0)
-        target = target_counts.get(name, 0)
         result[name] = {
-            "reference_count": ref,
-            "target_count": target,
-            "total_count": ref + target
+            "reference_count": ref_counts.get(name, 0),
+            "idea_target_count": idea_target_dict.get(name, 0),
+            "writing_count": writing_dict.get(name, 0),
+            "reviewing_count": reviewing_dict.get(name, 0),
+            "revising_count": revising_dict.get(name, 0),
+            "submitting_count": reviewing_dict.get(name, 0) + revising_dict.get(name, 0),  # 投稿中 = 审稿中 + 返修中
+            "published_count": published_dict.get(name, 0),
+            "paper_count": paper_dict.get(name, 0),
         }
 
     return result
@@ -262,11 +338,18 @@ async def get_journals(
         for journal in journals:
             stats = all_stats.get(journal.name, {
                 "reference_count": 0,
-                "target_count": 0,
-                "total_count": 0
+                "idea_target_count": 0,
+                "writing_count": 0,
+                "submitting_count": 0,
+                "published_count": 0,
+                "paper_count": 0,
             })
             journal.reference_count = stats["reference_count"]
-            journal.target_count = stats["target_count"]
+            journal.idea_target_count = stats["idea_target_count"]
+            journal.writing_count = stats["writing_count"]
+            journal.submitting_count = stats["submitting_count"]
+            journal.published_count = stats["published_count"]
+            journal.paper_count = stats["paper_count"]
 
         return journals
 

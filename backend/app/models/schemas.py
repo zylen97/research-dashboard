@@ -383,7 +383,11 @@ class Journal(JournalBase):
 
     # 统计字段（API返回时动态计算）
     reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
-    target_count: int = Field(default=0, description="作为投稿期刊的引用次数")
+    idea_target_count: int = Field(default=0, description="作为投稿期刊的Idea数量")
+    writing_count: int = Field(default=0, description="撰写中的项目数量")
+    submitting_count: int = Field(default=0, description="投稿中的项目数量（审稿中+返修中）")
+    published_count: int = Field(default=0, description="已发表的项目数量")
+    paper_count: int = Field(default=0, description="论文总数")
 
     class Config:
         from_attributes = True

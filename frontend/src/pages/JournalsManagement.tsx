@@ -362,9 +362,11 @@ const JournalsManagement: React.FC = () => {
                           {/* 统计信息 - 使用更紧凑的格式 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
                             参考{journal.reference_count || 0} ·
-                            拟投{journal.target_count || 0} ·
-                            论文{journal.paper_stats?.total_papers || 0}
-                            {journal.paper_stats && journal.paper_stats.pending_papers > 0 && ` · 待分析${journal.paper_stats.pending_papers}`}
+                            idea中{journal.idea_target_count || 0} ·
+                            撰写中{journal.writing_count || 0} ·
+                            投稿中{journal.submitting_count || 0} ·
+                            已发表{journal.published_count || 0} ·
+                            论文{journal.paper_count || 0}
                           </Text>
 
                           {/* 操作按钮 */}
@@ -919,9 +921,11 @@ const JournalsManagement: React.FC = () => {
                           {/* 统计信息 - 使用更紧凑的格式 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
                             参考{journal.reference_count || 0} ·
-                            拟投{journal.target_count || 0} ·
-                            论文{journal.paper_stats?.total_papers || 0}
-                            {journal.paper_stats && journal.paper_stats.pending_papers > 0 && ` · 待分析${journal.paper_stats.pending_papers}`}
+                            idea中{journal.idea_target_count || 0} ·
+                            撰写中{journal.writing_count || 0} ·
+                            投稿中{journal.submitting_count || 0} ·
+                            已发表{journal.published_count || 0} ·
+                            论文{journal.paper_count || 0}
                           </Text>
 
                           {/* 操作按钮 */}
