@@ -118,7 +118,7 @@ export const CollaboratorProjectsModal: React.FC<CollaboratorProjectsModalProps>
               <ProjectOutlined /> 共参与 <strong>{projects.length}</strong> 个项目
             </Text>
             <Text type="secondary">
-              进行中：{projects.filter(p => p.status === 'writing').length} 个
+              撰写中：{projects.filter(p => p.status === 'writing').length} 个
             </Text>
             <Text type="secondary">
               已发表：{projects.filter(p => p.status === 'published').length} 个

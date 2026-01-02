@@ -359,13 +359,9 @@ const JournalsManagement: React.FC = () => {
                             ))
                           )}
 
-                          {/* 统计信息 - 使用更紧凑的格式 */}
+                          {/* 统计信息 - 简化为只显示核心数据 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
                             参考{journal.reference_count || 0} ·
-                            idea中{journal.idea_target_count || 0} ·
-                            撰写中{journal.writing_count || 0} ·
-                            投稿中{journal.submitting_count || 0} ·
-                            已发表{journal.published_count || 0} ·
                             论文{journal.paper_count || 0}
                           </Text>
 
@@ -918,13 +914,9 @@ const JournalsManagement: React.FC = () => {
                             ))
                           )}
 
-                          {/* 统计信息 - 使用更紧凑的格式 */}
+                          {/* 统计信息 - 简化为只显示核心数据 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
                             参考{journal.reference_count || 0} ·
-                            idea中{journal.idea_target_count || 0} ·
-                            撰写中{journal.writing_count || 0} ·
-                            投稿中{journal.submitting_count || 0} ·
-                            已发表{journal.published_count || 0} ·
                             论文{journal.paper_count || 0}
                           </Text>
 

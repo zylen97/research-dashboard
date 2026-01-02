@@ -194,7 +194,7 @@ const CollaboratorManagement: React.FC = () => {
                 <ul style={{ marginLeft: 20 }}>
                   {dependencies.active_projects > 0 && (
                     <li style={{ color: '#333333' }}>
-                      参与 {dependencies.active_projects} 个进行中的项目
+                      参与 {dependencies.active_projects} 个撰写中的项目
                     </li>
                   )}
                   {dependencies.published_projects > 0 && (

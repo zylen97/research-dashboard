@@ -55,7 +55,7 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
           style={{ border: `2px solid ${GRAYSCALE_SYSTEM.secondary}` }}
         >
           <Statistic
-            title="进行中"
+            title="撰写中"
             value={stats.writing}
             valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
             prefix={<span style={{ fontSize: 14, marginRight: 4 }}>●</span>}
