@@ -375,17 +375,12 @@ class Journal(JournalBase):
     # v3.6 期卷号跟踪字段
     latest_volume: Optional[str] = Field(None, description="最新卷号")
     latest_issue: Optional[str] = Field(None, description="最新期号")
-    paper_count: int = Field(default=0, description="论文总数")
 
     # 关联的标签
     tags: List[Tag] = Field(default=[], description="关联的标签列表")
 
-    # 统计字段（API返回时动态计算）
+    # 统计字段（API返回时动态计算，v4.2简化）
     reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
-    idea_target_count: int = Field(default=0, description="作为投稿期刊的Idea数量")
-    writing_count: int = Field(default=0, description="撰写中的项目数量")
-    submitting_count: int = Field(default=0, description="投稿中的项目数量（审稿中+返修中）")
-    published_count: int = Field(default=0, description="已发表的项目数量")
     paper_count: int = Field(default=0, description="论文总数")
 
     class Config:

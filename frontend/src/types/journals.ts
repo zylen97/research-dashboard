@@ -46,12 +46,8 @@ export interface Journal extends JournalBase {
   // 标签关联
   tags: Tag[];  // 关联的标签列表
 
-  // 统计字段（动态计算）
+  // 统计字段（动态计算，v4.2简化）
   reference_count: number;      // 作为参考期刊的引用次数
-  idea_target_count: number;    // 作为投稿期刊的Idea数量
-  writing_count: number;        // 撰写中的项目数量
-  submitting_count: number;     // 投稿中的项目数量（审稿中+返修中）
-  published_count: number;      // 已发表的项目数量
   paper_count: number;          // 论文总数
 
   // 论文统计（可选字段，仅在详情时返回）
