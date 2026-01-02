@@ -50,9 +50,11 @@ async def get_papers(
     batch_id: Optional[str] = None,
     tag_ids: Optional[str] = None,
     search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取论文列表，支持筛选和搜索"""
+    """获取论文列表，支持筛选、搜索和排序"""
     query = db.query(Paper).options(
         joinedload(Paper.journal)
     )
@@ -97,8 +99,24 @@ async def get_papers(
     # 获取总数
     total = query.count()
 
-    # 按创建时间倒序
-    query = query.order_by(Paper.created_at.desc())
+    # 排序映射
+    sort_mapping = {
+        'created_at': Paper.created_at,
+        'year': Paper.year,
+        'volume': Paper.volume,
+        'issue': Paper.issue,
+    }
+
+    # 应用排序
+    if sort_by and sort_by in sort_mapping:
+        order_column = sort_mapping[sort_by]
+        if sort_order == 'desc':
+            query = query.order_by(order_column.desc())
+        else:
+            query = query.order_by(order_column.asc())
+    else:
+        # 默认按创建时间倒序
+        query = query.order_by(Paper.created_at.desc())
 
     papers = query.offset(skip).limit(limit).all()
 

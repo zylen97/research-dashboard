@@ -166,6 +166,10 @@ export interface PapersStatsResponse {
 
 // ===== 查询参数类型 =====
 
+export type PaperSortField = 'created_at' | 'year' | 'volume' | 'issue';
+
+export type SortOrder = 'asc' | 'desc';
+
 export interface PapersQueryParams {
   skip?: number;
   limit?: number;
@@ -174,6 +178,8 @@ export interface PapersQueryParams {
   journal_id?: number;
   batch_id?: string;
   search?: string;
+  sort_by?: PaperSortField;
+  sort_order?: SortOrder;
 }
 
 // ===== 提示词模板类型 =====
@@ -210,12 +216,34 @@ export interface UserConfig {
 
 // ===== 期卷号统计类型 =====
 
+// 期号统计项
+export interface IssueStatItem {
+  issue: string;   // 期号
+  count: number;   // 论文数量
+}
+
+// 卷号统计项
+export interface VolumeStatItem {
+  volume: string;              // 卷号
+  count: number;               // 该卷论文总数
+  year: number;                // 年份
+  issues: IssueStatItem[];     // 该卷包含的期号列表
+}
+
+// 覆盖项（按年份分组）
+export interface CoverageItem {
+  volume: string;  // 卷号
+  issue: string;   // 期号
+  count: number;   // 论文数量
+}
+
 export interface VolumeStats {
   journal_id: number;
   journal_name: string;
-  total_papers: number;            // 总论文数
-  volumes: Record<string, number>; // 每个卷号的论文数统计 { '41': 30, '42': 70 }
-  issues: Record<string, number>;  // 每个期号的论文数统计 { '6': 30, '7': 70 }
+  total_papers: number;           // 总论文数
+  volumes: VolumeStatItem[];       // 卷号列表（含期号）
+  issues: IssueStatItem[];         // 所有期号列表（扁平）
+  coverage_by_year: Record<number, CoverageItem[]>;  // 按年份分组的卷期覆盖
   latest_volume: string | null;    // 最新卷号
   latest_issue: string | null;     // 最新期号
   total_volumes: number;           // 总卷数（去重）

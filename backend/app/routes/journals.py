@@ -43,16 +43,16 @@ def calculate_journal_stats(db: Session, journal_name: str) -> Dict[str, int]:
     Returns:
         统计字典包含: reference_count, target_count, total_count
     """
-    # 统计作为参考期刊的次数
+    # 统计作为参考期刊的次数（大小写不敏感）
     reference_count = (
-        db.query(Idea).filter(Idea.reference_journal == journal_name).count() +
-        db.query(ResearchProject).filter(ResearchProject.reference_journal == journal_name).count()
+        db.query(Idea).filter(func.lower(Idea.reference_journal) == func.lower(journal_name)).count() +
+        db.query(ResearchProject).filter(func.lower(ResearchProject.reference_journal) == func.lower(journal_name)).count()
     )
 
-    # 统计作为拟投稿期刊的次数
+    # 统计作为拟投稿期刊的次数（大小写不敏感）
     target_count = (
-        db.query(Idea).filter(Idea.target_journal == journal_name).count() +
-        db.query(ResearchProject).filter(ResearchProject.target_journal == journal_name).count()
+        db.query(Idea).filter(func.lower(Idea.target_journal) == func.lower(journal_name)).count() +
+        db.query(ResearchProject).filter(func.lower(ResearchProject.target_journal) == func.lower(journal_name)).count()
     )
 
     return {
@@ -693,17 +693,21 @@ async def batch_import_journals(
 
         for journal_data in journals:
             try:
-                # 检查期刊是否已存在
-                existing = db.query(Journal).filter(Journal.name == journal_data.name).first()
+                # 格式化期刊名称为 Title Case（防止大小写重复）
+                formatted_name = to_title_case(journal_data.name.strip())
+
+                # 使用格式化后的名称检查期刊是否已存在
+                existing = db.query(Journal).filter(Journal.name == formatted_name).first()
                 if existing:
                     skipped_journals.append({
-                        "name": journal_data.name,
+                        "name": journal_data.name,  # 保留原始名称用于日志
                         "reason": "期刊名称已存在"
                     })
                     continue
 
-                # 创建期刊
-                new_journal = Journal(**journal_data.model_dump())
+                # 创建期刊，使用格式化后的名称
+                journal_dict = journal_data.model_dump(exclude={'name'})
+                new_journal = Journal(name=formatted_name, **journal_dict)
                 db.add(new_journal)
                 imported_count += 1
 
@@ -741,9 +745,11 @@ async def get_journal_papers(
     status: Optional[str] = None,
     year: Optional[int] = None,
     search: Optional[str] = None,
+    sort_by: Optional[str] = None,
+    sort_order: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
-    """获取指定期刊下的论文列表"""
+    """获取指定期刊下的论文列表，支持筛选、搜索和排序"""
     # 验证期刊存在
     journal = db.query(Journal).filter(Journal.id == journal_id).first()
     if not journal:
@@ -773,8 +779,24 @@ async def get_journal_papers(
     # 获取总数
     total = query.count()
 
-    # 按创建时间倒序
-    query = query.order_by(Paper.created_at.desc())
+    # 排序映射
+    sort_mapping = {
+        'created_at': Paper.created_at,
+        'year': Paper.year,
+        'volume': Paper.volume,
+        'issue': Paper.issue,
+    }
+
+    # 应用排序
+    if sort_by and sort_by in sort_mapping:
+        order_column = sort_mapping[sort_by]
+        if sort_order == 'desc':
+            query = query.order_by(order_column.desc())
+        else:
+            query = query.order_by(order_column.asc())
+    else:
+        # 默认按创建时间倒序
+        query = query.order_by(Paper.created_at.desc())
 
     papers = query.offset(skip).limit(limit).all()
 
@@ -1002,6 +1024,7 @@ async def get_journal_volume_stats(
     - latest_issue: 最新期号
     - total_volumes: 总卷数
     - total_issues: 总期数
+    - coverage_by_year: 按年份分组的卷期覆盖数据（v3.7新增）
     """
     try:
         # 验证期刊存在
@@ -1013,26 +1036,42 @@ async def get_journal_volume_stats(
         papers = db.query(Paper).filter(Paper.journal_id == journal_id).all()
 
         # 统计卷号和期号
-        volumes = {}
-        issues = {}
+        volumes = {}  # {volume: {count, year, issues: {issue: count}}}
+        issues = {}  # {issue: count}
         latest_volume = None
         latest_issue = None
 
         for paper in papers:
+            # 获取论文年份（用于分组）
+            paper_year = paper.year if paper.year else 2024
+
             # 统计卷号
             if paper.volume:
+                if paper.volume not in volumes:
+                    volumes[paper.volume] = {"count": 0, "issues": {}, "year": paper_year}
+                volumes[paper.volume]["count"] += 1
+
+                # 使用论文的实际年份（多卷号可能对应不同年份，取最新）
+                if paper_year > volumes[paper.volume]["year"]:
+                    volumes[paper.volume]["year"] = paper_year
+
                 try:
                     vol_num = int(paper.volume)
-                    volumes[paper.volume] = volumes.get(paper.volume, 0) + 1
                     if latest_volume is None or vol_num > int(latest_volume or 0):
                         latest_volume = paper.volume
                 except ValueError:
-                    # 卷号不是纯数字，直接使用字符串比较
-                    volumes[paper.volume] = volumes.get(paper.volume, 0) + 1
+                    # 卷号不是纯数字，使用字符串比较
                     if latest_volume is None or paper.volume > (latest_volume or ""):
                         latest_volume = paper.volume
 
-            # 统计期号
+            # 统计期号（按卷期关联）
+            if paper.volume and paper.issue:
+                if paper.volume in volumes:
+                    if paper.issue not in volumes[paper.volume]["issues"]:
+                        volumes[paper.volume]["issues"][paper.issue] = 0
+                    volumes[paper.volume]["issues"][paper.issue] += 1
+
+            # 统计独立期号
             if paper.issue:
                 try:
                     issue_num = int(paper.issue)
@@ -1044,21 +1083,55 @@ async def get_journal_volume_stats(
                     if latest_issue is None or paper.issue > (latest_issue or ""):
                         latest_issue = paper.issue
 
+        # 构建按年份分组的卷期覆盖数据
+        coverage_by_year = {}
+        for vol_str, vol_data in volumes.items():
+            year = vol_data.get("year", 2024)
+
+            if year not in coverage_by_year:
+                coverage_by_year[year] = []
+
+            # 添加该卷的所有期号
+            for issue, count in vol_data.get("issues", {}).items():
+                coverage_by_year[year].append({
+                    "volume": vol_str,
+                    "issue": issue,
+                    "count": count
+                })
+
+        # 按年份排序（降序）
+        sorted_coverage = dict(sorted(coverage_by_year.items(), reverse=True))
+
         # 计算总卷数和总期数（去重）
         total_volumes = len(volumes)
         total_issues = len(issues)
+
+        # 格式化volumes为前端需要的格式
+        formatted_volumes = []
+        for vol, data in volumes.items():
+            issue_list = [{"issue": i, "count": c} for i, c in data.get("issues", {}).items()]
+            formatted_volumes.append({
+                "volume": vol,
+                "count": data["count"],
+                "year": data.get("year", 2024),
+                "issues": issue_list
+            })
+
+        # 格式化issues
+        formatted_issues = [{"issue": i, "count": c} for i, c in issues.items()]
 
         return success_response(data={
             "journal_id": journal_id,
             "journal_name": journal.name,
             "total_papers": len(papers),
-            "volumes": volumes,
-            "issues": issues,
+            "volumes": formatted_volumes,
+            "issues": formatted_issues,
             "latest_volume": latest_volume,
             "latest_issue": latest_issue,
             "total_volumes": total_volumes,
             "total_issues": total_issues,
-            # 数据库字段（v3.6）
+            "coverage_by_year": sorted_coverage,
+            # 数据库字段（v3.6）- 保留用于对比
             "db_latest_volume": journal.latest_volume,
             "db_latest_issue": journal.latest_issue,
             "db_paper_count": journal.paper_count

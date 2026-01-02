@@ -1,6 +1,6 @@
 /**
  * 论文列表Tab组件
- * 显示所有论文，支持按期刊、标签、状态筛选
+ * 显示所有论文，支持按期刊、标签、状态筛选，支持排序
  */
 import React, { useState, useMemo } from 'react';
 import {
@@ -28,10 +28,10 @@ import {
   UploadOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import { paperApi, journalApi, tagApi } from '../services/apiOptimized';
-import { Paper, PaperStatus } from '../types/papers';
+import { Paper, PaperStatus, PaperSortField, SortOrder } from '../types/papers';
 import { Journal } from '../types/journals';
 import type { Tag as TagType } from '../types/journals';
 import {
@@ -68,6 +68,8 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
   const [tagFilter, setTagFilter] = useState<number[]>([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [sortBy, setSortBy] = useState<PaperSortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<SortOrder | undefined>(undefined);
 
   // 列可见性管理
   const { visibleColumns, setVisibleColumns } = useColumnVisibility(
@@ -95,7 +97,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     isLoading,
     refetch,
   } = useQuery<{ items: Paper[]; total: number; page: number; page_size: number }>({
-    queryKey: ['papers', searchText, currentPage, pageSize, statusFilter, journalFilter, tagFilter],
+    queryKey: ['papers', searchText, currentPage, pageSize, statusFilter, journalFilter, tagFilter, sortBy, sortOrder],
     queryFn: () => {
       const params: {
         skip?: number;
@@ -104,6 +106,8 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
         status?: PaperStatus;
         tag_ids?: string;
         journal_id?: number;
+        sort_by?: PaperSortField;
+        sort_order?: SortOrder;
       } = {
         skip: (currentPage - 1) * pageSize,
         limit: pageSize,
@@ -115,6 +119,8 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       if (journalFilter.length === 1) {
         params.journal_id = journalFilter[0] as number;
       }
+      if (sortBy) params.sort_by = sortBy;
+      if (sortOrder) params.sort_order = sortOrder;
       return paperApi.getPapers(params);
     },
   });
@@ -227,6 +233,19 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
   // 获取可选列定义
   const optionalColumnDefs = useMemo(() => createOptionalColumnDefinitions(), []);
 
+  // 处理Table排序变化
+  const handleTableChange: TableProps<Paper>['onChange'] = (_pagination, _filters, sorter) => {
+    if (sorter && !Array.isArray(sorter)) {
+      const field = sorter.field as PaperSortField;
+      const order = sorter.order === 'ascend' ? 'asc' : sorter.order === 'descend' ? 'desc' : undefined;
+      setSortBy(field);
+      setSortOrder(order);
+    } else {
+      setSortBy(undefined);
+      setSortOrder(undefined);
+    }
+  };
+
   // 动态列配置
   const columns: ColumnsType<Paper> = useMemo(() => {
     const result: ColumnsType<Paper> = [];
@@ -254,6 +273,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       dataIndex: 'year',
       key: 'year',
       width: 80,
+      sorter: true,
       render: (year: number | null) => year ?? '-',
     });
 
@@ -273,6 +293,20 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       },
     });
 
+    // 导入日期列 - 始终显示
+    result.push({
+      title: '导入日期',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 110,
+      sorter: true,
+      render: (date: string) => {
+        if (!date) return '-';
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      },
+    });
+
     // PapersListTab 特有列
     if (visibleColumns.includes('migration_potential')) {
       result.push(optionalColumnDefs.migration_potential);
@@ -285,6 +319,14 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     // 可选列
     if (visibleColumns.includes('authors')) {
       result.push(optionalColumnDefs.authors);
+    }
+
+    if (visibleColumns.includes('volume')) {
+      result.push(optionalColumnDefs.volume);
+    }
+
+    if (visibleColumns.includes('issue')) {
+      result.push(optionalColumnDefs.issue);
     }
 
     if (visibleColumns.includes('abstract')) {
@@ -451,6 +493,7 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
           selectedRowKeys,
           onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as number[]),
         }}
+        onChange={handleTableChange}
         pagination={{
           current: currentPage,
           pageSize: pageSize,

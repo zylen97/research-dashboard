@@ -1,6 +1,6 @@
 /**
  * 期刊论文Tab组件
- * 显示期刊下的论文列表
+ * 显示期刊下的论文列表，支持排序
  */
 import React, { useState, useMemo } from 'react';
 import {
@@ -24,10 +24,10 @@ import {
   RocketOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { ColumnsType } from 'antd/es/table';
+import type { ColumnsType, TableProps } from 'antd/es/table';
 
 import { journalApi, paperApi } from '../services/apiOptimized';
-import { Paper } from '../types/papers';
+import { Paper, PaperSortField, SortOrder } from '../types/papers';
 import {
   AVAILABLE_COLUMNS,
   COLUMN_VISIBILITY_KEYS,
@@ -55,6 +55,8 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | undefined>();
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
+  const [sortBy, setSortBy] = useState<PaperSortField | undefined>(undefined);
+  const [sortOrder, setSortOrder] = useState<SortOrder | undefined>(undefined);
 
   // 列可见性管理
   const { visibleColumns, setVisibleColumns } = useColumnVisibility(
@@ -68,14 +70,23 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
     isLoading,
     refetch,
   } = useQuery<{ items: Paper[]; total: number; page: number; page_size: number }>({
-    queryKey: ['journal-papers', journalId, searchText, currentPage, pageSize, statusFilter],
+    queryKey: ['journal-papers', journalId, searchText, currentPage, pageSize, statusFilter, sortBy, sortOrder],
     queryFn: () => {
-      const params: { skip?: number; limit?: number; search?: string; status?: string } = {
+      const params: {
+        skip?: number;
+        limit?: number;
+        search?: string;
+        status?: string;
+        sort_by?: PaperSortField;
+        sort_order?: SortOrder;
+      } = {
         skip: (currentPage - 1) * pageSize,
         limit: pageSize,
       };
       if (searchText) params.search = searchText;
       if (statusFilter) params.status = statusFilter;
+      if (sortBy) params.sort_by = sortBy;
+      if (sortOrder) params.sort_order = sortOrder;
       return journalApi.getJournalPapers(journalId, params);
     },
   });
@@ -149,6 +160,19 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
   // 获取可选列定义
   const optionalColumnDefs = useMemo(() => createOptionalColumnDefinitions(), []);
 
+  // 处理Table排序变化
+  const handleTableChange: TableProps<Paper>['onChange'] = (_pagination, _filters, sorter) => {
+    if (sorter && !Array.isArray(sorter)) {
+      const field = sorter.field as PaperSortField;
+      const order = sorter.order === 'ascend' ? 'asc' : sorter.order === 'descend' ? 'desc' : undefined;
+      setSortBy(field);
+      setSortOrder(order);
+    } else {
+      setSortBy(undefined);
+      setSortOrder(undefined);
+    }
+  };
+
   // 动态列配置
   const columns: ColumnsType<Paper> = useMemo(() => {
     const result: ColumnsType<Paper> = [];
@@ -167,12 +191,42 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
       result.push(optionalColumnDefs.authors);
     }
 
+    // 可选列 - 卷期（带排序）
+    if (visibleColumns.includes('volume')) {
+      result.push({
+        ...optionalColumnDefs.volume,
+        sorter: true,
+      });
+    }
+
+    if (visibleColumns.includes('issue')) {
+      result.push({
+        ...optionalColumnDefs.issue,
+        sorter: true,
+      });
+    }
+
     result.push({
       title: '年份',
       dataIndex: 'year',
       key: 'year',
       width: 80,
+      sorter: true,
       render: (year: number | null) => year ?? '-',
+    });
+
+    // 导入日期列 - 始终显示
+    result.push({
+      title: '导入日期',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 110,
+      sorter: true,
+      render: (date: string) => {
+        if (!date) return '-';
+        const d = new Date(date);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      },
     });
 
     result.push({
@@ -331,6 +385,7 @@ const JournalPapersTab: React.FC<JournalPapersTabProps> = ({ journalId, journalN
         rowKey="id"
         loading={isLoading}
         scroll={{ x: 1000 }}
+        onChange={handleTableChange}
         rowSelection={{
           selectedRowKeys,
           onChange: (selectedKeys) => setSelectedRowKeys(selectedKeys as number[]),

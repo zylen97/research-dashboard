@@ -25,9 +25,9 @@ import {
   UserConfig, VolumeStats
 } from '../types/papers';
 import { AIConfig, AIConfigUpdate, AITestRequest, AITestResponse as AIConfigTestResponse } from '../types/ai';
-import { handleListResponse } from '../utils/dataFormatters';
 import { errorInterceptorOptimized } from '../utils/errorHandlerOptimized';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
+import { handleListResponse } from '../utils/dataFormatters';
 import { API_CONFIG } from '../config/api';
 import { ENV } from '../config/environment';
 
@@ -91,8 +91,9 @@ export const collaboratorApi = {
   
   // 额外的方法
   getCollaboratorProjects: async (id: number): Promise<ResearchProject[]> => {
-    const response = await api.get(`/collaborators/${id}/projects`);
-    return handleListResponse<ResearchProject>(response, 'API.getCollaboratorProjects');
+    const { data } = await api.get(`/api/collaborators/${id}/projects`);
+    // 响应拦截器已确保返回数组
+    return (data || []) as ResearchProject[];
   },
 
   uploadCollaboratorsFile: (file: File): Promise<FileUploadResponse> => {
@@ -562,8 +563,8 @@ export const userConfigApi = {
 // 期卷号统计API
 export const volumeStatsApi = {
   // 获取期刊期卷号统计
-  getVolumeStats: (journalId: number): Promise<{ data: VolumeStats }> =>
-    api.get(`/journals/${journalId}/volume-stats`),
+  getVolumeStats: (journalId: number): Promise<VolumeStats> =>
+    api.get(`/api/journals/${journalId}/volume-stats`),
 };
 
 // AI配置管理API
