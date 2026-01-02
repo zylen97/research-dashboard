@@ -4,7 +4,7 @@
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status, UploadFile, File
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, func
 from typing import List, Optional, Dict, Any
 from datetime import datetime
@@ -234,7 +234,8 @@ async def get_journals(
     - search: 搜索关键词（匹配期刊名称）
     """
     try:
-        query = db.query(Journal)
+        # 使用joinedload预加载tags关系，确保序列化时包含标签数据
+        query = db.query(Journal).options(joinedload(Journal.tags))
 
         # 标签筛选（支持多个标签）
         if tag_ids:
@@ -360,7 +361,8 @@ async def get_journal(
 ):
     """获取单个期刊详情（含统计信息和论文统计）"""
     try:
-        journal = journal_crud.get(db, id=journal_id)
+        # 使用joinedload预加载tags关系
+        journal = db.query(Journal).options(joinedload(Journal.tags)).filter(Journal.id == journal_id).first()
         if not journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
@@ -408,8 +410,8 @@ async def update_journal(
 ):
     """更新期刊信息"""
     try:
-        # 检查期刊是否存在
-        db_journal = db.query(Journal).filter(Journal.id == journal_id).first()
+        # 检查期刊是否存在（预加载tags）
+        db_journal = db.query(Journal).options(joinedload(Journal.tags)).filter(Journal.id == journal_id).first()
         if not db_journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
@@ -464,7 +466,11 @@ async def update_journal(
                 setattr(db_journal, field, value)
 
         db.commit()
+
+        # 重新加载期刊对象（包含tags）
         db.refresh(db_journal)
+        # 需要重新预加载tags，因为refresh会清除关系
+        db_journal = db.query(Journal).options(joinedload(Journal.tags)).filter(Journal.id == journal_id).first()
 
         # 记录审计日志
         try:

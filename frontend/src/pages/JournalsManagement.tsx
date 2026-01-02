@@ -349,11 +349,15 @@ const JournalsManagement: React.FC = () => {
                           </Text>
 
                           {/* 标签 */}
-                          {journal.tags?.map((tag) => (
-                            <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
-                              {tag.name}
-                            </Tag>
-                          ))}
+                          {(!journal.tags || journal.tags.length === 0) ? (
+                            <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
+                          ) : (
+                            journal.tags.map((tag) => (
+                              <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
+                                {tag.name}
+                              </Tag>
+                            ))
+                          )}
 
                           {/* 统计信息 - 使用更紧凑的格式 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
@@ -902,11 +906,15 @@ const JournalsManagement: React.FC = () => {
                           </Text>
 
                           {/* 标签 */}
-                          {journal.tags?.map((tag) => (
-                            <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
-                              {tag.name}
-                            </Tag>
-                          ))}
+                          {(!journal.tags || journal.tags.length === 0) ? (
+                            <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
+                          ) : (
+                            journal.tags.map((tag) => (
+                              <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
+                                {tag.name}
+                              </Tag>
+                            ))
+                          )}
 
                           {/* 统计信息 - 使用更紧凑的格式 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
