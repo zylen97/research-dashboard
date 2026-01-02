@@ -4,7 +4,7 @@
 
 set -e
 
-PROJECT_ROOT="/Users/zylen/Library/CloudStorage/OneDrive-个人/04-Coding/_research/research-dashboard"
+PROJECT_ROOT="/Users/zylen/Library/CloudStorage/Dropbox/04-Coding/_research/research-dashboard"
 cd "$PROJECT_ROOT"
 
 # 颜色定义

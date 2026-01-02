@@ -58,7 +58,7 @@ export function useTableCRUD<T, CreateDTO, UpdateDTO>(
   });
 
   const deleteMutation = useMutation({
-    mutationFn: apiModule.delete,
+    mutationFn: (id: number) => apiModule.delete(id),
     onSuccess: () => {
       showSuccess('delete', options?.deleteSuccessMessage);
       queryClient.invalidateQueries({ queryKey: [queryKey] });

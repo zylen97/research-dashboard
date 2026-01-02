@@ -29,7 +29,6 @@ import {
   BulbOutlined,
   SwapRightOutlined,
   ReloadOutlined,
-  FileTextOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
@@ -114,7 +113,7 @@ const IdeasManagementPage: React.FC = () => {
 
   // 删除Idea
   const deleteMutation = useMutation({
-    mutationFn: ideasApi.delete,
+    mutationFn: (id: number) => ideasApi.delete(id),
     onSuccess: () => {
       message.success('Ideas删除成功');
       queryClient.invalidateQueries({ queryKey: ['ideas'] });
@@ -306,30 +305,6 @@ const IdeasManagementPage: React.FC = () => {
           <span>{text || '-'}</span>
         </Tooltip>
       ),
-    },
-    {
-      title: '来源论文',
-      key: 'source_paper',
-      width: 120,
-      render: (_, record: Idea) => {
-        if (record.source_paper_id) {
-          return (
-            <Tooltip title="查看来源论文">
-              <Link
-                href={`/papers`}
-                onClick={(e) => {
-                  e.preventDefault();
-                  // 可以在这里添加跳转到论文详情页面的逻辑
-                }}
-                style={{ cursor: 'pointer' }}
-              >
-                <FileTextOutlined style={{ fontSize: 16 }} />
-              </Link>
-            </Tooltip>
-          );
-        }
-        return '-';
-      },
     },
     {
       title: '负责人',

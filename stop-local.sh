@@ -2,7 +2,7 @@
 
 # 停止本地服务脚本
 
-PROJECT_ROOT="/Users/zylen/Library/CloudStorage/OneDrive-个人/04-Coding/_research/research-dashboard"
+PROJECT_ROOT="/Users/zylen/Library/CloudStorage/Dropbox/04-Coding/_research/research-dashboard"
 cd "$PROJECT_ROOT"
 
 GREEN='\033[0;32m'
