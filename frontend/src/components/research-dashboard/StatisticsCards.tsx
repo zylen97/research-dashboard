@@ -16,22 +16,24 @@ interface StatisticsCardsProps {
 
 interface ProjectStats {
   total: number;
-  active: number;
-  completed: number;
-  paused: number;
+  writing: number;
+  reviewing: number;
+  revising: number;
+  published: number;
   todo: number;
 }
 
-const StatisticsCards: React.FC<StatisticsCardsProps> = ({ 
-  projects, 
-  getProjectTodoStatus 
+const StatisticsCards: React.FC<StatisticsCardsProps> = ({
+  projects,
+  getProjectTodoStatus
 }) => {
   // 计算统计数据
   const stats: ProjectStats = {
     total: projects.length,
-    active: projects.filter(p => p.status === 'active').length,
-    completed: projects.filter(p => p.status === 'completed').length,
-    paused: projects.filter(p => p.status === 'paused').length,
+    writing: projects.filter(p => p.status === 'writing').length,
+    reviewing: projects.filter(p => p.status === 'reviewing').length,
+    revising: projects.filter(p => p.status === 'revising').length,
+    published: projects.filter(p => p.status === 'published').length,
     todo: projects.filter(p => getProjectTodoStatus(p).is_todo).length,
   };
 
@@ -49,46 +51,61 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
       </Col>
 
       {/* 进行中 - 600字重 + 2px边框 + 符号 */}
-      <Col xs={12} sm={8} lg={5}>
+      <Col xs={12} sm={8} lg={4}>
         <Card
           className="statistics-card hover-shadow"
           style={{ border: `2px solid ${GRAYSCALE_SYSTEM.secondary}` }}
         >
           <Statistic
             title="进行中"
-            value={stats.active}
+            value={stats.writing}
             valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
             prefix={<span style={{ fontSize: 14, marginRight: 4 }}>●</span>}
           />
         </Card>
       </Col>
 
-      {/* 已完成 - 400字重 + 浅灰背景 + 符号 */}
-      <Col xs={12} sm={8} lg={5}>
+      {/* 审稿中 - 500字重 + 2px点线边框 + 符号 */}
+      <Col xs={12} sm={8} lg={4}>
+        <Card
+          className="statistics-card hover-shadow"
+          style={{ border: `2px dotted ${GRAYSCALE_SYSTEM.secondary}` }}
+        >
+          <Statistic
+            title="审稿中"
+            value={stats.reviewing}
+            valueStyle={{ fontWeight: 500, color: GRAYSCALE_SYSTEM.secondary }}
+            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>⋯</span>}
+          />
+        </Card>
+      </Col>
+
+      {/* 返修中 - 600字重 + 2px边框 + 符号 */}
+      <Col xs={12} sm={8} lg={4}>
+        <Card
+          className="statistics-card hover-shadow"
+          style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
+        >
+          <Statistic
+            title="返修中"
+            value={stats.revising}
+            valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
+            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>◆</span>}
+          />
+        </Card>
+      </Col>
+
+      {/* 已发表 - 400字重 + 浅灰背景 + 符号 */}
+      <Col xs={12} sm={8} lg={4}>
         <Card
           className="statistics-card hover-shadow"
           style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
         >
           <Statistic
-            title="已完成"
-            value={stats.completed}
+            title="已发表"
+            value={stats.published}
             valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary }}
             prefix={<span style={{ fontSize: 14, marginRight: 4 }}>○</span>}
-          />
-        </Card>
-      </Col>
-
-      {/* 暂停 - 400字重 + 2px虚线边框 + 符号 */}
-      <Col xs={12} sm={8} lg={5}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ border: `2px dashed ${GRAYSCALE_SYSTEM.tertiary}` }}
-        >
-          <Statistic
-            title="暂停"
-            value={stats.paused}
-            valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.tertiary }}
-            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>‖</span>}
           />
         </Card>
       </Col>

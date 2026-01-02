@@ -29,11 +29,11 @@ class Collaborator(CollaboratorBase):
 # Research Project 枚举类型
 class ProjectStatus(str, Enum):
     """项目状态枚举"""
-    ACTIVE = "active"          # 撰写中
-    PAUSED = "paused"          # 暂停
+    WRITING = "writing"        # 撰写中
     REVIEWING = "reviewing"    # 审稿中
     REVISING = "revising"      # 返修中
-    COMPLETED = "completed"    # 已发表
+    PUBLISHED = "published"    # 已发表
+    COMPLETED = "completed"    # 已完成（但未发表）
 
 # Research Project schemas
 class ResearchProjectBase(BaseModel):
@@ -44,7 +44,7 @@ class ResearchProjectBase(BaseModel):
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
     target_journal: Optional[str] = Field(None, description="投稿期刊")
-    status: ProjectStatus = Field(default=ProjectStatus.ACTIVE, description="项目状态")
+    status: ProjectStatus = Field(default=ProjectStatus.WRITING, description="项目状态")
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     is_todo: bool = Field(default=False)

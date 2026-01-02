@@ -163,13 +163,13 @@ const CollaboratorManagement: React.FC = () => {
       const projects = await collaboratorApi.getCollaboratorProjects(collaborator.id);
       // 响应拦截器已确保返回数组
       const projectList = projects || [];
-      const activeProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'active', 'activeProjects');
-      const completedProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'completed', 'completedProjects');
+      const activeProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'writing', 'activeProjects');
+      const publishedProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'published', 'publishedProjects');
 
       const dependencies = {
         total_projects: projectList.length,
         active_projects: activeProjects.length,
-        completed_projects: completedProjects.length,
+        published_projects: publishedProjects.length,
       };
 
       const can_soft_delete = true;

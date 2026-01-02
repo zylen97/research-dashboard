@@ -76,7 +76,7 @@ class ResearchProject(Base):
     reference_paper = Column(Text, nullable=True)  # 参考论文
     reference_journal = Column(Text, nullable=True)  # 参考期刊
     target_journal = Column(Text, nullable=True)  # 投稿期刊
-    status = Column(String(50), default="active", nullable=False)  # active, completed, paused, reviewing, revising
+    status = Column(String(50), default="writing", nullable=False)  # writing, reviewing, revising, published, completed
     progress = Column(Float, default=0.0)  # 进展百分比
     start_date = Column(DateTime, default=datetime.utcnow)
     expected_completion = Column(DateTime)

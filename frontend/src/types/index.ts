@@ -154,7 +154,7 @@ export interface FileUploadResponse {
 
 // 常量
 export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as const;
-export const PROJECT_STATUSES = ['active', 'completed', 'paused', 'reviewing', 'revising'] as const;
+export const PROJECT_STATUSES = ['writing', 'reviewing', 'revising', 'published', 'completed'] as const;
 
 
 // 已移除认证系统 - User, UserLogin, AuthToken, AuthContextType 已删除

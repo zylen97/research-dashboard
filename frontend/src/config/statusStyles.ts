@@ -4,7 +4,7 @@
  */
 
 export const STATUS_VISUAL_SYSTEM = {
-  active: {
+  writing: {
     // 撰写中 - 中等强调
     textWeight: 500,
     borderStyle: 'solid' as const,
@@ -13,28 +13,6 @@ export const STATUS_VISUAL_SYSTEM = {
     backgroundColor: '#FFFFFF',
     icon: '●', // 实心圆
     label: '撰写中',
-  },
-
-  completed: {
-    // 已完成 - 弱化
-    textWeight: 400,
-    borderStyle: 'solid' as const,
-    borderWidth: '1px',
-    borderColor: '#D9D9D9',
-    backgroundColor: '#F5F5F5',
-    icon: '○', // 空心圆
-    label: '已发表',
-  },
-
-  paused: {
-    // 暂停 - 虚线边框
-    textWeight: 400,
-    borderStyle: 'dashed' as const,
-    borderWidth: '2px',
-    borderColor: '#8C8C8C',
-    backgroundColor: '#FFFFFF',
-    icon: '‖', // 双竖线
-    label: '暂停',
   },
 
   reviewing: {
@@ -57,6 +35,28 @@ export const STATUS_VISUAL_SYSTEM = {
     backgroundColor: '#FAFAFA',
     icon: '◆', // 实心菱形
     label: '返修中',
+  },
+
+  published: {
+    // 已发表 - 弱化
+    textWeight: 400,
+    borderStyle: 'solid' as const,
+    borderWidth: '1px',
+    borderColor: '#D9D9D9',
+    backgroundColor: '#F5F5F5',
+    icon: '○', // 空心圆
+    label: '已发表',
+  },
+
+  completed: {
+    // 已完成（但未发表） - 最弱化
+    textWeight: 400,
+    borderStyle: 'solid' as const,
+    borderWidth: '1px',
+    borderColor: '#E8E8E8',
+    backgroundColor: '#FAFAFA',
+    icon: '✓', // 对勾
+    label: '已完成',
   },
 } as const;
 
