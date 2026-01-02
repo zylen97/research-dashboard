@@ -19,7 +19,6 @@ import {
   UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useQuery } from '@tanstack/react-query';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import {
   StatisticsCards,

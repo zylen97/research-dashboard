@@ -3,12 +3,10 @@
  * 支持通过标签筛选期刊，可清空选择
  */
 import React, { useState } from 'react';
-import { Select, Space, Typography } from 'antd';
+import { Select, Space } from 'antd';
 import { useQuery } from '@tanstack/react-query';
 import { journalApi, tagApi } from '../services/apiOptimized';
-import type { Journal, Tag } from '../types';
-
-const { Text } = Typography;
+import type { Journal, Tag } from '../types/journals';
 
 interface JournalSelectProps {
   value?: string;
@@ -72,8 +70,8 @@ const JournalSelect: React.FC<JournalSelectProps> = ({
         showSearch
         style={{ width: '100%' }}
         placeholder={placeholder}
-        value={value}
-        onChange={onChange}
+        value={value || null}
+        onChange={(val) => onChange?.(val ?? undefined)}
         allowClear={allowClear}
         loading={journalsLoading}
         disabled={disabled}
@@ -81,7 +79,7 @@ const JournalSelect: React.FC<JournalSelectProps> = ({
           const journalName = option?.label?.toString() || '';
           return journalName.toLowerCase().includes(input.toLowerCase());
         }}
-        options={journals.map((journal) => ({
+        options={journals.map((journal: Journal) => ({
           label: journal.name,
           value: journal.name,
         }))}
