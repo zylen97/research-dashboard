@@ -398,14 +398,13 @@ const ResearchDashboard: React.FC = () => {
             name="status"
             label="项目状态"
             rules={[{ required: true, message: '请选择项目状态' }]}
-            initialValue="active"
+            initialValue="writing"
           >
             <Select placeholder="请选择项目状态">
-              <Select.Option value="active">撰写中</Select.Option>
-              <Select.Option value="paused">暂停</Select.Option>
-              <Select.Option value="reviewing">审稿中</Select.Option>
-              <Select.Option value="revising">返修中</Select.Option>
-              <Select.Option value="completed">已发表</Select.Option>
+              <Select.Option value="writing">撰写中</Select.Option>
+              <Select.Option value="submitting">投稿中</Select.Option>
+              <Select.Option value="published">已发表</Select.Option>
+              <Select.Option value="completed">已完成</Select.Option>
             </Select>
           </Form.Item>
 

@@ -4,8 +4,7 @@
  */
 import {
   EditOutlined,           // writing - 撰写中
-  FileSearchOutlined,     // reviewing - 审稿中
-  SyncOutlined,           // revising - 返修中
+  SyncOutlined,           // submitting - 投稿中
   CheckCircleOutlined,    // published - 已发表
   CheckOutlined,          // completed - 已完成（但未发表）
 } from '@ant-design/icons';
@@ -13,8 +12,7 @@ import { STATUS_VISUAL_SYSTEM } from './statusStyles';
 
 export const STATUS_ICON_MAP = {
   writing: EditOutlined,
-  reviewing: FileSearchOutlined,
-  revising: SyncOutlined,
+  submitting: SyncOutlined,
   published: CheckCircleOutlined,
   completed: CheckOutlined,
 } as const;

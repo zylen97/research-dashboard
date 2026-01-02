@@ -17,8 +17,7 @@ interface StatisticsCardsProps {
 interface ProjectStats {
   total: number;
   writing: number;
-  reviewing: number;
-  revising: number;
+  submitting: number;
   published: number;
   todo: number;
 }
@@ -31,8 +30,7 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
   const stats: ProjectStats = {
     total: projects.length,
     writing: projects.filter(p => p.status === 'writing').length,
-    reviewing: projects.filter(p => p.status === 'reviewing').length,
-    revising: projects.filter(p => p.status === 'revising').length,
+    submitting: projects.filter(p => p.status === 'submitting').length,
     published: projects.filter(p => p.status === 'published').length,
     todo: projects.filter(p => getProjectTodoStatus(p).is_todo).length,
   };
@@ -65,30 +63,15 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         </Card>
       </Col>
 
-      {/* 审稿中 - 500字重 + 2px点线边框 + 符号 */}
-      <Col xs={12} sm={8} lg={4}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ border: `2px dotted ${GRAYSCALE_SYSTEM.secondary}` }}
-        >
-          <Statistic
-            title="审稿中"
-            value={stats.reviewing}
-            valueStyle={{ fontWeight: 500, color: GRAYSCALE_SYSTEM.secondary }}
-            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>⋯</span>}
-          />
-        </Card>
-      </Col>
-
-      {/* 返修中 - 600字重 + 2px边框 + 符号 */}
+      {/* 投稿中 - 600字重 + 2px边框 + 符号 */}
       <Col xs={12} sm={8} lg={4}>
         <Card
           className="statistics-card hover-shadow"
           style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
         >
           <Statistic
-            title="返修中"
-            value={stats.revising}
+            title="投稿中"
+            value={stats.submitting}
             valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
             prefix={<span style={{ fontSize: 14, marginRight: 4 }}>◆</span>}
           />

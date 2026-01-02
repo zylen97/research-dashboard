@@ -22,7 +22,7 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 logger = setup_migration_logging()
 
 # 迁移版本号
-MIGRATION_VERSION = "v4.0_redesign_project_statuses"
+MIGRATION_VERSION = "v4.1_merge_reviewing_revising_to_submitting"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,18 +85,18 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 重新设计项目状态系统')
+        logger.info('🎯 目标: 合并"审稿中"和"返修中"为"投稿中"状态')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v4.0迁移任务：项目状态重新设计
+        # 🔧 v4.1迁移任务：合并审稿中和返修中为投稿中
         # 变更：
-        # 1. active → writing (撰写中)
-        # 2. completed → published (已发表)
-        # 3. paused → writing (删除暂停状态)
-        # 4. reviewing → reviewing (保持)
-        # 5. revising → revising (保持)
-        # 6. 新增 completed (已完成但未发表)
+        # 1. reviewing → submitting (审稿中 → 投稿中)
+        # 2. revising → submitting (返修中 → 投稿中)
+        # 3. writing → writing (保持)
+        # 4. published → published (保持)
+        # 5. completed → completed (保持)
+        # 最终状态系统：writing, submitting, published, completed
         # ===========================================
 
         # ============================
@@ -133,51 +133,48 @@ def run_migration():
         # ============================
         logger.info("\n📋 Step 3: 执行状态迁移")
 
-        # active → writing
+        # reviewing → submitting
         cursor.execute("""
             UPDATE research_projects
-            SET status = 'writing'
-            WHERE status = 'active'
+            SET status = 'submitting'
+            WHERE status = 'reviewing'
         """)
-        active_count = cursor.rowcount
-        logger.info(f"   ✅ active → writing: {active_count} 个项目")
+        reviewing_count = cursor.rowcount
+        logger.info(f"   ✅ reviewing → submitting: {reviewing_count} 个项目")
 
-        # completed → published
+        # revising → submitting
         cursor.execute("""
             UPDATE research_projects
-            SET status = 'published'
-            WHERE status = 'completed'
+            SET status = 'submitting'
+            WHERE status = 'revising'
         """)
-        completed_count = cursor.rowcount
-        logger.info(f"   ✅ completed → published: {completed_count} 个项目")
+        revising_count = cursor.rowcount
+        logger.info(f"   ✅ revising → submitting: {revising_count} 个项目")
 
-        # paused → writing (删除暂停状态，转为撰写中)
-        cursor.execute("""
-            UPDATE research_projects
-            SET status = 'writing'
-            WHERE status = 'paused'
-        """)
-        paused_count = cursor.rowcount
-        logger.info(f"   ✅ paused → writing: {paused_count} 个项目")
+        # writing 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'writing'")
+        writing_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ writing 保持不变: {writing_count} 个项目")
 
-        # reviewing 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'reviewing'")
-        reviewing_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ reviewing 保持不变: {reviewing_count} 个项目")
+        # published 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'published'")
+        published_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ published 保持不变: {published_count} 个项目")
 
-        # revising 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'revising'")
-        revising_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ revising 保持不变: {revising_count} 个项目")
+        # completed 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'completed'")
+        completed_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ completed 保持不变: {completed_count} 个项目")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v4.0 项目状态重新设计迁移完成！")
-        logger.info(f"✅ 状态迁移: active→writing, completed→published, paused→writing")
-        logger.info(f"✅ 保持不变: reviewing, revising")
+        logger.info("🎉 v4.1 状态简化迁移完成！")
+        logger.info(f"✅ 状态合并: reviewing→submitting, revising→submitting")
+        logger.info(f"✅ 保持不变: writing, published, completed")
+        logger.info(f"✅ 最终状态系统: writing, submitting, published, completed")
         logger.info("=" * 70)
 
         conn.close()

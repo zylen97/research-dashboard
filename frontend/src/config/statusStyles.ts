@@ -1,6 +1,6 @@
 /**
  * 状态视觉系统 - 包豪斯风格
- * 通过符号、字重、边框样式区分5种项目状态
+ * 通过符号、字重、边框样式区分4种项目状态
  */
 
 export const STATUS_VISUAL_SYSTEM = {
@@ -15,26 +15,15 @@ export const STATUS_VISUAL_SYSTEM = {
     label: '撰写中',
   },
 
-  reviewing: {
-    // 审稿中 - 点线边框
-    textWeight: 500,
-    borderStyle: 'dotted' as const,
-    borderWidth: '2px',
-    borderColor: '#737373',
-    backgroundColor: '#FFFFFF',
-    icon: '⋯', // 省略号
-    label: '审稿中',
-  },
-
-  revising: {
-    // 返修中 - 强调（最深灰度）
+  submitting: {
+    // 投稿中 - 强调（最深灰度，使用原返修中样式）
     textWeight: 600,
     borderStyle: 'solid' as const,
     borderWidth: '2px',
     borderColor: '#333333',
     backgroundColor: '#FAFAFA',
     icon: '◆', // 实心菱形
-    label: '返修中',
+    label: '投稿中',
   },
 
   published: {

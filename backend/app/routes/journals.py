@@ -66,11 +66,11 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     """
     批量计算多个期刊的引用统计（避免N+1查询）
 
-    新计数设计：
+    新计数设计（v4.1）：
     - 参考：Idea + ResearchProject 中 reference_journal 的合计
     - idea中：Idea 中 target_journal 的合计
     - 撰写中：ResearchProject 状态为"writing"且 target_journal 的合计
-    - 投稿中：ResearchProject 状态为"reviewing"+"revising"且 target_journal 的合计
+    - 投稿中：ResearchProject 状态为"submitting"且 target_journal 的合计
     - 已发表：ResearchProject 状态为"published"且 target_journal 的合计
     - 论文：Papers 中该期刊的论文总数
 
@@ -121,23 +121,12 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
         .all()
     )
 
-    # ResearchProject中的目标期刊 - 审稿中
-    reviewing_target_counts = (
+    # ResearchProject中的目标期刊 - 投稿中
+    submitting_target_counts = (
         db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
         .filter(
             ResearchProject.target_journal.in_(journal_names),
-            ResearchProject.status == 'reviewing'
-        )
-        .group_by(ResearchProject.target_journal)
-        .all()
-    )
-
-    # ResearchProject中的目标期刊 - 返修中
-    revising_target_counts = (
-        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
-        .filter(
-            ResearchProject.target_journal.in_(journal_names),
-            ResearchProject.status == 'revising'
+            ResearchProject.status == 'submitting'
         )
         .group_by(ResearchProject.target_journal)
         .all()
@@ -181,8 +170,7 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
 
     # 各状态项目计数
     writing_dict = {name: count for name, count in writing_target_counts}
-    reviewing_dict = {name: count for name, count in reviewing_target_counts}
-    revising_dict = {name: count for name, count in revising_target_counts}
+    submitting_dict = {name: count for name, count in submitting_target_counts}
     published_dict = {name: count for name, count in published_target_counts}
 
     # 论文计数（按journal_id转换为journal_name）
@@ -199,9 +187,7 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
             "reference_count": ref_counts.get(name, 0),
             "idea_target_count": idea_target_dict.get(name, 0),
             "writing_count": writing_dict.get(name, 0),
-            "reviewing_count": reviewing_dict.get(name, 0),
-            "revising_count": revising_dict.get(name, 0),
-            "submitting_count": reviewing_dict.get(name, 0) + revising_dict.get(name, 0),  # 投稿中 = 审稿中 + 返修中
+            "submitting_count": submitting_dict.get(name, 0),
             "published_count": published_dict.get(name, 0),
             "paper_count": paper_dict.get(name, 0),
         }
