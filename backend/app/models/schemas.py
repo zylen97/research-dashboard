@@ -32,7 +32,6 @@ class ProjectStatus(str, Enum):
     WRITING = "writing"        # 撰写中
     SUBMITTING = "submitting"  # 投稿中
     PUBLISHED = "published"    # 已发表
-    COMPLETED = "completed"    # 已完成（但未发表）
 
 # Research Project schemas
 class ResearchProjectBase(BaseModel):
@@ -43,18 +42,18 @@ class ResearchProjectBase(BaseModel):
     reference_paper: Optional[str] = Field(None, max_length=1000, description="参考论文")
     reference_journal: Optional[str] = Field(None, max_length=200, description="参考期刊")
     target_journal: Optional[str] = Field(None, description="投稿期刊")
-    status: ProjectStatus = Field(default=ProjectStatus.WRITING, description="项目状态: writing/submitting/published/completed")
+    status: ProjectStatus = Field(default=ProjectStatus.WRITING, description="项目状态: writing/submitting/published")
     progress: float = Field(default=0.0, ge=0, le=100)
     expected_completion: Optional[datetime] = None
     is_todo: bool = Field(default=False)
 
     # 我的身份字段
-    my_role: str = Field(default='other_author', description="我的身份: first_author/corresponding_author/other_author")
+    my_role: str = Field(default='first_author', description="我的身份: first_author/corresponding_author")
 
     @field_validator('my_role')
     @classmethod
     def validate_my_role(cls, v):
-        valid_roles = ['first_author', 'corresponding_author', 'other_author']
+        valid_roles = ['first_author', 'corresponding_author']
         if v not in valid_roles:
             raise ValueError(f'my_role must be one of {valid_roles}')
         return v
@@ -86,7 +85,7 @@ class ResearchProjectUpdate(BaseModel):
     @classmethod
     def validate_my_role(cls, v):
         if v is not None:
-            valid_roles = ['first_author', 'corresponding_author', 'other_author']
+            valid_roles = ['first_author', 'corresponding_author']
             if v not in valid_roles:
                 raise ValueError(f'my_role must be one of {valid_roles}')
         return v

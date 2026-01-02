@@ -16,7 +16,6 @@ import {
   ReloadOutlined,
   CrownOutlined,
   MailOutlined,
-  UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { ResearchProject, ResearchProjectCreate } from '../types';
@@ -119,7 +118,7 @@ const ResearchDashboard: React.FC = () => {
       ...project,
       collaborator_ids: Array.isArray(project.collaborators) ? project.collaborators.map(c => c.id) : [],
       start_date: project.start_date ? dayjs(project.start_date) : null,
-      my_role: project.my_role || 'other_author',
+      my_role: project.my_role || 'first_author',
     });
     setIsModalVisible(true);
   };
@@ -141,8 +140,8 @@ const ResearchDashboard: React.FC = () => {
     if (showArchived) {
       return sortedProjects;
     }
-    // 默认过滤掉存档（completed）状态的项目
-    return sortedProjects.filter((project: ResearchProject) => project.status !== 'completed');
+    // 默认过滤掉已发表状态的项目
+    return sortedProjects.filter((project: ResearchProject) => project.status !== 'published');
   }, [sortedProjects, showArchived]);
 
   // 处理显示存档开关变化
@@ -404,7 +403,6 @@ const ResearchDashboard: React.FC = () => {
               <Select.Option value="writing">撰写中</Select.Option>
               <Select.Option value="submitting">投稿中</Select.Option>
               <Select.Option value="published">已发表</Select.Option>
-              <Select.Option value="completed">已完成</Select.Option>
             </Select>
           </Form.Item>
 
@@ -413,7 +411,7 @@ const ResearchDashboard: React.FC = () => {
             name="my_role"
             label="我的身份"
             rules={[{ required: true, message: '请选择您在此项目中的身份' }]}
-            initialValue="other_author"
+            initialValue="first_author"
           >
             <Select placeholder="选择您的身份">
               <Select.Option value="first_author">
@@ -421,9 +419,6 @@ const ResearchDashboard: React.FC = () => {
               </Select.Option>
               <Select.Option value="corresponding_author">
                 <span style={{ fontWeight: 'bold', color: '#666666' }}><MailOutlined style={{ marginRight: 8 }} />通讯作者</span>
-              </Select.Option>
-              <Select.Option value="other_author">
-                <span style={{ color: '#999999' }}><UserOutlined style={{ marginRight: 8 }} />其他作者</span>
               </Select.Option>
             </Select>
           </Form.Item>

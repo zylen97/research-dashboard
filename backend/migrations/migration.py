@@ -22,7 +22,7 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 logger = setup_migration_logging()
 
 # 迁移版本号
-MIGRATION_VERSION = "v4.1_merge_reviewing_revising_to_submitting"
+MIGRATION_VERSION = "v4.3_remove_completed_status_and_other_author"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,18 +85,16 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 合并"审稿中"和"返修中"为"投稿中"状态')
+        logger.info('🎯 目标: 删除completed状态和other_author角色')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v4.1迁移任务：合并审稿中和返修中为投稿中
+        # 🔧 v4.3迁移任务：简化状态和角色
         # 变更：
-        # 1. reviewing → submitting (审稿中 → 投稿中)
-        # 2. revising → submitting (返修中 → 投稿中)
-        # 3. writing → writing (保持)
-        # 4. published → published (保持)
-        # 5. completed → completed (保持)
-        # 最终状态系统：writing, submitting, published, completed
+        # 1. completed → published (已完成 → 已发表)
+        # 2. other_author → first_author (其他作者 → 第一作者)
+        # 最终状态系统：writing, submitting, published
+        # 最终角色系统：first_author, corresponding_author
         # ===========================================
 
         # ============================
@@ -112,10 +110,11 @@ def run_migration():
             logger.info("   ✅ research_projects表存在")
 
         # ============================
-        # Step 2: 统计当前各状态的项目数量
+        # Step 2: 统计当前数据分布
         # ============================
-        logger.info("\n📋 Step 2: 统计当前各状态的项目数量")
+        logger.info("\n📋 Step 2: 统计当前数据分布")
 
+        # 状态分布
         cursor.execute("""
             SELECT status, COUNT(*) as count
             FROM research_projects
@@ -123,58 +122,85 @@ def run_migration():
             ORDER BY status
         """)
         status_counts = cursor.fetchall()
-
         logger.info("   当前项目状态分布:")
         for status, count in status_counts:
             logger.info(f"     - {status}: {count} 个")
+
+        # 角色分布
+        cursor.execute("""
+            SELECT my_role, COUNT(*) as count
+            FROM research_projects
+            GROUP BY my_role
+            ORDER BY my_role
+        """)
+        role_counts = cursor.fetchall()
+        logger.info("   当前角色分布:")
+        for role, count in role_counts:
+            logger.info(f"     - {role}: {count} 个")
 
         # ============================
         # Step 3: 执行状态迁移
         # ============================
         logger.info("\n📋 Step 3: 执行状态迁移")
 
-        # reviewing → submitting
+        # completed → published
         cursor.execute("""
             UPDATE research_projects
-            SET status = 'submitting'
-            WHERE status = 'reviewing'
+            SET status = 'published'
+            WHERE status = 'completed'
         """)
-        reviewing_count = cursor.rowcount
-        logger.info(f"   ✅ reviewing → submitting: {reviewing_count} 个项目")
-
-        # revising → submitting
-        cursor.execute("""
-            UPDATE research_projects
-            SET status = 'submitting'
-            WHERE status = 'revising'
-        """)
-        revising_count = cursor.rowcount
-        logger.info(f"   ✅ revising → submitting: {revising_count} 个项目")
+        completed_count = cursor.rowcount
+        logger.info(f"   ✅ completed → published: {completed_count} 个项目")
 
         # writing 保持不变
         cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'writing'")
         writing_count = cursor.fetchone()[0]
         logger.info(f"   ✓ writing 保持不变: {writing_count} 个项目")
 
-        # published 保持不变
+        # submitting 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'submitting'")
+        submitting_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ submitting 保持不变: {submitting_count} 个项目")
+
+        # published 保持不变（包括刚转换的）
         cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'published'")
         published_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ published 保持不变: {published_count} 个项目")
+        logger.info(f"   ✓ published 总数: {published_count} 个项目")
 
-        # completed 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'completed'")
-        completed_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ completed 保持不变: {completed_count} 个项目")
+        # ============================
+        # Step 4: 执行角色迁移
+        # ============================
+        logger.info("\n📋 Step 4: 执行角色迁移")
+
+        # other_author → first_author
+        cursor.execute("""
+            UPDATE research_projects
+            SET my_role = 'first_author'
+            WHERE my_role = 'other_author'
+        """)
+        other_author_count = cursor.rowcount
+        logger.info(f"   ✅ other_author → first_author: {other_author_count} 个项目")
+
+        # first_author 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE my_role = 'first_author'")
+        first_author_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ first_author 总数: {first_author_count} 个项目")
+
+        # corresponding_author 保持不变
+        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE my_role = 'corresponding_author'")
+        corresponding_author_count = cursor.fetchone()[0]
+        logger.info(f"   ✓ corresponding_author 保持不变: {corresponding_author_count} 个项目")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v4.1 状态简化迁移完成！")
-        logger.info(f"✅ 状态合并: reviewing→submitting, revising→submitting")
-        logger.info(f"✅ 保持不变: writing, published, completed")
-        logger.info(f"✅ 最终状态系统: writing, submitting, published, completed")
+        logger.info("🎉 v4.3 简化迁移完成！")
+        logger.info(f"✅ 状态简化: completed→published")
+        logger.info(f"✅ 角色简化: other_author→first_author")
+        logger.info(f"✅ 最终状态系统: writing, submitting, published")
+        logger.info(f"✅ 最终角色系统: first_author, corresponding_author")
         logger.info("=" * 70)
 
         conn.close()

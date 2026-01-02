@@ -36,17 +36,6 @@ export const STATUS_VISUAL_SYSTEM = {
     icon: '○', // 空心圆
     label: '已发表',
   },
-
-  completed: {
-    // 已完成（但未发表） - 最弱化
-    textWeight: 400,
-    borderStyle: 'solid' as const,
-    borderWidth: '1px',
-    borderColor: '#E8E8E8',
-    backgroundColor: '#FAFAFA',
-    icon: '✓', // 对勾
-    label: '已完成',
-  },
 } as const;
 
 // TypeScript类型辅助

@@ -53,8 +53,8 @@ class DataValidator:
 
         # 检查参与的项目
         projects = collaborator.projects
-        active_projects = [p for p in projects if p.status in ["active", "reviewing", "revising"]]
-        completed_projects = [p for p in projects if p.status == "completed"]
+        active_projects = [p for p in projects if p.status in ["writing", "submitting"]]
+        published_projects = [p for p in projects if p.status == "published"]
 
         # 检查交流日志
         communication_logs = db.query(CommunicationLog).filter(
@@ -72,8 +72,8 @@ class DataValidator:
         if active_projects:
             warnings.append(f"合作者仍参与 {len(active_projects)} 个活跃项目")
             can_hard_delete = False  # 有活跃项目，不能永久删除
-        if completed_projects:
-            warnings.append(f"合作者参与了 {len(completed_projects)} 个已完成项目")
+        if published_projects:
+            warnings.append(f"合作者参与了 {len(published_projects)} 个已发表项目")
         if communication_logs > 0:
             warnings.append(f"合作者有 {communication_logs} 条交流记录")
             can_hard_delete = False  # 有交流记录，不能永久删除（外键约束）
@@ -87,7 +87,7 @@ class DataValidator:
             "collaborator_name": collaborator.name,
             "projects_count": len(projects),
             "active_projects_count": len(active_projects),
-            "completed_projects_count": len(completed_projects),
+            "published_projects_count": len(published_projects),
             "project_titles": [p.title for p in projects],
             "communication_logs_count": communication_logs,
             "responsible_ideas_count": len(responsible_ideas),
@@ -159,8 +159,8 @@ class DataValidator:
             ).first()
             if not project:
                 errors.append("指定的项目不存在")
-            elif project.status == "completed":
-                warnings.append("项目已完成，仍在添加交流日志")
+            elif project.status == "published":
+                warnings.append("项目已发表，仍在添加交流日志")
         
         # 验证标题
         if not log_data.get("title"):

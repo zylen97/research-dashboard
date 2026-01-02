@@ -1,6 +1,6 @@
 /**
  * 身份视觉系统 - 包豪斯风格
- * 通过符号、字重、字号、下划线区分3种作者角色
+ * 通过符号、字重、字号、下划线区分2种作者角色
  */
 
 export const ROLE_VISUAL_SYSTEM = {
@@ -26,18 +26,6 @@ export const ROLE_VISUAL_SYSTEM = {
     label: '通讯作者',
     borderBottom: '1px solid #666666',
     color: '#666666',
-  },
-
-  other_author: {
-    // 其他作者 - 常规
-    fontSize: '12px',
-    fontWeight: 400,
-    textTransform: 'none' as const,
-    letterSpacing: 'normal',
-    icon: '·',
-    label: '其他作者',
-    borderBottom: 'none',
-    color: '#999999',
   },
 } as const;
 

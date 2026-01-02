@@ -70,7 +70,7 @@ export interface ResearchProject {
   todo_marked_at?: string; // 标记为待办事项的时间
 
   // 我的身份字段
-  my_role: 'first_author' | 'corresponding_author' | 'other_author';
+  my_role: 'first_author' | 'corresponding_author';
 }
 
 export interface ResearchProjectCreate {
@@ -89,7 +89,7 @@ export interface ResearchProjectCreate {
   start_date?: string; // 项目开始时间
 
   // 我的身份字段（必填）
-  my_role: 'first_author' | 'corresponding_author' | 'other_author';
+  my_role: 'first_author' | 'corresponding_author';
 }
 
 export interface ResearchProjectUpdate {
@@ -108,7 +108,7 @@ export interface ResearchProjectUpdate {
   start_date?: string; // 项目开始时间
 
   // 我的身份字段（更新时可选）
-  my_role?: 'first_author' | 'corresponding_author' | 'other_author';
+  my_role?: 'first_author' | 'corresponding_author';
 }
 
 
@@ -154,7 +154,7 @@ export interface FileUploadResponse {
 
 // 常量
 export const COMMUNICATION_TYPES = ['meeting', 'email', 'chat', 'phone'] as const;
-export const PROJECT_STATUSES = ['writing', 'submitting', 'published', 'completed'] as const;
+export const PROJECT_STATUSES = ['writing', 'submitting', 'published'] as const;
 
 
 // 已移除认证系统 - User, UserLogin, AuthToken, AuthContextType 已删除

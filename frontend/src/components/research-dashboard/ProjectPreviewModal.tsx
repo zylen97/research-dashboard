@@ -148,7 +148,7 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
           <UserOutlined /> 我的身份
         </Title>
         {(() => {
-          const config = ROLE_VISUAL_SYSTEM[project.my_role as keyof typeof ROLE_VISUAL_SYSTEM] || ROLE_VISUAL_SYSTEM.other_author;
+          const config = ROLE_VISUAL_SYSTEM[project.my_role as keyof typeof ROLE_VISUAL_SYSTEM] || ROLE_VISUAL_SYSTEM.first_author;
 
           return (
             <span

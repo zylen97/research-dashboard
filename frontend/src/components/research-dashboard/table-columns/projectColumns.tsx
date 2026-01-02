@@ -183,7 +183,7 @@ export const createProjectColumns = ({
     key: 'my_role',
     width: 120,
     render: (my_role: string) => {
-      return <RoleIcon role={(my_role as AuthorRole) || 'other_author'} showLabel={true} />;
+      return <RoleIcon role={(my_role as AuthorRole) || 'first_author'} showLabel={true} />;
     },
   },
   ...(isMobile ? [] : [{
