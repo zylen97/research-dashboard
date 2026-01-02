@@ -266,17 +266,9 @@ async def get_journals(
         for journal in journals:
             stats = all_stats.get(journal.name, {
                 "reference_count": 0,
-                "idea_target_count": 0,
-                "writing_count": 0,
-                "submitting_count": 0,
-                "published_count": 0,
                 "paper_count": 0,
             })
             journal.reference_count = stats["reference_count"]
-            journal.idea_target_count = stats["idea_target_count"]
-            journal.writing_count = stats["writing_count"]
-            journal.submitting_count = stats["submitting_count"]
-            journal.published_count = stats["published_count"]
             journal.paper_count = stats["paper_count"]
 
         return journals
