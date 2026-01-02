@@ -197,9 +197,9 @@ const CollaboratorManagement: React.FC = () => {
                       参与 {dependencies.active_projects} 个进行中的项目
                     </li>
                   )}
-                  {dependencies.completed_projects > 0 && (
+                  {dependencies.published_projects > 0 && (
                     <li>
-                      参与 {dependencies.completed_projects} 个已完成的项目
+                      参与 {dependencies.published_projects} 个已发表的项目
                     </li>
                   )}
                 </ul>

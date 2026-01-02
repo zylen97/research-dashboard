@@ -65,7 +65,6 @@ export interface Journal extends JournalBase {
   // v3.6 期卷号跟踪字段
   latest_volume?: string | null;   // 最新卷号
   latest_issue?: string | null;    // 最新期号
-  paper_count?: number;            // 论文总数（数据库字段）
 }
 
 // 创建期刊请求
