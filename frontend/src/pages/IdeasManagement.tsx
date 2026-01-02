@@ -40,7 +40,6 @@ import { PageContainer, PageHeader, TableContainer } from '../styles/components'
 const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
-const { Link } = Typography;
 
 const IdeasManagementPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
