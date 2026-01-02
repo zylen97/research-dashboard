@@ -142,7 +142,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           collapsed={collapsed}
           style={{
             background: colorBgContainer,
-            boxShadow: '2px 0 8px 0 rgba(29,35,41,.05)',
           }}
         >
           {renderMenuContent()}
@@ -195,8 +194,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
             padding: mobileView ? 12 : 16,
             minHeight: 'calc(100vh - 64px)',
             background: colorBgContainer,
-            borderRadius: mobileView ? '4px' : '8px',
-            boxShadow: '0 1px 2px 0 rgba(0,0,0,0.03), 0 1px 6px -1px rgba(0,0,0,0.02), 0 2px 4px 0 rgba(0,0,0,0.02)',
+            borderRadius: '4px',
             overflow: 'auto',
             position: 'relative',
           }}

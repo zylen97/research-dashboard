@@ -149,3 +149,36 @@ export interface JournalBatchImportResponse {
     error: string;
   }>;
 }
+
+// ===== 卷期统计类型定义 =====
+
+// 期号统计项
+export interface IssueStatItem {
+  issue: string;   // 期号
+  count: number;   // 论文数量
+}
+
+// 卷号统计项
+export interface VolumeStatItem {
+  volume: string;              // 卷号
+  count: number;               // 该卷论文总数
+  year: number;                // 年份
+  issues: IssueStatItem[];     // 该卷包含的期号列表
+}
+
+// 覆盖项（按年份分组）
+export interface CoverageItem {
+  volume: string;  // 卷号
+  issue: string;   // 期号
+  count: number;   // 论文数量
+}
+
+// 期刊卷期统计（volume-stats接口返回）
+export interface JournalVolumeStats {
+  total_papers: number;                    // 总论文数
+  volumes: VolumeStatItem[];                // 卷号列表（含期号）
+  issues: IssueStatItem[];                  // 所有期号列表（扁平）
+  coverage_by_year: Record<number, CoverageItem[]>;  // 按年份分组的卷期覆盖
+  latest_volume?: string;                   // 最新卷号
+  latest_issue?: string;                    // 最新期号
+}

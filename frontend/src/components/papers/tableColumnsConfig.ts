@@ -58,6 +58,20 @@ export const AVAILABLE_COLUMNS: ColumnConfig[] = [
     defaultVisible: false,
   },
   {
+    key: 'volume',
+    title: '卷',
+    width: 60,
+    category: 'optional',
+    defaultVisible: false,
+  },
+  {
+    key: 'issue',
+    title: '期',
+    width: 60,
+    category: 'optional',
+    defaultVisible: false,
+  },
+  {
     key: 'abstract',
     title: '摘要',
     width: 300,

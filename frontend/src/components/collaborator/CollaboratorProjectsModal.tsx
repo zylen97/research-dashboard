@@ -6,7 +6,6 @@ import { collaboratorApi } from '../../services/apiOptimized';
 import { Collaborator, ResearchProject } from '../../types';
 import { createProjectColumns } from '../research-dashboard/table-columns/projectColumns';
 import ProjectPreviewModal from '../research-dashboard/ProjectPreviewModal';
-import { handleListResponse } from '../../utils/dataFormatters';
 
 const { Text } = Typography;
 
@@ -37,7 +36,8 @@ export const CollaboratorProjectsModal: React.FC<CollaboratorProjectsModalProps>
     enabled: visible && !!collaborator,
   });
 
-  const projects = handleListResponse<ResearchProject>(projectsData, 'CollaboratorProjectsModal.projects');
+  // 响应拦截器已确保返回数组
+  const projects = (projectsData || []) as ResearchProject[];
 
   // 项目操作配置（简化版 - 只保留预览功能）
   const projectActions = useMemo(() => ({

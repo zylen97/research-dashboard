@@ -21,12 +21,12 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { collaboratorApi, researchApi, ideasApi } from '../services/apiOptimized';
 import { useTableCRUD } from '../hooks/useTableCRUDOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
-import { Collaborator, CollaboratorCreate } from '../types';
+import { Collaborator, CollaboratorCreate, ResearchProject, Idea } from '../types';
 import CollaboratorStatistics from '../components/collaborator/CollaboratorStatistics';
 import CollaboratorFormModal from '../components/collaborator/CollaboratorFormModal';
 import CollaboratorProjectsModal from '../components/collaborator/CollaboratorProjectsModal';
 import { safeForEach, safeFilter } from '../utils/arrayHelpers';
-import { handleListResponse } from '../utils/dataFormatters';
+import { PageHeader } from '../styles/components';
 
 const { Title, Text } = Typography;
 
@@ -58,8 +58,8 @@ const CollaboratorManagement: React.FC = () => {
     queryFn: () => collaboratorApi.getList(),
   });
 
-  // 确保 collaborators 始终是数组
-  const collaborators = handleListResponse<Collaborator>(collaboratorsData, 'CollaboratorManagement.collaborators');
+  // 响应拦截器已确保返回数组
+  const collaborators = (collaboratorsData || []) as Collaborator[];
 
   // 获取研究项目数据
   const { data: projectsData } = useQuery({
@@ -67,14 +67,14 @@ const CollaboratorManagement: React.FC = () => {
     queryFn: () => researchApi.getList(),
   });
 
-  const projects = handleListResponse(projectsData, 'CollaboratorManagement.projects');
+  const projects = (projectsData || []) as ResearchProject[];
 
   // 获取Ideas数据
   const { data: ideasData } = useQuery({
     queryKey: ['ideas'],
     queryFn: () => ideasApi.getList(),
   });
-  const ideas = handleListResponse(ideasData, 'CollaboratorManagement.ideas');
+  const ideas = (ideasData || []) as Idea[];
 
   // 使用优化的CRUD Hook
   const {
@@ -109,8 +109,8 @@ const CollaboratorManagement: React.FC = () => {
 
   // 排序合作者（按项目数降序，项目数相同时按名字排序）
   const sortedCollaborators = useMemo(() => {
-    const safeCollaborators = handleListResponse<Collaborator>(collaborators, 'CollaboratorManagement.sortedCollaborators');
-    return [...safeCollaborators].sort((a, b) => {
+    // collaborators已经由响应拦截器处理为数组
+    return [...collaborators].sort((a, b) => {
       if (!a || !b) return 0;
 
       // 1. 按项目数降序
@@ -160,13 +160,14 @@ const CollaboratorManagement: React.FC = () => {
   const handleDelete = withErrorHandler(
     async (collaborator: Collaborator) => {
       // 先检查是否有关联的项目
-      const projectsResponse = await collaboratorApi.getCollaboratorProjects(collaborator.id);
-      const projects = handleListResponse(projectsResponse, 'getCollaboratorProjects');
-      const activeProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'active', 'activeProjects');
-      const completedProjects = safeFilter(projects, (p: any) => p && typeof p === 'object' && p.status === 'completed', 'completedProjects');
+      const projects = await collaboratorApi.getCollaboratorProjects(collaborator.id);
+      // 响应拦截器已确保返回数组
+      const projectList = projects || [];
+      const activeProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'active', 'activeProjects');
+      const completedProjects = safeFilter(projectList, (p: any) => p && typeof p === 'object' && p.status === 'completed', 'completedProjects');
 
       const dependencies = {
-        total_projects: projects.length,
+        total_projects: projectList.length,
         active_projects: activeProjects.length,
         completed_projects: completedProjects.length,
       };
@@ -292,40 +293,44 @@ const CollaboratorManagement: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '16px' }}>
+    <div>
       {/* 页面标题和操作按钮 */}
-      <div className="page-header">
-        <div>
-          <Title level={3} style={{ margin: 0 }}>
-            <TeamOutlined style={{ marginRight: 8 }} />
-            合作者管理
-          </Title>
-          <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
-            管理所有合作者信息
-          </Text>
-        </div>
-        <Space>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => refetch()}
-            loading={isLoading}
-            title="刷新数据"
-          >
-            刷新
-          </Button>
-          <Button
-            type="default"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingCollaborator(null);
-              form.resetFields();
-              setIsModalVisible(true);
-            }}
-          >
-            新增合作者
-          </Button>
-        </Space>
-      </div>
+      <PageHeader
+        title={
+          <>
+            <Title level={3} style={{ margin: 0 }}>
+              <TeamOutlined style={{ marginRight: 8 }} />
+              合作者管理
+            </Title>
+            <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
+              管理所有合作者信息
+            </Text>
+          </>
+        }
+        actions={
+          <Space>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              loading={isLoading}
+              title="刷新数据"
+            >
+              刷新
+            </Button>
+            <Button
+              type="default"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingCollaborator(null);
+                form.resetFields();
+                setIsModalVisible(true);
+              }}
+            >
+              新增合作者
+            </Button>
+          </Space>
+        }
+      />
 
       {/* 统计卡片 */}
       <CollaboratorStatistics collaborators={collaborators} />

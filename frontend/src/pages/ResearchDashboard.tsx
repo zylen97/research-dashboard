@@ -14,6 +14,9 @@ import {
   PlusOutlined,
   ProjectOutlined,
   ReloadOutlined,
+  CrownOutlined,
+  MailOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useQuery } from '@tanstack/react-query';
@@ -28,6 +31,7 @@ import {
 import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
 import { journalApi } from '../services/apiOptimized';
+import { PageHeader } from '../styles/components';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -195,7 +199,7 @@ const ResearchDashboard: React.FC = () => {
   });
 
   return (
-    <div style={{ padding: '16px' }}>
+    <div>
       {/* 待办项目行样式和可调整列宽样式 */}
       <style>{`
         .todo-project-row {
@@ -228,43 +232,47 @@ const ResearchDashboard: React.FC = () => {
       `}</style>
 
       {/* 页面标题和操作按钮 */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-          <Title level={3} style={{ margin: 0 }}>
-            <ProjectOutlined style={{ marginRight: 8 }} />
-            研究看板
-          </Title>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span>显示已发表项目</span>
-            <Switch
-              checked={showArchived}
-              onChange={handleShowArchivedChange}
-              size="small"
-            />
+      <PageHeader
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+            <Title level={3} style={{ margin: 0 }}>
+              <ProjectOutlined style={{ marginRight: 8 }} />
+              研究看板
+            </Title>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>显示已发表项目</span>
+              <Switch
+                checked={showArchived}
+                onChange={handleShowArchivedChange}
+                size="small"
+              />
+            </div>
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button 
-            icon={<ReloadOutlined />}
-            onClick={() => refetch()}
-            loading={isLoading}
-            title="刷新数据"
-          >
-            刷新
-          </Button>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingProject(null);
-              form.resetFields();
-              setIsModalVisible(true);
-            }}
-          >
-            新建项目
-          </Button>
-        </div>
-      </div>
+        }
+        actions={
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => refetch()}
+              loading={isLoading}
+              title="刷新数据"
+            >
+              刷新
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingProject(null);
+                form.resetFields();
+                setIsModalVisible(true);
+              }}
+            >
+              新建项目
+            </Button>
+          </div>
+        }
+      />
 
       {/* 统计卡片 */}
       <StatisticsCards 
@@ -315,7 +323,7 @@ const ResearchDashboard: React.FC = () => {
         }}
         onOk={() => form.submit()}
         confirmLoading={isCreating || isUpdating}
-        width={600}
+        width={800}
       >
         <Form
           form={form}
@@ -447,13 +455,13 @@ const ResearchDashboard: React.FC = () => {
           >
             <Select placeholder="选择您的身份">
               <Select.Option value="first_author">
-                <span style={{ fontWeight: 'bold', color: '#333333' }}>🥇 第一作者</span>
+                <span style={{ fontWeight: 'bold', color: '#333333' }}><CrownOutlined style={{ marginRight: 8 }} />第一作者</span>
               </Select.Option>
               <Select.Option value="corresponding_author">
-                <span style={{ fontWeight: 'bold', color: '#666666' }}>✉️ 通讯作者</span>
+                <span style={{ fontWeight: 'bold', color: '#666666' }}><MailOutlined style={{ marginRight: 8 }} />通讯作者</span>
               </Select.Option>
               <Select.Option value="other_author">
-                <span style={{ color: '#999999' }}>👥 其他作者</span>
+                <span style={{ color: '#999999' }}><UserOutlined style={{ marginRight: 8 }} />其他作者</span>
               </Select.Option>
             </Select>
           </Form.Item>

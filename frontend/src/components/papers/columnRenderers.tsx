@@ -146,7 +146,7 @@ export const renderYear = (year: number | null) => {
 /**
  * 可选列的键名类型
  */
-export type OptionalColumnKey = 'authors' | 'abstract' | 'abstract_summary' | 'ai_analysis' | 'migration_potential' | 'link';
+export type OptionalColumnKey = 'authors' | 'volume' | 'issue' | 'abstract' | 'abstract_summary' | 'ai_analysis' | 'migration_potential' | 'link';
 
 /**
  * 创建可选列的列定义
@@ -161,6 +161,20 @@ export const createOptionalColumnDefinitions = (): Record<OptionalColumnKey, Exc
       width: 150,
       ellipsis: true,
       render: renderAuthors,
+    },
+    volume: {
+      title: '卷',
+      dataIndex: 'volume',
+      key: 'volume',
+      width: 60,
+      render: (volume: string | null) => volume || '-',
+    },
+    issue: {
+      title: '期',
+      dataIndex: 'issue',
+      key: 'issue',
+      width: 60,
+      render: (issue: string | null) => issue || '-',
     },
     abstract: {
       title: '摘要',

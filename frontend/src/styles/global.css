@@ -47,18 +47,18 @@
   padding: 12px;
 }
 
-/* 优化统计卡片 */
+/* 优化统计卡片 - 适度缩小以节省空间 */
 .statistics-card .ant-card-body {
-  padding: 16px;
+  padding: 12px;
 }
 
 .statistics-card .ant-statistic-title {
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-bottom: 2px;
+  font-size: 11px;
 }
 
 .statistics-card .ant-statistic-content {
-  font-size: 20px;
+  font-size: 16px;
 }
 
 /* 页面标题区域优化 */
@@ -143,7 +143,6 @@
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 2px 0 rgba(0,0,0,0.03);
 }
 
 /* 动画和过渡效果 */
@@ -259,10 +258,18 @@
 
 /* 输入框焦点效果 - 已在上方Line 184-196统一定义，此处删除重复 */
 
+/* 统一所有面板的 Content 区域留白（桌面端） */
+@media (min-width: 768px) {
+  .ant-layout-content {
+    margin: 12px !important;
+    padding: 16px !important;
+  }
+}
+
 /* 优化移动端间距 */
 @media (max-width: 576px) {
   .ant-layout-content {
-    margin: 12px 8px !important;
+    margin: 8px !important;
     padding: 12px !important;
   }
   

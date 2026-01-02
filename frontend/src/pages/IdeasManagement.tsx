@@ -74,58 +74,15 @@ const IdeasManagementPage: React.FC = () => {
     },
   });
 
-  // 强化数据验证 - 确保ideas绝对是数组，修复"q.some is not a function"错误
+  // 响应拦截器已确保返回数组
   const ideas = React.useMemo(() => {
-    console.log('[IdeasManagement] 原始数据类型:', typeof ideasData, '是否为数组:', Array.isArray(ideasData), '数据:', ideasData);
-    
-    // 多重验证确保返回数组
-    if (!ideasData) {
-      console.warn('[IdeasManagement] 数据为空，返回空数组');
-      return [];
-    }
-    
+    if (!ideasData) return [];
+    // 额外安全检查：确保是数组
     if (!Array.isArray(ideasData)) {
-      console.warn('[IdeasManagement] 接收到非数组数据，类型:', typeof ideasData, '内容:', ideasData);
-      
-      // 尝试从对象中提取数组
-      if (typeof ideasData === 'object' && ideasData !== null) {
-        // 检查是否有data字段
-        if ('data' in ideasData && Array.isArray((ideasData as any).data)) {
-          console.log('[IdeasManagement] 从.data字段提取数组');
-          return (ideasData as any).data;
-        }
-        
-        // 检查是否有items字段
-        if ('items' in ideasData && Array.isArray((ideasData as any).items)) {
-          console.log('[IdeasManagement] 从.items字段提取数组');
-          return (ideasData as any).items;
-        }
-        
-        // 如果对象可以转换为数组
-        const objectValues = Object.values(ideasData);
-        if (objectValues.length > 0 && objectValues.every(item => 
-          typeof item === 'object' && item !== null && 'id' in item
-        )) {
-          console.log('[IdeasManagement] 将对象值转换为数组');
-          return objectValues;
-        }
-      }
-      
-      console.error('[IdeasManagement] 无法将数据转换为数组，强制返回空数组');
+      console.error('[IdeasManagement] 数据不是数组:', ideasData);
       return [];
     }
-    
-    // 验证数组中的每个元素
-    const validatedArray = ideasData.filter(item => {
-      if (!item || typeof item !== 'object') {
-        console.warn('[IdeasManagement] 过滤无效项目:', item);
-        return false;
-      }
-      return true;
-    });
-    
-    console.log('[IdeasManagement] 验证后的数组长度:', validatedArray.length);
-    return validatedArray;
+    return ideasData;
   }, [ideasData]);
 
   // 创建Idea

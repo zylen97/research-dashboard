@@ -13,9 +13,7 @@ import {
   FileTextOutlined,
   ThunderboltOutlined,
 } from '@ant-design/icons';
-import { useQuery } from '@tanstack/react-query';
 
-import { userConfigApi } from '../services/apiOptimized';
 import PapersListTab from '../components/PapersListTab';
 import BatchAnalysisTab from '../components/BatchAnalysisTab';
 
@@ -24,18 +22,12 @@ const { Title } = Typography;
 const PapersManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('papers');
 
-  // 获取全局用户配置
-  const { data: userConfig } = useQuery({
-    queryKey: ['user-config'],
-    queryFn: () => userConfigApi.getConfig(),
-  });
-
   return (
-    <div style={{ padding: '16px' }}>
+    <div>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* 页面标题 */}
         <div>
-          <Title level={2} style={{ marginBottom: 8 }}>论文库</Title>
+          <Title level={3} style={{ marginBottom: 8 }}>论文库</Title>
           <Typography.Text type="secondary">
             管理和分析导入的论文文献，支持批量AI分析
           </Typography.Text>
@@ -65,11 +57,7 @@ const PapersManagement: React.FC = () => {
                     批量分析
                   </span>
                 ),
-                children: (
-                  <BatchAnalysisTab
-                    {...(userConfig?.data && { initialUserConfig: userConfig.data })}
-                  />
-                ),
+                children: <BatchAnalysisTab />,
               },
             ]}
           />

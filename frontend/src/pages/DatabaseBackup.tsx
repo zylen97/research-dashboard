@@ -16,6 +16,7 @@ import {
   Modal,
   Input,
 } from 'antd';
+import { PageHeader, TableContainer } from '../styles/components';
 import {
   DownloadOutlined,
   CloudUploadOutlined,
@@ -389,60 +390,15 @@ const DatabaseBackup: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: '24px' }}>
-      <Title level={4}>
-        <DatabaseOutlined /> 数据库备份管理
-      </Title>
-      
-      {/* 统计信息 */}
-      {stats && (
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="备份总数"
-                value={stats.total_backups}
-                suffix={`/ ${stats.max_backups}`}
-                prefix={<SaveOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="总大小"
-                value={formatSize(stats.total_size)}
-                prefix={<DatabaseOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="平均大小"
-                value={formatSize(stats.average_size)}
-                prefix={<FolderOpenOutlined />}
-              />
-            </Card>
-          </Col>
-          <Col span={6}>
-            <Card>
-              <Statistic
-                title="当前环境"
-                value={stats.current_environment}
-                valueStyle={{
-                  color: '#000000'
-                }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
-      
-      {/* 操作按钮 */}
-      <Card 
-        title="备份列表"
-        extra={
+    <div>
+      <PageHeader
+        title={
+          <Title level={3} style={{ margin: 0 }}>
+            <DatabaseOutlined style={{ marginRight: 8 }} />
+            数据库备份管理
+          </Title>
+        }
+        actions={
           <Space>
             <Button
               type="default"
@@ -460,7 +416,47 @@ const DatabaseBackup: React.FC = () => {
             </Button>
           </Space>
         }
-      >
+      />
+
+      {/* 统计信息 */}
+      {stats && (
+        <Row gutter={12} style={{ marginBottom: 16 }}>
+          <Col span={8}>
+            <Card className="statistics-card hover-shadow">
+              <Statistic
+                title="备份总数"
+                value={stats.total_backups}
+                suffix={`/ ${stats.max_backups}`}
+                prefix={<SaveOutlined />}
+                valueStyle={{ color: '#333333' }}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card className="statistics-card hover-shadow">
+              <Statistic
+                title="总大小"
+                value={formatSize(stats.total_size)}
+                prefix={<DatabaseOutlined />}
+                valueStyle={{ color: '#333333' }}
+              />
+            </Card>
+          </Col>
+          <Col span={8}>
+            <Card className="statistics-card hover-shadow">
+              <Statistic
+                title="平均大小"
+                value={formatSize(stats.average_size)}
+                prefix={<FolderOpenOutlined />}
+                valueStyle={{ color: '#333333' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* 备份列表 */}
+      <TableContainer>
         {loadingBackups ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>
             <Spin size="large" />
@@ -479,7 +475,7 @@ const DatabaseBackup: React.FC = () => {
             }}
           />
         )}
-      </Card>
+      </TableContainer>
     </div>
   );
 };

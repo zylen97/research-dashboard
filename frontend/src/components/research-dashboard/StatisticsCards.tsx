@@ -36,7 +36,7 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
   };
 
   return (
-    <Row gutter={12} style={{ marginBottom: 16 }}>
+    <Row gutter={8} style={{ marginBottom: 12 }}>
       {/* 总项目数 - 默认样式 */}
       <Col xs={12} sm={8} lg={5}>
         <Card className="statistics-card hover-shadow">

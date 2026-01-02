@@ -72,7 +72,9 @@ class ExcelImportService:
         if not journal_name or pd.isna(journal_name):
             return None
 
-        journal = db.query(Journal).filter(Journal.name == str(journal_name).strip()).first()
+        # 格式化期刊名称为 Title Case 后再查询（防止大小写不匹配导致重复）
+        formatted_name = to_title_case(str(journal_name).strip())
+        journal = db.query(Journal).filter(Journal.name == formatted_name).first()
         return journal.id if journal else None
 
     @classmethod

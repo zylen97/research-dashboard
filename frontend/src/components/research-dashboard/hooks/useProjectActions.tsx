@@ -168,7 +168,7 @@ export const useProjectActions = ({
           </ul>
           
           <p style={{ color: '#ff4d4f', marginTop: 16, fontWeight: 'bold' }}>
-            ⚠️ 此操作不可恢复！请确认是否继续。
+            此操作不可恢复！请确认是否继续。
           </p>
         </div>
       ),
