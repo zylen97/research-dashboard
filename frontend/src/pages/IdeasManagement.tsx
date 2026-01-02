@@ -33,9 +33,10 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType } from 'antd/es/table';
 
-import { ideasApi, collaboratorApi, journalApi } from '../services/apiOptimized';
+import { ideasApi, collaboratorApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 import { PageContainer, PageHeader, TableContainer } from '../styles/components';
+import JournalSelect from '../components/JournalSelect';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -52,12 +53,6 @@ const IdeasManagementPage: React.FC = () => {
   const { data: collaborators = [] } = useQuery({
     queryKey: ['collaborators'],
     queryFn: () => collaboratorApi.getList(),
-  });
-
-  // 查询期刊列表（用于期刊下拉选择器）
-  const { data: journals = [] } = useQuery({
-    queryKey: ['journals'],
-    queryFn: () => journalApi.getJournals(),
   });
 
   // 查询Ideas列表 - 使用增强的安全方法
@@ -549,21 +544,7 @@ const IdeasManagementPage: React.FC = () => {
             label="参考期刊（可选）"
             rules={[{ max: 200, message: '参考期刊不能超过200字符' }]}
           >
-            <Select
-              showSearch
-              placeholder="从期刊库选择"
-              allowClear
-              filterOption={(input, option) =>
-                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {Array.isArray(journals) && journals.map((journal: any) => (
-                <Select.Option key={journal.id} value={journal.name}>
-                  {journal.name}
-                  {journal.category && ` (${journal.category})`}
-                </Select.Option>
-              ))}
-            </Select>
+            <JournalSelect placeholder="从期刊库选择" />
           </Form.Item>
 
           <Form.Item
@@ -571,21 +552,7 @@ const IdeasManagementPage: React.FC = () => {
             label="拟投稿期刊（可选）"
             rules={[{ max: 200, message: '拟投稿期刊不能超过200字符' }]}
           >
-            <Select
-              showSearch
-              placeholder="从期刊库选择"
-              allowClear
-              filterOption={(input, option) =>
-                (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {Array.isArray(journals) && journals.map((journal: any) => (
-                <Select.Option key={journal.id} value={journal.name}>
-                  {journal.name}
-                  {journal.category && ` (${journal.category})`}
-                </Select.Option>
-              ))}
-            </Select>
+            <JournalSelect placeholder="从期刊库选择" />
           </Form.Item>
 
           <Form.Item
