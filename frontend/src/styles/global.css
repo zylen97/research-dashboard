@@ -49,16 +49,16 @@
 
 /* 优化统计卡片 - 适度缩小以节省空间 */
 .statistics-card .ant-card-body {
-  padding: 12px;
+  padding: 6px;
 }
 
 .statistics-card .ant-statistic-title {
-  margin-bottom: 2px;
-  font-size: 11px;
+  margin-bottom: 0;
+  font-size: 10px;
 }
 
 .statistics-card .ant-statistic-content {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 /* 页面标题区域优化 */

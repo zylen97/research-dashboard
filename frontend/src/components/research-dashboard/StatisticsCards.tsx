@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card, Statistic, Row, Col } from 'antd';
+import { Card, Statistic } from 'antd';
 import { FlagOutlined } from '@ant-design/icons';
 import { ResearchProject } from '../../types';
 import { GRAYSCALE_SYSTEM } from '../../config/colors';
@@ -36,78 +36,73 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
   };
 
   return (
-    <Row gutter={8} style={{ marginBottom: 12 }}>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+      gap: 8,
+      marginBottom: 12
+    }}>
       {/* 总项目数 - 默认样式 */}
-      <Col xs={12} sm={8} lg={5}>
-        <Card className="statistics-card hover-shadow">
-          <Statistic
-            title="总项目数"
-            value={stats.total}
-            valueStyle={{ fontWeight: 400 }}
-          />
-        </Card>
-      </Col>
+      <Card className="statistics-card hover-shadow">
+        <Statistic
+          title="总项目数"
+          value={stats.total}
+          valueStyle={{ fontWeight: 400 }}
+        />
+      </Card>
 
       {/* 进行中 - 600字重 + 2px边框 + 符号 */}
-      <Col xs={12} sm={8} lg={4}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ border: `2px solid ${GRAYSCALE_SYSTEM.secondary}` }}
-        >
-          <Statistic
-            title="撰写中"
-            value={stats.writing}
-            valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
-            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>●</span>}
-          />
-        </Card>
-      </Col>
+      <Card
+        className="statistics-card hover-shadow"
+        style={{ border: `2px solid ${GRAYSCALE_SYSTEM.secondary}` }}
+      >
+        <Statistic
+          title="撰写中"
+          value={stats.writing}
+          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
+          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>●</span>}
+        />
+      </Card>
 
       {/* 投稿中 - 600字重 + 2px边框 + 符号 */}
-      <Col xs={12} sm={8} lg={4}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
-        >
-          <Statistic
-            title="投稿中"
-            value={stats.submitting}
-            valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
-            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>◆</span>}
-          />
-        </Card>
-      </Col>
+      <Card
+        className="statistics-card hover-shadow"
+        style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
+      >
+        <Statistic
+          title="投稿中"
+          value={stats.submitting}
+          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
+          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>◆</span>}
+        />
+      </Card>
 
       {/* 已发表 - 400字重 + 浅灰背景 + 符号 */}
-      <Col xs={12} sm={8} lg={4}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
-        >
-          <Statistic
-            title="已发表"
-            value={stats.published}
-            valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary }}
-            prefix={<span style={{ fontSize: 14, marginRight: 4 }}>○</span>}
-          />
-        </Card>
-      </Col>
+      <Card
+        className="statistics-card hover-shadow"
+        style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
+      >
+        <Statistic
+          title="已发表"
+          value={stats.published}
+          valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary }}
+          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>○</span>}
+        />
+      </Card>
 
       {/* 待办事项 - 700字重 + 2px粗边框 + 旗帜图标 */}
-      <Col xs={12} sm={8} lg={4}>
-        <Card
-          className="statistics-card hover-shadow"
-          style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
-        >
-          <Statistic
-            title="待办事项"
-            value={stats.todo}
-            valueStyle={{ fontWeight: 700, color: GRAYSCALE_SYSTEM.primary }}
-            prefix={<FlagOutlined style={{ fontSize: 14, color: GRAYSCALE_SYSTEM.primary }} />}
-          />
-        </Card>
-      </Col>
-    </Row>
+      <Card
+        className="statistics-card hover-shadow"
+        style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
+      >
+        <Statistic
+          title="待办事项"
+          value={stats.todo}
+          valueStyle={{ fontWeight: 700, color: GRAYSCALE_SYSTEM.primary }}
+          prefix={<FlagOutlined style={{ fontSize: 14, color: GRAYSCALE_SYSTEM.primary }} />}
+        />
+      </Card>
+    </div>
   );
 };
 

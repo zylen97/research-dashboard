@@ -42,7 +42,7 @@ class BackupManager:
         # 设置备份目录（统一使用单一目录）
         self.backup_dir = self.backend_dir / "backups"
         
-        self.max_backups = 7  # 保留最近7个备份
+        self.max_backups = 5  # 保留最近5个备份
         
         # 确保备份目录存在
         self.backup_dir.mkdir(parents=True, exist_ok=True)
