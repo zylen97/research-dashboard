@@ -381,9 +381,8 @@ const ResearchDashboard: React.FC = () => {
           >
             <Select
               showSearch
-              placeholder="选择或输入期刊名称"
-              mode="tags"
-              maxCount={1}
+              placeholder="从期刊库选择"
+              allowClear
               filterOption={(input, option) =>
                 (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
@@ -403,9 +402,8 @@ const ResearchDashboard: React.FC = () => {
           >
             <Select
               showSearch
-              placeholder="选择或输入期刊名称"
-              mode="tags"
-              maxCount={1}
+              placeholder="从期刊库选择"
+              allowClear
               filterOption={(input, option) =>
                 (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
