@@ -503,6 +503,7 @@ async def delete_journal(
     删除期刊
 
     如果期刊被引用，则不允许删除，返回409错误和引用详情
+    删除期刊时会级联删除所有关联的论文
     """
     try:
         # 检查期刊是否存在
@@ -510,7 +511,7 @@ async def delete_journal(
         if not journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
-        # 检查是否被引用
+        # 检查是否被Idea/Project引用（字符串引用）
         stats = calculate_journal_stats(db, journal.name)
         if stats["total_count"] > 0:
             # 获取引用详情
@@ -532,7 +533,26 @@ async def delete_journal(
                 }
             )
 
-        # 记录审计日志（在删除前）
+        # 查询并删除所有关联的论文
+        papers = db.query(Paper).filter(Paper.journal_id == journal_id).all()
+        paper_count = len(papers)
+
+        # 为每篇论文记录审计日志并删除
+        for paper in papers:
+            old_values = AuditService.serialize_model_instance(paper)
+            try:
+                AuditService.log_delete(
+                    db,
+                    table_name="papers",
+                    record_id=paper.id,
+                    old_values=old_values,
+                    extra_info=f"Cascaded from journal deletion: {journal.name}"
+                )
+            except Exception as audit_error:
+                logger.warning(f"论文审计日志记录失败 (ID: {paper.id}): {audit_error}")
+            db.delete(paper)
+
+        # 记录期刊审计日志（在删除前）
         old_values = {
             "name": journal.name,
             "notes": journal.notes,
@@ -544,7 +564,8 @@ async def delete_journal(
                 db,
                 table_name="journals",
                 record_id=journal_id,
-                old_values=old_values
+                old_values=old_values,
+                extra_info=f"Cascaded {paper_count} papers"
             )
         except Exception as audit_error:
             logger.warning(f"审计日志记录失败: {audit_error}")
@@ -553,8 +574,9 @@ async def delete_journal(
         journal_crud.remove(db, id=journal_id)
 
         return {
-            "message": "期刊删除成功",
-            "journal_name": old_values["name"]
+            "message": "期刊及其关联论文删除成功",
+            "journal_name": old_values["name"],
+            "deleted_papers_count": paper_count
         }
 
     except HTTPException:

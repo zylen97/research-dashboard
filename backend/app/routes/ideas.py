@@ -166,26 +166,23 @@ async def delete_idea(
     request: Request,
     db: Session = Depends(get_db)
 ):
-    """删除Idea"""
+    """
+    删除Idea
+
+    注意：删除Idea后，关联的Paper的source_paper_id会被设为NULL（数据库外键约束）
+    """
     try:
         # 获取要删除的记录
         db_idea = idea_crud.get(db, id=idea_id)
         if not db_idea:
             raise HTTPException(status_code=404, detail="Idea not found")
-        
-        # 记录原始值用于审计
-        old_values = {
-            "project_name": getattr(db_idea, "project_name", ""),
-            "project_description": getattr(db_idea, "project_description", ""),
-            "research_method": getattr(db_idea, "research_method", ""),
-            "source": getattr(db_idea, "source", ""),
-            "responsible_person": getattr(db_idea, "responsible_person", ""),
-            "maturity": getattr(db_idea, "maturity", "")
-        }
-        
+
+        # 使用序列化服务记录审计日志
+        old_values = AuditService.serialize_model_instance(db_idea)
+
         # 使用CRUD基类删除
         idea_crud.remove(db, id=idea_id)
-        
+
         # 记录审计日志
         try:
             AuditService.log_delete(
@@ -197,8 +194,11 @@ async def delete_idea(
         except Exception as audit_error:
             logger.warning(f"审计日志记录失败: {audit_error}")
 
-        return success_response(message="Idea deleted successfully")
-        
+        return success_response(
+            message="Idea deleted successfully",
+            data={"idea_id": idea_id}
+        )
+
     except HTTPException:
         raise
     except Exception as e:
