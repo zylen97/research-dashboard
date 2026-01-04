@@ -68,30 +68,27 @@ export const CollaboratorProjectsModal: React.FC<CollaboratorProjectsModalProps>
       pageSize,
     });
 
-    return allColumns.map(col => {
-      if (col.key === 'collaborators') {
-        // 隐藏合作者列
-        return { ...col, width: 0, render: () => null };
-      }
-      if (col.key === 'actions') {
-        // 只保留预览按钮
-        return {
-          ...col,
-          width: 80,
-          render: (_: any, project: ResearchProject) => (
-            <Space size="small">
-              <Button
-                type="text"
-                icon={<EyeOutlined />}
-                onClick={() => projectActions.onPreview(project)}
-                title="预览详情"
-              />
-            </Space>
-          ),
-        };
-      }
-      return col;
-    }).filter(col => col.width !== 0);
+    return allColumns
+      .filter(col => col.key !== 'collaborators')  // 过滤掉合作者列
+      .map(col => {
+        if (col.key === 'actions') {
+          // 只保留预览按钮
+          return {
+            ...col,
+            render: (_: any, project: ResearchProject) => (
+              <Space size="small">
+                <Button
+                  type="text"
+                  icon={<EyeOutlined />}
+                  onClick={() => projectActions.onPreview(project)}
+                  title="预览详情"
+                />
+              </Space>
+            ),
+          };
+        }
+        return col;
+      });
   }, [projectActions, currentPage, pageSize]);
 
   if (!collaborator) return null;

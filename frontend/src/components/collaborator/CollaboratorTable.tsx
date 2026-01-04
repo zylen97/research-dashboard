@@ -106,7 +106,6 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       title: '姓名',
       dataIndex: 'name',
       key: 'name',
-      width: 150,
       fixed: 'left',
       ...getColumnSearchProps('name'),
       render: (text) => (
@@ -126,7 +125,6 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       title: '背景信息',
       dataIndex: 'background',
       key: 'background',
-      width: 250,
       ellipsis: true,
       ...getColumnSearchProps('background'),
     },
@@ -134,7 +132,6 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       title: '项目数',
       dataIndex: 'project_count',
       key: 'project_count',
-      width: 100,
       sorter: (a, b) => (a.project_count || 0) - (b.project_count || 0),
       render: count => (
         <Tag style={{
@@ -150,7 +147,6 @@ export const CollaboratorTable: React.FC<CollaboratorTableProps> = ({
       title: '操作',
       key: 'action',
       fixed: 'right',
-      width: 180,
       render: (_, record) => (
         <Space size="small">
           <Button

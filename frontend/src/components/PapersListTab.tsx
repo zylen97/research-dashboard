@@ -248,7 +248,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       title: '标题',
       dataIndex: 'title',
       key: 'title',
-      width: 300,
       ellipsis: true,
     });
 
@@ -256,7 +255,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       title: '期刊',
       dataIndex: ['journal', 'name'],
       key: 'journal',
-      width: 150,
       ellipsis: true,
       render: (name: string) => name || '-',
     });
@@ -265,7 +263,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       title: '年份',
       dataIndex: 'year',
       key: 'year',
-      width: 80,
       sorter: true,
       render: (year: number | null) => year ?? '-',
     });
@@ -274,7 +271,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       title: '状态',
       dataIndex: 'status',
       key: 'status',
-      width: 100,
       render: (status: string) => {
         const statusMap: Record<string, { text: string; color: string }> = {
           pending: { text: '待分析', color: '#999' },
@@ -291,7 +287,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
       title: '导入日期',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 110,
       sorter: true,
       render: (date: string) => {
         if (!date) return '-';
@@ -338,7 +333,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     result.push({
       title: '操作',
       key: 'actions',
-      width: 180,
       fixed: 'right' as const,
       render: (_: unknown, record: Paper) => (
         <Space size="small">

@@ -78,7 +78,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           position: 'fixed',
           zIndex: 999,
           width: '100%',
-          height: 48,
+          height: 64,
           padding: '0 16px',
           background: colorBgContainer,
           borderBottom: '1px solid #f0f0f0',
@@ -87,8 +87,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
         }}
       >
         {/* Logo */}
-        <div style={{ marginRight: 24 }}>
-          <BulbOutlined style={{ fontSize: 18, color: '#333333' }} />
+        <div style={{ marginRight: 24, fontSize: 18, fontWeight: 600 }}>
+          Research Dashboard
         </div>
 
         {/* 水平菜单 */}
@@ -99,7 +99,8 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           style={{
             border: 'none',
             flex: 1,
-            lineHeight: '48px',
+            lineHeight: '64px',
+            fontSize: 16,
           }}
         />
       </Header>
@@ -107,7 +108,7 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       {/* 内容区域 */}
       <Content
         style={{
-          paddingTop: 64,
+          paddingTop: 80,
           paddingRight: 16,
           paddingBottom: 16,
           paddingLeft: 16,

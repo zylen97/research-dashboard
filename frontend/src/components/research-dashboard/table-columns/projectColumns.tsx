@@ -51,7 +51,6 @@ export const createProjectColumns = ({
   {
     title: '序号',
     key: 'index',
-    width: 50,
     fixed: 'left' as const,
     render: (_: any, __: any, index: number) => {
       return (currentPage - 1) * pageSize + index + 1;
@@ -61,7 +60,6 @@ export const createProjectColumns = ({
     title: '项目名称',
     dataIndex: 'title',
     key: 'title',
-    width: 180,
     render: (title: string, project: ResearchProject) => {
       const todoStatus = getProjectTodoStatus(project);
       return (
@@ -84,7 +82,6 @@ export const createProjectColumns = ({
     title: '投稿期刊',
     dataIndex: 'target_journal',
     key: 'target_journal',
-    width: 150,
     render: (target_journal: string) => (
       <div
         style={{
@@ -104,7 +101,6 @@ export const createProjectColumns = ({
     title: '研究方法',
     dataIndex: 'research_method',
     key: 'research_method',
-    width: 60,
     render: (method: string) => (
       <div
         style={{ 
@@ -125,7 +121,6 @@ export const createProjectColumns = ({
       title: '参考论文',
       dataIndex: 'reference_paper',
       key: 'reference_paper',
-      width: 200,
       render: (text: string) => (
         <div
           style={{
@@ -145,7 +140,6 @@ export const createProjectColumns = ({
       title: '参考期刊',
       dataIndex: 'reference_journal',
       key: 'reference_journal',
-      width: 150,
       render: (text: string) => (
         <div
           style={{
@@ -166,7 +160,6 @@ export const createProjectColumns = ({
     title: '状态',
     dataIndex: 'status',
     key: 'status',
-    width: 120,
     render: (status: string) => {
       // 防御null/undefined
       if (!status || !STATUS_VISUAL_SYSTEM[status as keyof typeof STATUS_VISUAL_SYSTEM]) {
@@ -181,7 +174,6 @@ export const createProjectColumns = ({
     title: '我的身份',
     dataIndex: 'my_role',
     key: 'my_role',
-    width: 80,
     render: (my_role: string) => {
       return <RoleIcon role={(my_role as AuthorRole) || 'first_author'} showLabel={true} showIcon={false} />;
     },
@@ -190,7 +182,6 @@ export const createProjectColumns = ({
     title: '合作者',
     dataIndex: 'collaborators',
     key: 'collaborators',
-    width: 180,
     render: (collaborators: any[]) => {
       return (
         <div style={{ fontSize: '13px', lineHeight: '1.5' }}>
@@ -223,7 +214,6 @@ export const createProjectColumns = ({
   ...(isMobile ? [] : [{
     title: '论文进度',
     key: 'communication_progress',
-    width: 200,
     render: (record: ResearchProject) => {
       // 使用communication_logs数组，正确排序获取最新记录
       const logs = record.communication_logs || [];
@@ -275,7 +265,6 @@ export const createProjectColumns = ({
   {
     title: '操作',
     key: 'actions',
-    width: 150,
     fixed: 'right' as const,
     render: (_: any, project: ResearchProject) => {
       const todoStatus = getProjectTodoStatus(project);

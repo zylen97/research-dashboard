@@ -233,14 +233,12 @@ const IdeasManagementPage: React.FC = () => {
     {
       title: '序号',
       key: 'index',
-      width: 60,
       render: (_, __, index) => index + 1,
     },
     {
       title: '研究名称',
       dataIndex: 'project_name',
       key: 'project_name',
-      width: 200,
       ellipsis: {
         showTitle: false,
       },
@@ -254,7 +252,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
-      width: 200,
       ellipsis: {
         showTitle: false,
       },
@@ -268,7 +265,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '参考论文',
       dataIndex: 'reference_paper',
       key: 'reference_paper',
-      width: 200,
       ellipsis: {
         showTitle: false,
       },
@@ -282,7 +278,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '参考期刊',
       dataIndex: 'reference_journal',
       key: 'reference_journal',
-      width: 150,
       ellipsis: {
         showTitle: false,
       },
@@ -296,7 +291,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '投稿期刊',
       dataIndex: 'target_journal',
       key: 'target_journal',
-      width: 150,
       ellipsis: {
         showTitle: false,
       },
@@ -310,7 +304,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '负责人',
       dataIndex: 'responsible_persons',
       key: 'responsible_persons',
-      width: 150,
       render: (persons: any[]) => {
         if (!persons || persons.length === 0) return '-';
         if (persons.length === 1) return persons[0].name;
@@ -326,7 +319,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '成熟度',
       dataIndex: 'maturity',
       key: 'maturity',
-      width: 100,
       render: (maturity: string) => (
         <Tag
           style={{
@@ -343,13 +335,11 @@ const IdeasManagementPage: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 120,
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 180,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
