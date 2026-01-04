@@ -289,7 +289,7 @@ const ResearchDashboard: React.FC = () => {
               研究
             </Title>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span>显示已发表项目</span>
+              <span style={{ fontSize: '13px' }}>显示已发表研究</span>
               <Switch
                 checked={showArchived}
                 onChange={handleShowArchivedChange}

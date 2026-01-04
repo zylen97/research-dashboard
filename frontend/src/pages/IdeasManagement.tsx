@@ -1,6 +1,6 @@
 /**
  * Ideas管理页面 - 重新设计版本
- * 简化表单：项目名称、项目描述、研究方法、来源、负责人、成熟度
+ * 简化表单：研究名称、项目描述、研究方法、来源、负责人、成熟度
  * 包含编辑、删除、转化功能
  */
 import React, { useState, useMemo } from 'react';
@@ -237,7 +237,7 @@ const IdeasManagementPage: React.FC = () => {
       render: (_, __, index) => index + 1,
     },
     {
-      title: '项目名称',
+      title: '研究名称',
       dataIndex: 'project_name',
       key: 'project_name',
       width: 200,
@@ -475,13 +475,13 @@ const IdeasManagementPage: React.FC = () => {
         >
           <Form.Item
             name="project_name"
-            label="项目名称"
+            label="研究名称"
             rules={[
-              { required: true, message: '请输入项目名称' },
-              { max: 200, message: '项目名称不能超过200字符' }
+              { required: true, message: '请输入研究名称' },
+              { max: 200, message: '研究名称不能超过200字符' }
             ]}
           >
-            <Input placeholder="简洁明确的项目名称" />
+            <Input placeholder="简洁明确的研究名称" />
           </Form.Item>
 
           <Form.Item

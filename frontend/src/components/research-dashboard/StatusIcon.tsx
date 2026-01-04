@@ -32,7 +32,7 @@ export const StatusIcon: React.FC<StatusIconProps> = ({
     <Tooltip title={config.label}>
       <Space size={4}>
         {iconElement}
-        {showLabel && <span>{config.label}</span>}
+        {showLabel && <span style={{ fontSize: '13px' }}>{config.label}</span>}
       </Space>
     </Tooltip>
   );
