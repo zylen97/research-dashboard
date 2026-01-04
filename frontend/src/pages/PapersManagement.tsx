@@ -27,10 +27,10 @@ const PapersManagement: React.FC = () => {
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
         {/* 页面标题 */}
         <div>
-          <Title level={3} style={{ marginBottom: 8 }}>论文库</Title>
-          <Typography.Text type="secondary">
-            管理和分析导入的论文文献，支持批量AI分析
-          </Typography.Text>
+          <Title level={3} style={{ marginBottom: 8 }}>
+            <FileTextOutlined style={{ marginRight: 8 }} />
+            论文库
+          </Title>
         </div>
 
         {/* 主内容区域 */}

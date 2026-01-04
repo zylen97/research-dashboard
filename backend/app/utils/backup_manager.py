@@ -131,19 +131,19 @@ class BackupManager:
         try:
             conn = sqlite3.connect(backup_db_path)
             cursor = conn.cursor()
-            
+
             # 统计活跃合作者数量（排除已删除的）
             cursor.execute("SELECT COUNT(*) FROM collaborators WHERE is_deleted = 0")
             collaborators_count = cursor.fetchone()[0]
-            
-            # 统计项目数量  
+
+            # 统计项目数量
             cursor.execute("SELECT COUNT(*) FROM research_projects")
             projects_count = cursor.fetchone()[0]
-            
+
             # 统计交流日志数量
             cursor.execute("SELECT COUNT(*) FROM communication_logs")
             logs_count = cursor.fetchone()[0]
-            
+
             # 统计Ideas数量 - 支持新旧表名
             try:
                 cursor.execute("SELECT COUNT(*) FROM ideas")  # 新表名
@@ -164,6 +164,34 @@ class BackupManager:
                 # 表不存在，设为0
                 journals_count = 0
 
+            # 🆕 统计论文数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM papers")
+                papers_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                papers_count = 0
+
+            # 🆕 统计研究方法数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM research_methods")
+                research_methods_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                research_methods_count = 0
+
+            # 🆕 统计标签数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM tags")
+                tags_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                tags_count = 0
+
+            # 🆕 统计审计日志数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM audit_logs")
+                audit_logs_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                audit_logs_count = 0
+
             conn.close()
 
             return {
@@ -171,7 +199,11 @@ class BackupManager:
                 "projects_count": projects_count,
                 "logs_count": logs_count,
                 "ideas_count": ideas_count,
-                "journals_count": journals_count
+                "journals_count": journals_count,
+                "papers_count": papers_count,
+                "research_methods_count": research_methods_count,
+                "tags_count": tags_count,
+                "audit_logs_count": audit_logs_count,
             }
         except Exception as e:
             logger.warning(f"无法读取备份数据统计: {e}")
@@ -180,7 +212,11 @@ class BackupManager:
                 "projects_count": 0,
                 "logs_count": 0,
                 "ideas_count": 0,
-                "journals_count": 0
+                "journals_count": 0,
+                "papers_count": 0,
+                "research_methods_count": 0,
+                "tags_count": 0,
+                "audit_logs_count": 0,
             }
     
     def _cleanup_old_backups(self):

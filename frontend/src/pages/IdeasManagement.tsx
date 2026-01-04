@@ -3,7 +3,7 @@
  * 简化表单：项目名称、项目描述、研究方法、来源、负责人、成熟度
  * 包含编辑、删除、转化功能
  */
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Table,
   Button,
@@ -68,7 +68,7 @@ const IdeasManagementPage: React.FC = () => {
   });
 
   // 响应拦截器已确保返回数组
-  const ideas = React.useMemo(() => {
+  const ideas = useMemo(() => {
     if (!ideasData) return [];
     // 额外安全检查：确保是数组
     if (!Array.isArray(ideasData)) {
@@ -234,7 +234,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '序号',
       key: 'index',
       width: 60,
-      align: 'center',
       render: (_, __, index) => index + 1,
     },
     {

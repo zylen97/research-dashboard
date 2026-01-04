@@ -354,6 +354,12 @@ const CollaboratorManagement: React.FC = () => {
           scroll={{ x: 1000 }}
           columns={[
             {
+              title: '序号',
+              key: 'index',
+              width: 60,
+              render: (_: any, __: any, index: number) => index + 1,
+            },
+            {
               title: '姓名',
               dataIndex: 'name',
               key: 'name',
@@ -387,7 +393,6 @@ const CollaboratorManagement: React.FC = () => {
               title: '参与项目数',
               key: 'project_count',
               width: 120,
-              align: 'center',
               render: (_, record) => {
                 const projectCount = projects.filter((p: any) =>
                   p?.collaborators?.some((c: any) => c?.id === record.id)
@@ -399,7 +404,6 @@ const CollaboratorManagement: React.FC = () => {
               title: '负责Idea数',
               key: 'idea_count',
               width: 120,
-              align: 'center',
               render: (_, record) => {
                 const ideaCount = ideas.filter((i: any) =>
                   i?.responsible_person?.id === record.id

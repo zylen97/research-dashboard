@@ -49,7 +49,11 @@ async def list_backups() -> Dict[str, Any]:
                 "projects_count": backup.get("projects_count", 0),
                 "logs_count": backup.get("logs_count", 0),
                 "ideas_count": backup.get("ideas_count", 0),
-                "journals_count": backup.get("journals_count", 0)
+                "journals_count": backup.get("journals_count", 0),
+                "papers_count": backup.get("papers_count", 0),
+                "research_methods_count": backup.get("research_methods_count", 0),
+                "tags_count": backup.get("tags_count", 0),
+                "audit_logs_count": backup.get("audit_logs_count", 0),
             })
         
         return {

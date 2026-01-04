@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { Card, Row, Col, Statistic } from 'antd';
+import { Card, Statistic } from 'antd';
 
 /**
  * 统计数据接口
@@ -44,40 +44,39 @@ const PaperStatsCards: React.FC<PaperStatsCardsProps> = ({ stats, loading = fals
   const analyzed = 'by_status' in stats ? stats.by_status.analyzed : stats.analyzed_papers;
 
   const statisticStyle = {
-    fontSize: 20,
+    fontSize: 14,  // 从20改为14，符合统一规范
     fontWeight: 600 as const,
   };
 
   return (
-    <Row gutter={16} style={{ marginBottom: 16 }}>
-      <Col span={8}>
-        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
-          <Statistic
-            title={<span style={{ fontSize: 12 }}>总论文数</span>}
-            value={total}
-            valueStyle={statisticStyle}
-          />
-        </Card>
-      </Col>
-      <Col span={8}>
-        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
-          <Statistic
-            title={<span style={{ fontSize: 12 }}>待分析</span>}
-            value={pending}
-            valueStyle={{ ...statisticStyle, color: '#999' }}
-          />
-        </Card>
-      </Col>
-      <Col span={8}>
-        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
-          <Statistic
-            title={<span style={{ fontSize: 12 }}>已分析</span>}
-            value={analyzed}
-            valueStyle={{ ...statisticStyle, color: '#333' }}
-          />
-        </Card>
-      </Col>
-    </Row>
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+      gap: 8,
+      marginBottom: 12,
+    }}>
+      <Card loading={loading} className="statistics-card hover-shadow">
+        <Statistic
+          title={<span style={{ fontSize: 10 }}>总论文数</span>}
+          value={total}
+          valueStyle={statisticStyle}
+        />
+      </Card>
+      <Card loading={loading} className="statistics-card hover-shadow">
+        <Statistic
+          title={<span style={{ fontSize: 10 }}>待分析</span>}
+          value={pending}
+          valueStyle={{ ...statisticStyle, color: '#999' }}
+        />
+      </Card>
+      <Card loading={loading} className="statistics-card hover-shadow">
+        <Statistic
+          title={<span style={{ fontSize: 10 }}>已分析</span>}
+          value={analyzed}
+          valueStyle={{ ...statisticStyle, color: '#333' }}
+        />
+      </Card>
+    </div>
   );
 };
 

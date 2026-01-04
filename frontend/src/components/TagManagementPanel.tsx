@@ -150,7 +150,6 @@ export const TagManagementPanel: React.FC = () => {
       dataIndex: 'journal_count',
       key: 'journal_count',
       width: 120,
-      align: 'center' as const,
       sorter: (a: TagType, b: TagType) => a.journal_count - b.journal_count,
       render: (count: number) => (
         <span style={{ fontWeight: count > 0 ? 'bold' : 'normal' }}>

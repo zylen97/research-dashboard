@@ -47,9 +47,10 @@
   padding: 12px;
 }
 
-/* 优化统计卡片 - 适度缩小以节省空间 */
+/* 优化统计卡片 - 增加高度 */
 .statistics-card .ant-card-body {
-  padding: 6px;
+  padding: 16px 20px;
+  min-height: 80px;
 }
 
 .statistics-card .ant-statistic-title {

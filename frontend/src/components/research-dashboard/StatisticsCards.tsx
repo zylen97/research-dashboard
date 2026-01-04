@@ -47,7 +47,7 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         <Statistic
           title="总项目数"
           value={stats.total}
-          valueStyle={{ fontWeight: 400 }}
+          valueStyle={{ fontWeight: 400, fontSize: 20 }}
         />
       </Card>
 
@@ -59,8 +59,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         <Statistic
           title="撰写中"
           value={stats.writing}
-          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
-          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>●</span>}
+          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary, fontSize: 20 }}
+          prefix={<span style={{ fontSize: 16, marginRight: 4 }}>●</span>}
         />
       </Card>
 
@@ -72,8 +72,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         <Statistic
           title="投稿中"
           value={stats.submitting}
-          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary }}
-          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>◆</span>}
+          valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary, fontSize: 20 }}
+          prefix={<span style={{ fontSize: 16, marginRight: 4 }}>◆</span>}
         />
       </Card>
 
@@ -85,8 +85,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         <Statistic
           title="已发表"
           value={stats.published}
-          valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary }}
-          prefix={<span style={{ fontSize: 14, marginRight: 4 }}>○</span>}
+          valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary, fontSize: 20 }}
+          prefix={<span style={{ fontSize: 16, marginRight: 4 }}>○</span>}
         />
       </Card>
 
@@ -98,8 +98,8 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         <Statistic
           title="待办事项"
           value={stats.todo}
-          valueStyle={{ fontWeight: 700, color: GRAYSCALE_SYSTEM.primary }}
-          prefix={<FlagOutlined style={{ fontSize: 14, color: GRAYSCALE_SYSTEM.primary }} />}
+          valueStyle={{ fontWeight: 700, color: GRAYSCALE_SYSTEM.primary, fontSize: 20 }}
+          prefix={<FlagOutlined style={{ fontSize: 16, color: GRAYSCALE_SYSTEM.primary }} />}
         />
       </Card>
     </div>

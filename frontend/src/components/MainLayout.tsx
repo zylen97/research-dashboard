@@ -1,10 +1,9 @@
 import React from 'react';
 import { Layout, Menu, theme } from 'antd';
 import {
-  DashboardOutlined,
+  ProjectOutlined,
   TeamOutlined,
   BulbOutlined,
-  UnorderedListOutlined,
   DatabaseOutlined,
   GlobalOutlined,
   FileTextOutlined,
@@ -28,13 +27,13 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   const menuItems = [
     {
       key: '/dashboard',
-      icon: <DashboardOutlined />,
+      icon: <ProjectOutlined />,
       label: '研究',
       onClick: () => navigate('/dashboard'),
     },
     {
       key: '/ideas-management',
-      icon: <UnorderedListOutlined />,
+      icon: <BulbOutlined />,
       label: 'Idea',
       onClick: () => navigate('/ideas-management'),
     },

@@ -1,14 +1,10 @@
 import React, { useState } from 'react';
 import {
-  Card,
   Table,
   Button,
   Space,
   Tag,
   Popconfirm,
-  Statistic,
-  Row,
-  Col,
   Typography,
   Spin,
   Empty,
@@ -25,27 +21,19 @@ import {
   DatabaseOutlined,
   ClockCircleOutlined,
   FolderOpenOutlined,
-  SaveOutlined,
   TeamOutlined,
   ProjectOutlined,
   MessageOutlined,
-  ExclamationCircleOutlined,
   BulbOutlined,
   BookOutlined,
+  FileTextOutlined,
+  TagsOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { backupApi } from '../services/apiOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { BackupItem } from '../types';
-
-type BackupStatsResponse = {
-  total_backups: number;
-  max_backups: number;
-  total_size: number;
-  average_size: number;
-  current_environment: string;
-};
 
 const { Title, Text } = Typography;
 
@@ -62,12 +50,6 @@ const DatabaseBackup: React.FC = () => {
     },
   });
 
-  // 获取备份统计
-  const { data: stats, refetch: refetchStats } = useQuery<BackupStatsResponse>({
-    queryKey: ['backup-stats'],
-    queryFn: () => backupApi.getStats(),
-  });
-
   // 创建备份mutation
   const createBackupMutation = useMutation({
     mutationFn: async (_reason: string) => {
@@ -75,7 +57,6 @@ const DatabaseBackup: React.FC = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backups'] });
-      queryClient.invalidateQueries({ queryKey: ['backup-stats'] });
     },
   });
 
@@ -184,19 +165,19 @@ const DatabaseBackup: React.FC = () => {
     }
   );
 
-  // 格式化文件大小
-  const formatSize = (size: number): string => {
-    const units = ['B', 'KB', 'MB', 'GB'];
-    let unitIndex = 0;
-    let formattedSize = size;
-    
-    while (formattedSize >= 1024 && unitIndex < units.length - 1) {
-      formattedSize /= 1024;
-      unitIndex++;
-    }
-    
-    return `${formattedSize.toFixed(2)} ${units[unitIndex]}`;
-  };
+  // 提取的通用渲染函数
+  const renderCountTag = (count: number | undefined, icon: React.ReactNode) => (
+    <Space size="small">
+      {icon}
+      <Tag style={{
+        backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
+        color: count === 0 ? '#999999' : '#333333',
+        borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
+      }}>
+        {count || 0}
+      </Tag>
+    </Space>
+  );
 
   // 表格列配置
   const columns: ColumnsType<BackupItem> = [
@@ -204,10 +185,12 @@ const DatabaseBackup: React.FC = () => {
       title: '备份名称',
       dataIndex: 'name',
       key: 'name',
+      width: 150,
+      ellipsis: { showTitle: false },
       render: (text: string) => (
         <Space>
           <FolderOpenOutlined />
-          <Text strong>{text}</Text>
+          <Text strong ellipsis={{ tooltip: text }}>{text}</Text>
         </Space>
       ),
     },
@@ -215,14 +198,20 @@ const DatabaseBackup: React.FC = () => {
       title: '大小',
       dataIndex: 'sizeFormatted',
       key: 'size',
-      render: (text: string) => <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>{text}</Tag>,
+      width: 90,
+      render: (text: string) => (
+        <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>
+          {text}
+        </Tag>
+      ),
     },
     {
       title: '创建时间',
       dataIndex: 'createdFormatted',
       key: 'created',
+      width: 140,
       render: (text: string) => (
-        <Space>
+        <Space style={{ fontSize: 12 }}>
           <ClockCircleOutlined />
           {text}
         </Space>
@@ -232,105 +221,63 @@ const DatabaseBackup: React.FC = () => {
       title: '合作者',
       dataIndex: 'collaborators_count',
       key: 'collaborators',
-      render: (count: number) => (
-        <Space>
-          <TeamOutlined />
-          <Tag style={{
-            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
-            color: count === 0 ? '#999999' : '#333333',
-            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
-          }}>
-            {count || 0}
-          </Tag>
-          {count === 0 && (
-            <Tooltip title="备份中没有合作者数据">
-              <ExclamationCircleOutlined style={{ color: '#999999' }} />
-            </Tooltip>
-          )}
-        </Space>
-      ),
+      width: 80,
+      render: (count: number) => renderCountTag(count, <TeamOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.collaborators_count || 0) - (b.collaborators_count || 0),
     },
     {
       title: '项目',
       dataIndex: 'projects_count',
       key: 'projects',
-      render: (count: number) => (
-        <Space>
-          <ProjectOutlined />
-          <Tag style={{
-            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
-            color: count === 0 ? '#999999' : '#333333',
-            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
-          }}>
-            {count || 0}
-          </Tag>
-          {count === 0 && (
-            <Tooltip title="备份中没有项目数据">
-              <ExclamationCircleOutlined style={{ color: '#999999' }} />
-            </Tooltip>
-          )}
-        </Space>
-      ),
+      width: 80,
+      render: (count: number) => renderCountTag(count, <ProjectOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.projects_count || 0) - (b.projects_count || 0),
     },
     {
-      title: '日志',
-      dataIndex: 'logs_count',
-      key: 'logs',
-      render: (count: number) => (
-        <Space>
-          <MessageOutlined />
-          <Tag style={{
-            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
-            color: count === 0 ? '#999999' : '#333333',
-            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
-          }}>
-            {count || 0}
-          </Tag>
-        </Space>
-      ),
-      sorter: (a: BackupItem, b: BackupItem) => (a.logs_count || 0) - (b.logs_count || 0),
+      title: '论文',
+      dataIndex: 'papers_count',
+      key: 'papers',
+      width: 80,
+      render: (count: number) => renderCountTag(count, <FileTextOutlined />),
+      sorter: (a: BackupItem, b: BackupItem) => (a.papers_count || 0) - (b.papers_count || 0),
     },
     {
       title: 'Ideas',
       dataIndex: 'ideas_count',
       key: 'ideas',
-      render: (count: number) => (
-        <Space>
-          <BulbOutlined />
-          <Tag style={{
-            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
-            color: count === 0 ? '#999999' : '#333333',
-            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
-          }}>
-            {count || 0}
-          </Tag>
-        </Space>
-      ),
+      width: 75,
+      render: (count: number) => renderCountTag(count, <BulbOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.ideas_count || 0) - (b.ideas_count || 0),
+    },
+    {
+      title: '日志',
+      dataIndex: 'logs_count',
+      key: 'logs',
+      width: 75,
+      render: (count: number) => renderCountTag(count, <MessageOutlined />),
+      sorter: (a: BackupItem, b: BackupItem) => (a.logs_count || 0) - (b.logs_count || 0),
     },
     {
       title: '期刊',
       dataIndex: 'journals_count',
       key: 'journals',
-      render: (count: number) => (
-        <Space>
-          <BookOutlined />
-          <Tag style={{
-            backgroundColor: count === 0 ? '#F5F5F5' : '#E8E8E8',
-            color: count === 0 ? '#999999' : '#333333',
-            borderColor: count === 0 ? '#E8E8E8' : '#CCCCCC'
-          }}>
-            {count || 0}
-          </Tag>
-        </Space>
-      ),
+      width: 75,
+      render: (count: number) => renderCountTag(count, <BookOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.journals_count || 0) - (b.journals_count || 0),
+    },
+    {
+      title: '标签',
+      dataIndex: 'tags_count',
+      key: 'tags',
+      width: 70,
+      render: (count: number) => renderCountTag(count, <TagsOutlined />),
+      sorter: (a: BackupItem, b: BackupItem) => (a.tags_count || 0) - (b.tags_count || 0),
     },
     {
       title: '操作',
       key: 'action',
+      width: 150,
+      fixed: 'right',
       render: (_, record) => (
         <Space size="middle">
           <Tooltip title="下载备份">
@@ -343,7 +290,7 @@ const DatabaseBackup: React.FC = () => {
               下载
             </Button>
           </Tooltip>
-          
+
           <Popconfirm
             title="恢复备份"
             description="恢复此备份将覆盖当前数据库，确定要继续吗？"
@@ -361,7 +308,7 @@ const DatabaseBackup: React.FC = () => {
               恢复
             </Button>
           </Popconfirm>
-          
+
           <Popconfirm
             title="删除备份"
             description="确定要删除这个备份吗？"
@@ -386,7 +333,6 @@ const DatabaseBackup: React.FC = () => {
 
   const handleRefresh = () => {
     refetchBackups();
-    refetchStats();
   };
 
   return (
@@ -417,43 +363,6 @@ const DatabaseBackup: React.FC = () => {
           </Space>
         }
       />
-
-      {/* 统计信息 */}
-      {stats && (
-        <Row gutter={12} style={{ marginBottom: 16 }}>
-          <Col span={8}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic
-                title="备份总数"
-                value={stats.total_backups}
-                suffix={`/ ${stats.max_backups}`}
-                prefix={<SaveOutlined />}
-                valueStyle={{ color: '#333333' }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic
-                title="总大小"
-                value={formatSize(stats.total_size)}
-                prefix={<DatabaseOutlined />}
-                valueStyle={{ color: '#333333' }}
-              />
-            </Card>
-          </Col>
-          <Col span={8}>
-            <Card className="statistics-card hover-shadow">
-              <Statistic
-                title="平均大小"
-                value={formatSize(stats.average_size)}
-                prefix={<FolderOpenOutlined />}
-                valueStyle={{ color: '#333333' }}
-              />
-            </Card>
-          </Col>
-        </Row>
-      )}
 
       {/* 备份列表 */}
       <TableContainer>
