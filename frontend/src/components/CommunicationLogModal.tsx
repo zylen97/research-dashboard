@@ -23,8 +23,6 @@ import dayjs from 'dayjs';
 
 interface CommunicationFormValues {
   title: string;
-  content?: string;
-  outcomes?: string;
   communication_date?: any;
 }
 
@@ -79,14 +77,13 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
 
     // 确保title长度符合要求
     if (values.title.length > 200) {
-      message.error('标题长度不能超过200个字符');
+      message.error('内容长度不能超过200个字符');
       return;
     }
 
     const logData: CommunicationLogCreate = {
       communication_type: 'meeting', // 默认值，后端需要
       title: values.title.trim(),
-      content: values.content?.trim() || '',  // 允许空值，默认为空字符串
       ...(values.communication_date && { communication_date: values.communication_date.format('YYYY-MM-DD') }),
     };
 
@@ -115,7 +112,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     setEditingLog(log);
     form.setFieldsValue({
       title: log.title,
-      content: log.content,
       communication_date: log.communication_date ? dayjs(log.communication_date) : undefined,
     });
     setIsAddModalVisible(true);
@@ -149,16 +145,9 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         render: (date: string) => dayjs(date).format('YYYY-MM-DD'),
       },
       {
-        title: '标题',
+        title: '内容',
         dataIndex: 'title',
         key: 'title',
-        width: 200,
-        ellipsis: true,
-      },
-      {
-        title: '内容',
-        dataIndex: 'content',
-        key: 'content',
         ellipsis: true,
       },
       {
@@ -269,10 +258,13 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         >
           <Form.Item
             name="title"
-            label="标题"
-            rules={[{ required: true, message: '请输入标题' }]}
+            label="内容"
+            rules={[{ required: true, message: '请输入内容' }]}
           >
-            <Input placeholder="请输入论文进度标题" />
+            <TextArea
+              rows={3}
+              placeholder="请记录论文进度"
+            />
           </Form.Item>
 
           <Form.Item
@@ -284,16 +276,6 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
             <DatePicker
               format="YYYY-MM-DD"
               style={{ width: '100%' }}
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="content"
-            label="进度内容"
-          >
-            <TextArea
-              rows={4}
-              placeholder="请详细记录论文进度、讨论的问题等（可选）"
             />
           </Form.Item>
         </Form>
