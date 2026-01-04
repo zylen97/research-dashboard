@@ -22,7 +22,7 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 logger = setup_migration_logging()
 
 # 迁移版本号
-MIGRATION_VERSION = "v4.3_remove_completed_status_and_other_author"
+MIGRATION_VERSION = "v4.7_research_method_table"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,16 +85,15 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 删除completed状态和other_author角色')
+        logger.info('🎯 目标: 创建研究方法表，支持下拉选择')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v4.3迁移任务：简化状态和角色
+        # 🔧 v4.7迁移任务：研究方法表
         # 变更：
-        # 1. completed → published (已完成 → 已发表)
-        # 2. other_author → first_author (其他作者 → 第一作者)
-        # 最终状态系统：writing, submitting, published
-        # 最终角色系统：first_author, corresponding_author
+        # 1. 创建 research_methods 表
+        # 2. 添加 research_method_id 外键到 research_projects
+        # 3. 迁移现有研究方法数据
         # ===========================================
 
         # ============================
@@ -110,97 +109,92 @@ def run_migration():
             logger.info("   ✅ research_projects表存在")
 
         # ============================
-        # Step 2: 统计当前数据分布
+        # Step 2: 统计现有研究方法数据
         # ============================
-        logger.info("\n📋 Step 2: 统计当前数据分布")
+        logger.info("\n📋 Step 2: 统计现有研究方法数据")
 
-        # 状态分布
         cursor.execute("""
-            SELECT status, COUNT(*) as count
+            SELECT DISTINCT research_method
             FROM research_projects
-            GROUP BY status
-            ORDER BY status
+            WHERE research_method IS NOT NULL AND research_method != ''
+            ORDER BY research_method
         """)
-        status_counts = cursor.fetchall()
-        logger.info("   当前项目状态分布:")
-        for status, count in status_counts:
-            logger.info(f"     - {status}: {count} 个")
+        existing_methods = cursor.fetchall()
+        logger.info(f"   发现 {len(existing_methods)} 个不同的研究方法:")
+        for (method,) in existing_methods:
+            logger.info(f"     - {method[:50]}...")
 
-        # 角色分布
+        # ============================
+        # Step 3: 创建 research_methods 表
+        # ============================
+        logger.info("\n📋 Step 3: 创建 research_methods 表")
+
         cursor.execute("""
-            SELECT my_role, COUNT(*) as count
-            FROM research_projects
-            GROUP BY my_role
-            ORDER BY my_role
+            CREATE TABLE IF NOT EXISTS research_methods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                usage_count INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
         """)
-        role_counts = cursor.fetchall()
-        logger.info("   当前角色分布:")
-        for role, count in role_counts:
-            logger.info(f"     - {role}: {count} 个")
+        logger.info("   ✅ research_methods 表创建成功")
 
         # ============================
-        # Step 3: 执行状态迁移
+        # Step 4: 添加 research_method_id 列到 research_projects
         # ============================
-        logger.info("\n📋 Step 3: 执行状态迁移")
+        logger.info("\n📋 Step 4: 添加 research_method_id 列")
 
-        # completed → published
+        # 检查列是否已存在
+        columns = get_table_columns(cursor, 'research_projects')
+        if 'research_method_id' not in columns:
+            cursor.execute("""
+                ALTER TABLE research_projects
+                ADD COLUMN research_method_id INTEGER REFERENCES research_methods(id)
+            """)
+            logger.info("   ✅ research_method_id 列添加成功")
+        else:
+            logger.info("   ✓ research_method_id 列已存在，跳过")
+
+        # ============================
+        # Step 5: 迁移现有研究方法数据
+        # ============================
+        logger.info("\n📋 Step 5: 迁移现有研究方法数据")
+
+        migrated_count = 0
+        for (method_name,) in existing_methods:
+            # 尝试插入研究方法（忽略已存在的）
+            cursor.execute("""
+                INSERT OR IGNORE INTO research_methods (name)
+                VALUES (?)
+            """, (method_name,))
+            migrated_count += cursor.rowcount
+
+        logger.info(f"   ✅ 成功迁移 {migrated_count} 个研究方法到新表")
+
+        # ============================
+        # Step 6: 更新 usage_count
+        # ============================
+        logger.info("\n📋 Step 6: 更新使用次数统计")
+
         cursor.execute("""
-            UPDATE research_projects
-            SET status = 'published'
-            WHERE status = 'completed'
+            UPDATE research_methods
+            SET usage_count = (
+                SELECT COUNT(*)
+                FROM research_projects
+                WHERE research_projects.research_method = research_methods.name
+            )
         """)
-        completed_count = cursor.rowcount
-        logger.info(f"   ✅ completed → published: {completed_count} 个项目")
-
-        # writing 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'writing'")
-        writing_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ writing 保持不变: {writing_count} 个项目")
-
-        # submitting 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'submitting'")
-        submitting_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ submitting 保持不变: {submitting_count} 个项目")
-
-        # published 保持不变（包括刚转换的）
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE status = 'published'")
-        published_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ published 总数: {published_count} 个项目")
-
-        # ============================
-        # Step 4: 执行角色迁移
-        # ============================
-        logger.info("\n📋 Step 4: 执行角色迁移")
-
-        # other_author → first_author
-        cursor.execute("""
-            UPDATE research_projects
-            SET my_role = 'first_author'
-            WHERE my_role = 'other_author'
-        """)
-        other_author_count = cursor.rowcount
-        logger.info(f"   ✅ other_author → first_author: {other_author_count} 个项目")
-
-        # first_author 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE my_role = 'first_author'")
-        first_author_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ first_author 总数: {first_author_count} 个项目")
-
-        # corresponding_author 保持不变
-        cursor.execute("SELECT COUNT(*) FROM research_projects WHERE my_role = 'corresponding_author'")
-        corresponding_author_count = cursor.fetchone()[0]
-        logger.info(f"   ✓ corresponding_author 保持不变: {corresponding_author_count} 个项目")
+        logger.info("   ✅ 使用次数统计更新完成")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v4.3 简化迁移完成！")
-        logger.info(f"✅ 状态简化: completed→published")
-        logger.info(f"✅ 角色简化: other_author→first_author")
-        logger.info(f"✅ 最终状态系统: writing, submitting, published")
-        logger.info(f"✅ 最终角色系统: first_author, corresponding_author")
+        logger.info("🎉 v4.7 研究方法表迁移完成！")
+        logger.info(f"✅ 创建 research_methods 表")
+        logger.info(f"✅ 添加 research_method_id 外键")
+        logger.info(f"✅ 迁移 {migrated_count} 个研究方法")
         logger.info("=" * 70)
 
         conn.close()

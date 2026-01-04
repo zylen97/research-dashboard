@@ -88,10 +88,28 @@ class ResearchProject(Base):
     # 我的身份字段
     my_role = Column(String(50), nullable=False, default='first_author')  # 我在研究中的身份
 
+    # 研究方法外键（v4.7）
+    research_method_id = Column(Integer, ForeignKey('research_methods.id'), nullable=True, comment="研究方法ID")
+
     # Relationships
     collaborators = relationship("Collaborator", secondary=project_collaborators, back_populates="projects")
     communication_logs = relationship("CommunicationLog", back_populates="project", cascade="all, delete-orphan")
+    research_method_rel = relationship("ResearchMethod", foreign_keys=[research_method_id])
 
+
+
+class ResearchMethod(Base):
+    """研究方法模型（v4.7）"""
+    __tablename__ = "research_methods"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(200), nullable=False, unique=True, index=True, comment="研究方法名称")
+    usage_count = Column(Integer, default=0, comment="使用次数")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+
+    # Pydantic 配置，启用 ORM 模式
+    class Config:
+        from_attributes = True
 
 
 class AuditLog(Base):

@@ -31,6 +31,7 @@ import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
 import ValidationPromptModal from '../components/ValidationPromptModal';
 import JournalSelect from '../components/JournalSelect';
+import ResearchMethodSelect from '../components/ResearchMethodSelect';
 import { PageHeader, FilterSection } from '../styles/components';
 
 const { Title } = Typography;
@@ -431,15 +432,9 @@ const ResearchDashboard: React.FC = () => {
           <Form.Item
             name="research_method"
             label="研究方法"
-            rules={[
-              { required: true, message: '请输入研究方法' },
-              { max: 2000, message: '研究方法不能超过2000字符' }
-            ]}
+            rules={[{ required: true, message: '请选择或输入研究方法' }]}
           >
-            <TextArea
-              rows={2}
-              placeholder="请输入研究方法"
-            />
+            <ResearchMethodSelect placeholder="选择或输入研究方法" />
           </Form.Item>
 
           <Form.Item

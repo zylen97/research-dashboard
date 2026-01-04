@@ -13,11 +13,18 @@ from .database import (
     Tag,
     Journal,
     Paper,
+    ResearchMethod,
     project_collaborators,
     journal_tags
 )
 
 from .schemas import (
+    # Research Method schemas
+    ResearchMethodBase,
+    ResearchMethodCreate,
+    ResearchMethodUpdate,
+    ResearchMethod as ResearchMethodSchema,
+
     # Collaborator schemas
     CollaboratorBase,
     CollaboratorCreate,
@@ -80,8 +87,9 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "Paper",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "Paper", "ResearchMethod",
     "project_collaborators", "journal_tags",
+    "ResearchMethodBase", "ResearchMethodCreate", "ResearchMethodUpdate", "ResearchMethodSchema",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
     "CommunicationLogBase", "CommunicationLogCreate", "CommunicationLogUpdate", "CommunicationLogSchema",

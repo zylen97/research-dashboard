@@ -33,6 +33,7 @@ import { ideasApi, collaboratorApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 import { PageContainer, PageHeader, TableContainer } from '../styles/components';
 import JournalSelect from '../components/JournalSelect';
+import ResearchMethodSelect from '../components/ResearchMethodSelect';
 import ValidationPromptModal from '../components/ValidationPromptModal';
 
 const { Title } = Typography;
@@ -501,15 +502,9 @@ const IdeasManagementPage: React.FC = () => {
           <Form.Item
             name="research_method"
             label="研究方法"
-            rules={[
-              { required: true, message: '请输入研究方法' },
-              { max: 1000, message: '研究方法不能超过1000字符' }
-            ]}
+            rules={[{ required: true, message: '请选择或输入研究方法' }]}
           >
-            <TextArea
-              rows={2}
-              placeholder="描述计划采用的研究方法"
-            />
+            <ResearchMethodSelect placeholder="选择或输入研究方法" />
           </Form.Item>
 
           <Form.Item

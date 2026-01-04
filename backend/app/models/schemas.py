@@ -3,6 +3,45 @@ from typing import List, Optional, Union
 from datetime import datetime
 from enum import Enum
 
+# Research Method schemas (v4.7)
+class ResearchMethodBase(BaseModel):
+    """研究方法基础数据模型"""
+    name: str = Field(..., min_length=1, max_length=200, description="研究方法名称")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError('研究方法名称不能为空')
+        return v
+
+class ResearchMethodCreate(ResearchMethodBase):
+    """创建研究方法的数据模型"""
+    pass
+
+class ResearchMethodUpdate(BaseModel):
+    """更新研究方法的数据模型"""
+    name: Optional[str] = Field(None, min_length=1, max_length=200, description="研究方法名称")
+
+    @field_validator('name')
+    @classmethod
+    def validate_name(cls, v):
+        if v is not None:
+            v = v.strip()
+            if not v:
+                raise ValueError('研究方法名称不能为空')
+        return v
+
+class ResearchMethod(ResearchMethodBase):
+    """完整的研究方法数据模型"""
+    id: int
+    usage_count: int = Field(default=0, description="使用次数")
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
 # Collaborator schemas（极简版 - 只保留2个业务字段）
 class CollaboratorBase(BaseModel):
     name: str = Field(..., max_length=100, description="姓名")
