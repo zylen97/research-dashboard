@@ -30,10 +30,10 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ColumnsType, TableProps } from 'antd/es/table';
 
-import { paperApi, journalApi, tagApi } from '../services/apiOptimized';
+import { paperApi, journalApi } from '../services/apiOptimized';
+import EnhancedTagSelect from './EnhancedTagSelect';
 import { Paper, PaperStatus, PaperSortField, SortOrder } from '../types/papers';
 import { Journal } from '../types/journals';
-import type { Tag as TagType } from '../types/journals';
 import {
   AVAILABLE_COLUMNS,
   COLUMN_VISIBILITY_KEYS,
@@ -45,7 +45,6 @@ import ColumnFilter from './papers/ColumnFilter';
 
 const { Text, Paragraph } = Typography;
 const { Search } = Input;
-const { Option } = Select;
 
 interface PapersListTabProps {
   // 可选的筛选器初始值
@@ -83,12 +82,6 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
   const { data: journals = [] } = useQuery<Journal[]>({
     queryKey: ['journals'],
     queryFn: () => journalApi.getJournals(),
-  });
-
-  // 查询标签列表（用于筛选）
-  const { data: tags = [] } = useQuery<TagType[]>({
-    queryKey: ['tags'],
-    queryFn: () => tagApi.getTags(),
   });
 
   // 查询论文列表
@@ -438,21 +431,13 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
               value={journalFilter}
               options={journals.map(j => ({ label: j.name, value: j.id }))}
             />
-            <Select
-              mode="multiple"
+            <EnhancedTagSelect
               placeholder="标签"
               allowClear
               style={{ width: 120 }}
               onChange={setTagFilter}
               value={tagFilter}
-              maxTagCount={2}
-            >
-              {tags.map(tag => (
-                <Option key={tag.id} value={tag.id}>
-                  {tag.name}
-                </Option>
-              ))}
-            </Select>
+            />
             <Select
               placeholder="状态"
               allowClear

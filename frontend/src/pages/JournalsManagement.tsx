@@ -34,6 +34,7 @@ import {
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journalApi, tagApi, volumeStatsApi } from '../services/apiOptimized';
+import EnhancedTagSelect from '../components/EnhancedTagSelect';
 import {
   Journal,
   JournalCreate,
@@ -50,7 +51,6 @@ import ValidationPromptModal from '../components/ValidationPromptModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
-const { Option } = Select;
 
 const JournalsManagement: React.FC = () => {
   const queryClient = useQueryClient();
@@ -462,17 +462,9 @@ const JournalsManagement: React.FC = () => {
             name="tag_ids"
             label="标签"
           >
-            <Select
-              mode="multiple"
-              placeholder="选择标签（可选）"
-              allowClear
-            >
-              {tags.map((tag) => (
-                <Option key={tag.id} value={tag.id}>
-                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary }}>{tag.name}</Tag>
-                </Option>
-              ))}
-            </Select>
+            <EnhancedTagSelect
+              placeholder="选择或创建标签（可选）"
+            />
           </Form.Item>
 
           <Form.Item name="notes" label="备注">
@@ -1017,17 +1009,9 @@ const JournalsManagement: React.FC = () => {
             name="tag_ids"
             label="标签"
           >
-            <Select
-              mode="multiple"
-              placeholder="选择标签（可选）"
-              allowClear
-            >
-              {tags.map((tag) => (
-                <Option key={tag.id} value={tag.id}>
-                  <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary }}>{tag.name}</Tag>
-                </Option>
-              ))}
-            </Select>
+            <EnhancedTagSelect
+              placeholder="选择或创建标签（可选）"
+            />
           </Form.Item>
 
           <Form.Item name="notes" label="备注">
