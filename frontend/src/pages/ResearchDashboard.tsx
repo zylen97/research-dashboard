@@ -9,7 +9,6 @@ import {
   Table,
   Switch,
   DatePicker,
-  Space,
 } from 'antd';
 import {
   PlusOutlined,
@@ -332,11 +331,15 @@ const ResearchDashboard: React.FC = () => {
       {/* 筛选区域 */}
       <FilterSection
         filterControls={
-          <Space size="middle" wrap>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(6, 1fr)',
+            gap: '12px',
+            alignItems: 'start',
+          }}>
             <Select
               placeholder="状态"
               allowClear
-              style={{ width: 120 }}
               value={filterStatus || null}
               onChange={setFilterStatus}
             >
@@ -347,7 +350,6 @@ const ResearchDashboard: React.FC = () => {
             <Select
               placeholder="我的身份"
               allowClear
-              style={{ width: 120 }}
               value={filterMyRole || null}
               onChange={setFilterMyRole}
             >
@@ -358,7 +360,6 @@ const ResearchDashboard: React.FC = () => {
               placeholder="研究方法"
               allowClear
               showSearch
-              style={{ width: 150 }}
               value={filterResearchMethod || null}
               onChange={setFilterResearchMethod}
               filterOption={(input, option) =>
@@ -372,14 +373,12 @@ const ResearchDashboard: React.FC = () => {
             <Input
               placeholder="投稿期刊"
               allowClear
-              style={{ width: 150 }}
               value={filterTargetJournal}
               onChange={(e) => setFilterTargetJournal(e.target.value)}
             />
             <Input
               placeholder="参考期刊"
               allowClear
-              style={{ width: 150 }}
               value={filterReferenceJournal}
               onChange={(e) => setFilterReferenceJournal(e.target.value)}
             />
@@ -390,7 +389,7 @@ const ResearchDashboard: React.FC = () => {
             >
               重置筛选
             </Button>
-          </Space>
+          </div>
         }
       />
 
