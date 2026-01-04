@@ -4,7 +4,7 @@ export * from './api';
 export * from './ideas';
 // 导出Papers相关类型
 export * from './papers';
-// 导出Tag类型（从journals.ts导入）
+// 导出Tag类型（从journals.ts导入，同时在内部使用）
 import type { Tag } from './journals';
 export type { Tag } from './journals';
 

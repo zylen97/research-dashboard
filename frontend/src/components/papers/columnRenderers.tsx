@@ -11,6 +11,13 @@ import { PAPER_STATUS_CONFIG } from '../../config/paperStatusConfig';
 
 const { Text } = Typography;
 
+// 迁移潜力映射常量
+const POTENTIAL_MAP: Record<string, { text: string; color: string }> = {
+  high: { text: '高', color: '#52c41a' },
+  medium: { text: '中', color: '#faad14' },
+  low: { text: '低', color: '#d9d9d9' },
+};
+
 // ===== 基础渲染器 =====
 
 /**
@@ -79,13 +86,7 @@ export const renderAIAnalysis = (record: Paper) => {
   const analysis = parseAIAnalysis(record);
   if (!analysis) return '-';
 
-  const potentialMap: Record<string, { text: string; color: string }> = {
-    high: { text: '高', color: '#52c41a' },
-    medium: { text: '中', color: '#faad14' },
-    low: { text: '低', color: '#d9d9d9' },
-  };
-
-  const potential = potentialMap[analysis.migration_potential] || potentialMap['medium'];
+  const potential = POTENTIAL_MAP[analysis.migration_potential] || POTENTIAL_MAP['medium'];
   const coreIdea = analysis.core_idea?.slice(0, 50) + (analysis.core_idea?.length > 50 ? '...' : '');
 
   return (
@@ -113,12 +114,7 @@ export const renderStatus = (status: string) => {
  */
 export const renderMigrationPotential = (potential: string | null) => {
   if (!potential) return '-';
-  const potentialMap: Record<string, { text: string; color: string }> = {
-    high: { text: '高', color: '#52c41a' },
-    medium: { text: '中', color: '#faad14' },
-    low: { text: '低', color: '#d9d9d9' },
-  };
-  const config = potentialMap[potential];
+  const config = POTENTIAL_MAP[potential];
   return config ? <Tag color={config.color}>{config.text}</Tag> : '-';
 };
 
