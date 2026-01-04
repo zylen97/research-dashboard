@@ -17,8 +17,10 @@ import {
   ReloadOutlined,
   CrownOutlined,
   MailOutlined,
+  ClearOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { useQuery } from '@tanstack/react-query';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import {
   StatisticsCards,
@@ -33,6 +35,8 @@ import ValidationPromptModal from '../components/ValidationPromptModal';
 import JournalSelect from '../components/JournalSelect';
 import ResearchMethodSelect from '../components/ResearchMethodSelect';
 import { PageHeader, FilterSection } from '../styles/components';
+import { researchMethodApi } from '../services/apiOptimized';
+import { ResearchMethod } from '../types/research-methods';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -78,6 +82,21 @@ const ResearchDashboard: React.FC = () => {
     return saved ? JSON.parse(saved) : DEFAULT_COLUMN_WIDTHS;
   });
   const [form] = Form.useForm();
+
+  // 查询研究方法列表（用于筛选）
+  const { data: researchMethods = [] } = useQuery<ResearchMethod[]>({
+    queryKey: ['research-methods'],
+    queryFn: () => researchMethodApi.getMethods(),
+  });
+
+  // 重置所有筛选
+  const handleResetFilters = () => {
+    setFilterStatus('');
+    setFilterMyRole('');
+    setFilterResearchMethod('');
+    setFilterTargetJournal('');
+    setFilterReferenceJournal('');
+  };
 
   // 构建筛选参数对象
   const filters = useMemo(() => ({
@@ -335,12 +354,20 @@ const ResearchDashboard: React.FC = () => {
               <Select.Option value="first_author">第一作者</Select.Option>
               <Select.Option value="corresponding_author">通讯作者</Select.Option>
             </Select>
-            <Input
+            <Select
               placeholder="研究方法"
               allowClear
+              showSearch
               style={{ width: 150 }}
-              value={filterResearchMethod}
-              onChange={(e) => setFilterResearchMethod(e.target.value)}
+              value={filterResearchMethod || null}
+              onChange={setFilterResearchMethod}
+              filterOption={(input, option) =>
+                (option?.label?.toString() || '').toLowerCase().includes(input.toLowerCase())
+              }
+              options={researchMethods.map(m => ({
+                label: m.name,
+                value: m.name
+              }))}
             />
             <Input
               placeholder="投稿期刊"
@@ -356,6 +383,13 @@ const ResearchDashboard: React.FC = () => {
               value={filterReferenceJournal}
               onChange={(e) => setFilterReferenceJournal(e.target.value)}
             />
+            <Button
+              icon={<ClearOutlined />}
+              onClick={handleResetFilters}
+              disabled={!filterStatus && !filterMyRole && !filterResearchMethod && !filterTargetJournal && !filterReferenceJournal}
+            >
+              重置筛选
+            </Button>
           </Space>
         }
       />

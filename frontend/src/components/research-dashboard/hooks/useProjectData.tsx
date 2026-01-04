@@ -74,11 +74,42 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
 
   // 按待办状态排序项目：待办项目置顶，然后按论文进度日期倒序
   const sortedProjects = useMemo(() => {
-    // 状态优先级映射（用于非待办项目排序）
+    // 状态优先级映射（用于非待办项目排序）- 扩展更多状态（v4.7.1）
     const STATUS_PRIORITY: Record<string, number> = {
       'writing': 1,      // 撰写中
       'submitting': 2,   // 投稿中
       'published': 3,    // 已发表
+      'draft': 4,        // 草稿
+      'rejected': 5,     // 已拒稿
+      'under_review': 6, // 审稿中
+    };
+
+    // 获取状态优先级的辅助函数（P1-6）
+    const getStatusPriority = (status: string): number => {
+      return STATUS_PRIORITY[status] ?? 999;
+    };
+
+    // 获取最新论文进度日期，添加日期有效性检查（P2-7）
+    const getLatestCommunicationDate = (project: ResearchProject): Date | null => {
+      const logs = project.communication_logs || [];
+      if (logs.length === 0) return null;
+
+      const sortedLogs = [...logs].sort((logA, logB) => {
+        const dateA = new Date(logA.communication_date || logA.created_at);
+        const dateB = new Date(logB.communication_date || logB.created_at);
+
+        // 检查日期是否有效
+        if (isNaN(dateA.getTime())) return 1;
+        if (isNaN(dateB.getTime())) return -1;
+
+        return dateB.getTime() - dateA.getTime();
+      });
+
+      const latestLog = sortedLogs[0];
+      if (!latestLog) return null;
+
+      const date = new Date(latestLog.communication_date || latestLog.created_at);
+      return isNaN(date.getTime()) ? null : date;
     };
 
     return [...projects].sort((a, b) => {
@@ -97,37 +128,25 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
         }
         // 标记时间比较
         if (aTodoStatus.marked_at && bTodoStatus.marked_at) {
-          return new Date(bTodoStatus.marked_at).getTime() - new Date(aTodoStatus.marked_at).getTime();
+          const aTime = new Date(aTodoStatus.marked_at).getTime();
+          const bTime = new Date(bTodoStatus.marked_at).getTime();
+          // 检查日期有效性
+          if (!isNaN(aTime) && !isNaN(bTime)) {
+            return bTime - aTime;
+          }
         }
         return 0;
       }
 
       // 3. 都不是待办项目时，先按状态优先级排序，再按论文进度日期倒序
       // 状态优先级：writing(撰写中) → submitting(投稿中) → published(已发表)
-      const aStatusPriority = STATUS_PRIORITY[a.status] || 999;
-      const bStatusPriority = STATUS_PRIORITY[b.status] || 999;
+      const aStatusPriority = getStatusPriority(a.status);
+      const bStatusPriority = getStatusPriority(b.status);
       if (aStatusPriority !== bStatusPriority) {
         return aStatusPriority - bStatusPriority;
       }
 
       // 4. 状态相同时，按论文进度日期倒序排列
-      // 获取最新论文进度记录的日期
-      const getLatestCommunicationDate = (project: ResearchProject) => {
-        const logs = project.communication_logs || [];
-        if (logs.length === 0) return null;
-
-        const sortedLogs = [...logs].sort((logA, logB) => {
-          const dateA = new Date(logA.communication_date || logA.created_at);
-          const dateB = new Date(logB.communication_date || logB.created_at);
-          return dateB.getTime() - dateA.getTime();
-        });
-
-        const latestLog = sortedLogs[0];
-        if (!latestLog) return null;
-
-        return new Date(latestLog.communication_date || latestLog.created_at);
-      };
-
       const aLatestDate = getLatestCommunicationDate(a);
       const bLatestDate = getLatestCommunicationDate(b);
 
@@ -141,7 +160,12 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
       }
 
       // 都没有论文进度时，按创建时间倒序
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+      const aCreated = new Date(a.created_at).getTime();
+      const bCreated = new Date(b.created_at).getTime();
+      // 检查创建日期有效性
+      if (isNaN(aCreated)) return 1;
+      if (isNaN(bCreated)) return -1;
+      return bCreated - aCreated;
     });
   }, [projects, getProjectTodoStatus]);
 

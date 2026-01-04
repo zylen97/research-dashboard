@@ -4,7 +4,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, exc
 from typing import List, Optional
 from app.models.database import ResearchMethod as ResearchMethodModel, ResearchProject, get_db
 from app.models.schemas import ResearchMethodCreate, ResearchMethodUpdate, ResearchMethod as ResearchMethodSchema
@@ -172,21 +172,43 @@ async def get_or_create_research_method(
 
     - **name**: 研究方法名称
     - 如果存在则返回现有方法，不存在则创建新方法
+    - 使用数据库事务锁防止并发创建重复记录
     """
     name = method_data.name.strip()
-    method = db.query(ResearchMethodModel).filter(ResearchMethodModel.name == name).first()
 
-    if method:
-        return method
+    try:
+        # 使用 SELECT FOR UPDATE 锁定行，防止并发创建
+        method = db.query(ResearchMethodModel).filter(
+            ResearchMethodModel.name == name
+        ).with_for_update().first()
 
-    # 创建新研究方法
-    new_method = ResearchMethodModel(
-        name=name,
-        usage_count=0
-    )
+        if method:
+            return method
 
-    db.add(new_method)
-    db.commit()
-    db.refresh(new_method)
+        # 不存在则创建
+        new_method = ResearchMethodModel(
+            name=name,
+            usage_count=0
+        )
 
-    return new_method
+        db.add(new_method)
+        db.commit()
+        db.refresh(new_method)
+
+        return new_method
+
+    except exc.IntegrityError:
+        # 并发创建时，回滚并重新查询
+        db.rollback()
+        method = db.query(ResearchMethodModel).filter(
+            ResearchMethodModel.name == name
+        ).first()
+
+        if method:
+            return method
+
+        # 如果还是找不到，说明有其他问题
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"创建研究方法 '{name}' 失败，请重试"
+        )

@@ -5,13 +5,8 @@
 import React, { useState, useRef } from 'react';
 import { Select, message } from 'antd';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-
-interface ResearchMethod {
-  id: number;
-  name: string;
-  usage_count: number;
-  created_at: string;
-}
+import { researchMethodApi } from '../services/apiOptimized';
+import { ResearchMethod } from '../types/research-methods';
 
 interface ResearchMethodSelectProps {
   value?: string;
@@ -35,28 +30,12 @@ const ResearchMethodSelect: React.FC<ResearchMethodSelectProps> = ({
   // 查询所有研究方法
   const { data: methods = [], isLoading } = useQuery<ResearchMethod[]>({
     queryKey: ['research-methods'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:8000/api/research-methods/');
-      if (!response.ok) {
-        throw new Error('获取研究方法失败');
-      }
-      return response.json();
-    },
+    queryFn: () => researchMethodApi.getMethods(),
   });
 
   // 自动创建新研究方法
   const createMutation = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await fetch('http://localhost:8000/api/research-methods/get-or-create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-      });
-      if (!response.ok) {
-        throw new Error('创建研究方法失败');
-      }
-      return response.json();
-    },
+    mutationFn: (name: string) => researchMethodApi.getOrCreate(name),
     onSuccess: (data) => {
       // 刷新研究方法列表
       queryClient.invalidateQueries({ queryKey: ['research-methods'] });
@@ -93,19 +72,17 @@ const ResearchMethodSelect: React.FC<ResearchMethodSelectProps> = ({
     }
   };
 
-  // 处理失焦事件
+  // 处理失焦事件 - 只清空搜索值，不自动创建
   const handleBlur = () => {
-    // 如果搜索值不为空且不是现有方法，且没有在创建中，则创建新方法
-    if (
-      searchValue.trim() &&
-      !methods.find(m => m.name === searchValue.trim()) &&
-      !isCreatingRef.current &&
-      searchValue.trim() !== value
-    ) {
+    setSearchValue('');
+  };
+
+  // 处理键盘事件 - 按Enter时创建新方法
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && searchValue.trim() && !methods.find(m => m.name === searchValue.trim()) && !isCreatingRef.current) {
       isCreatingRef.current = true;
       createMutation.mutate(searchValue.trim());
     }
-    setSearchValue('');
   };
 
   // 生成选项列表
@@ -131,12 +108,13 @@ const ResearchMethodSelect: React.FC<ResearchMethodSelectProps> = ({
       onChange={handleChange}
       onSearch={handleSearch}
       onBlur={handleBlur}
+      onKeyDown={handleKeyDown}
       allowClear={allowClear}
       loading={isLoading || createMutation.isPending}
       disabled={disabled}
       filterOption={false} // 禁用内置过滤，使用自定义逻辑
       options={options}
-      notFoundContent={searchValue.trim() ? `"${searchValue.trim()}" 将作为新方法创建` : '暂无数据'}
+      notFoundContent={searchValue.trim() ? `按Enter创建 "${searchValue.trim()}"` : '暂无数据'}
     />
   );
 };

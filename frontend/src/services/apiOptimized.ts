@@ -24,6 +24,7 @@ import {
   PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate,
   UserConfig, VolumeStats
 } from '../types/papers';
+import { ResearchMethod, ResearchMethodCreate, ResearchMethodUpdate } from '../types/research-methods';
 import { AIConfig, AIConfigUpdate, AITestRequest, AITestResponse as AIConfigTestResponse } from '../types/ai';
 import { errorInterceptorOptimized } from '../utils/errorHandlerOptimized';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
@@ -454,6 +455,40 @@ export const auditApi = {
 
   getUserActions: (userId: number, params?: any) =>
     api.get(`/audit/user/${userId}`, { params }),
+};
+
+// 研究方法API（v4.7）
+export const researchMethodApi = {
+  // 获取所有研究方法
+  getMethods: async (): Promise<ResearchMethod[]> => {
+    try {
+      const response = await api.get('/research-methods/');
+      return handleListResponse<ResearchMethod>(response, 'API.getResearchMethods');
+    } catch (error) {
+      console.error('获取研究方法列表失败:', error);
+      return [];
+    }
+  },
+
+  // 获取单个研究方法
+  getMethod: (id: number): Promise<ResearchMethod> =>
+    api.get(`/research-methods/${id}`),
+
+  // 创建研究方法
+  create: (data: ResearchMethodCreate): Promise<ResearchMethod> =>
+    api.post('/research-methods/', data),
+
+  // 更新研究方法
+  update: (id: number, data: ResearchMethodUpdate): Promise<ResearchMethod> =>
+    api.put(`/research-methods/${id}`, data),
+
+  // 删除研究方法
+  delete: (id: number): Promise<{ message: string; method_id: number }> =>
+    api.delete(`/research-methods/${id}`),
+
+  // 获取或创建研究方法（用于下拉选择自动创建）
+  getOrCreate: (name: string): Promise<ResearchMethod> =>
+    api.post('/research-methods/get-or-create', { name }),
 };
 
 // 论文管理API

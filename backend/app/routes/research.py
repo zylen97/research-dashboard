@@ -7,13 +7,31 @@ import json
 from ..models import (
     get_db, ResearchProject, Collaborator, CommunicationLog,
     ResearchProjectSchema, ResearchProjectCreate, ResearchProjectUpdate,
-    CommunicationLogSchema, CommunicationLogCreate, CommunicationLogUpdate
+    CommunicationLogSchema, CommunicationLogCreate, CommunicationLogUpdate,
+    ResearchMethod
 )
 from ..utils import DataValidator
 from ..utils.security_validators import SecurityValidator
 from ..utils.response import success_response
 
 router = APIRouter()
+
+
+def update_research_method_usage(db: Session, method_name: str, increment: int = 1):
+    """
+    更新研究方法的使用次数
+
+    Args:
+        db: 数据库会话
+        method_name: 研究方法名称
+        increment: 增量（正数增加，负数减少）
+    """
+    if not method_name:
+        return
+
+    method = db.query(ResearchMethod).filter(ResearchMethod.name == method_name).first()
+    if method:
+        method.usage_count = max(0, method.usage_count + increment)
 
 @router.get("/", response_model=List[ResearchProjectSchema])
 async def get_research_projects(
@@ -43,15 +61,15 @@ async def get_research_projects(
 
     # 按研究方法筛选（模糊匹配）
     if research_method:
-        query = query.filter(ResearchProject.research_method.like(f"%{research_method}%"))
+        query = query.filter(ResearchProject.research_method.contains(research_method))
 
     # 按投稿期刊筛选（模糊匹配）
     if target_journal:
-        query = query.filter(ResearchProject.target_journal.like(f"%{target_journal}%"))
+        query = query.filter(ResearchProject.target_journal.contains(target_journal))
 
     # 按参考期刊筛选（模糊匹配）
     if reference_journal:
-        query = query.filter(ResearchProject.reference_journal.like(f"%{reference_journal}%"))
+        query = query.filter(ResearchProject.reference_journal.contains(reference_journal))
 
     projects = query.offset(skip).limit(limit).all()
     return projects
@@ -137,9 +155,15 @@ async def create_research_project(
             Collaborator.is_deleted == False
         ).all()
         db_project.collaborators = collaborators
-    
+
     db.commit()
     db.refresh(db_project)
+
+    # 更新研究方法的使用次数（v4.7）
+    if db_project.research_method:
+        update_research_method_usage(db, db_project.research_method, 1)
+        db.commit()
+
     return db_project
 
 @router.put("/{project_id}", response_model=ResearchProjectSchema)
@@ -155,7 +179,10 @@ async def update_research_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Research project not found"
         )
-    
+
+    # 保存旧的研究方法，用于更新usage_count（v4.7）
+    old_research_method = db_project.research_method
+
     update_data = project_update.model_dump(exclude_unset=True, exclude={'collaborator_ids'})
 
     # 特殊处理is_todo字段
@@ -173,16 +200,28 @@ async def update_research_project(
     # 处理其他字段
     for field, value in update_data.items():
         setattr(db_project, field, value)
-    
+
     # Update collaborators if provided
     if project_update.collaborator_ids is not None:
         collaborators = db.query(Collaborator).filter(
             Collaborator.id.in_(project_update.collaborator_ids)
         ).all()
         db_project.collaborators = collaborators
-    
+
     db.commit()
     db.refresh(db_project)
+
+    # 更新研究方法的使用次数（v4.7）
+    new_research_method = db_project.research_method
+    if old_research_method != new_research_method:
+        # 减少旧方法的使用次数
+        if old_research_method:
+            update_research_method_usage(db, old_research_method, -1)
+        # 增加新方法的使用次数
+        if new_research_method:
+            update_research_method_usage(db, new_research_method, 1)
+        db.commit()
+
     return db_project
 
 @router.delete("/{project_id}")
@@ -194,16 +233,24 @@ async def delete_research_project(project_id: int, db: Session = Depends(get_db)
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Research project not found"
         )
-    
+
+    # 保存研究方法，用于更新usage_count（v4.7）
+    research_method = db_project.research_method
+
     try:
         # 获取关联数据统计（用于返回信息）
         log_count = db.query(CommunicationLog).filter(CommunicationLog.project_id == project_id).count()
         collaborator_count = len(db_project.collaborators)
-        
+
         # 删除项目（级联删除会自动处理关联的交流日志）
         db.delete(db_project)
         db.commit()
-        
+
+        # 更新研究方法的使用次数（v4.7）
+        if research_method:
+            update_research_method_usage(db, research_method, -1)
+            db.commit()
+
         return {
             "message": "Research project deleted successfully",
             "deleted_logs": log_count,
