@@ -57,33 +57,33 @@ const StatisticsCards: React.FC<StatisticsCardsProps> = ({
         style={{ border: `2px solid ${GRAYSCALE_SYSTEM.secondary}` }}
       >
         <Statistic
-          title="撰写中"
+          title="撰写"
           value={stats.writing}
           valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary, fontSize: 20 }}
           prefix={<span style={{ fontSize: 16, marginRight: 4 }}>●</span>}
         />
       </Card>
 
-      {/* 投稿中 - 600字重 + 2px边框 + 符号 */}
+      {/* 投稿 - 600字重 + 2px边框 + 符号 */}
       <Card
         className="statistics-card hover-shadow"
         style={{ border: `2px solid ${GRAYSCALE_SYSTEM.primary}` }}
       >
         <Statistic
-          title="投稿中"
+          title="投稿"
           value={stats.submitting}
           valueStyle={{ fontWeight: 600, color: GRAYSCALE_SYSTEM.primary, fontSize: 20 }}
           prefix={<span style={{ fontSize: 16, marginRight: 4 }}>◆</span>}
         />
       </Card>
 
-      {/* 已发表 - 400字重 + 浅灰背景 + 符号 */}
+      {/* 发表 - 400字重 + 浅灰背景 + 符号 */}
       <Card
         className="statistics-card hover-shadow"
         style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
       >
         <Statistic
-          title="已发表"
+          title="发表"
           value={stats.published}
           valueStyle={{ fontWeight: 400, color: GRAYSCALE_SYSTEM.secondary, fontSize: 20 }}
           prefix={<span style={{ fontSize: 16, marginRight: 4 }}>○</span>}

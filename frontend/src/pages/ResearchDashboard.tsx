@@ -344,9 +344,9 @@ const ResearchDashboard: React.FC = () => {
               value={filterStatus || null}
               onChange={setFilterStatus}
             >
-              <Select.Option value="writing">撰写中</Select.Option>
-              <Select.Option value="submitting">投稿中</Select.Option>
-              <Select.Option value="published">已发表</Select.Option>
+              <Select.Option value="writing">撰写</Select.Option>
+              <Select.Option value="submitting">投稿</Select.Option>
+              <Select.Option value="published">发表</Select.Option>
             </Select>
             <Select
               placeholder="我的身份"
@@ -514,9 +514,9 @@ const ResearchDashboard: React.FC = () => {
             initialValue="writing"
           >
             <Select placeholder="请选择项目状态">
-              <Select.Option value="writing">撰写中</Select.Option>
-              <Select.Option value="submitting">投稿中</Select.Option>
-              <Select.Option value="published">已发表</Select.Option>
+              <Select.Option value="writing">撰写</Select.Option>
+              <Select.Option value="submitting">投稿</Select.Option>
+              <Select.Option value="published">发表</Select.Option>
             </Select>
           </Form.Item>
 
