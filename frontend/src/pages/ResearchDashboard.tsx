@@ -9,6 +9,7 @@ import {
   Table,
   Switch,
   DatePicker,
+  Space,
 } from 'antd';
 import {
   PlusOutlined,
@@ -30,7 +31,7 @@ import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
 import ValidationPromptModal from '../components/ValidationPromptModal';
 import JournalSelect from '../components/JournalSelect';
-import { PageHeader } from '../styles/components';
+import { PageHeader, FilterSection } from '../styles/components';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -57,6 +58,14 @@ const ResearchDashboard: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+
+  // 筛选状态
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterMyRole, setFilterMyRole] = useState<string>('');
+  const [filterResearchMethod, setFilterResearchMethod] = useState<string>('');
+  const [filterTargetJournal, setFilterTargetJournal] = useState<string>('');
+  const [filterReferenceJournal, setFilterReferenceJournal] = useState<string>('');
+
   const [showArchived, setShowArchived] = useState(() => {
     // 从localStorage读取用户偏好
     const saved = localStorage.getItem('showArchivedProjects');
@@ -69,6 +78,15 @@ const ResearchDashboard: React.FC = () => {
   });
   const [form] = Form.useForm();
 
+  // 构建筛选参数对象
+  const filters = useMemo(() => ({
+    status: filterStatus || undefined,
+    my_role: filterMyRole || undefined,
+    research_method: filterResearchMethod || undefined,
+    target_journal: filterTargetJournal || undefined,
+    reference_journal: filterReferenceJournal || undefined,
+  }), [filterStatus, filterMyRole, filterResearchMethod, filterTargetJournal, filterReferenceJournal]);
+
   // 使用自定义钩子管理数据和操作
   const {
     sortedProjects,
@@ -78,7 +96,7 @@ const ResearchDashboard: React.FC = () => {
     updateLocalTodoStatus,
     revertLocalTodoStatus,
     refetch,
-  } = useProjectData();
+  } = useProjectData(filters);
 
   const {
     createProjectMutation,
@@ -286,9 +304,59 @@ const ResearchDashboard: React.FC = () => {
       />
 
       {/* 统计卡片 */}
-      <StatisticsCards 
-        projects={sortedProjects} 
-        getProjectTodoStatus={getProjectTodoStatus} 
+      <StatisticsCards
+        projects={sortedProjects}
+        getProjectTodoStatus={getProjectTodoStatus}
+      />
+
+      {/* 筛选区域 */}
+      <FilterSection
+        filterControls={
+          <Space size="middle" wrap>
+            <Select
+              placeholder="状态"
+              allowClear
+              style={{ width: 120 }}
+              value={filterStatus || null}
+              onChange={setFilterStatus}
+            >
+              <Select.Option value="writing">撰写中</Select.Option>
+              <Select.Option value="submitting">投稿中</Select.Option>
+              <Select.Option value="published">已发表</Select.Option>
+            </Select>
+            <Select
+              placeholder="我的身份"
+              allowClear
+              style={{ width: 120 }}
+              value={filterMyRole || null}
+              onChange={setFilterMyRole}
+            >
+              <Select.Option value="first_author">第一作者</Select.Option>
+              <Select.Option value="corresponding_author">通讯作者</Select.Option>
+            </Select>
+            <Input
+              placeholder="研究方法"
+              allowClear
+              style={{ width: 150 }}
+              value={filterResearchMethod}
+              onChange={(e) => setFilterResearchMethod(e.target.value)}
+            />
+            <Input
+              placeholder="投稿期刊"
+              allowClear
+              style={{ width: 150 }}
+              value={filterTargetJournal}
+              onChange={(e) => setFilterTargetJournal(e.target.value)}
+            />
+            <Input
+              placeholder="参考期刊"
+              allowClear
+              style={{ width: 150 }}
+              value={filterReferenceJournal}
+              onChange={(e) => setFilterReferenceJournal(e.target.value)}
+            />
+          </Space>
+        }
       />
 
       {/* 项目列表 */}

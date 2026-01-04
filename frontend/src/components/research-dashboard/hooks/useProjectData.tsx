@@ -10,7 +10,15 @@ export interface TodoStatus {
   notes: string | null;
 }
 
-export const useProjectData = () => {
+export interface ProjectFilters {
+  status?: string | undefined;
+  my_role?: string | undefined;
+  research_method?: string | undefined;
+  target_journal?: string | undefined;
+  reference_journal?: string | undefined;
+}
+
+export const useProjectData = (filters: ProjectFilters = {}) => {
   // 获取用户的待办项目列表
   const { data: userTodosData, refetch: refetchTodos } = useQuery({
     queryKey: ['user-todos'],
@@ -24,8 +32,8 @@ export const useProjectData = () => {
 
   // 获取研究项目数据
   const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useQuery({
-    queryKey: ['research-projects'],
-    queryFn: () => researchApi.getProjects(),
+    queryKey: ['research-projects', filters],
+    queryFn: () => researchApi.getProjects(filters as any),
   });
 
   // 获取合作者数据（用于下拉选择）
@@ -66,14 +74,21 @@ export const useProjectData = () => {
 
   // 按待办状态排序项目：待办项目置顶，然后按论文进度日期倒序
   const sortedProjects = useMemo(() => {
+    // 状态优先级映射（用于非待办项目排序）
+    const STATUS_PRIORITY: Record<string, number> = {
+      'writing': 1,      // 撰写中
+      'submitting': 2,   // 投稿中
+      'published': 3,    // 已发表
+    };
+
     return [...projects].sort((a, b) => {
       const aTodoStatus = getProjectTodoStatus(a);
       const bTodoStatus = getProjectTodoStatus(b);
-      
+
       // 1. 待办项目优先
       if (aTodoStatus.is_todo && !bTodoStatus.is_todo) return -1;
       if (!aTodoStatus.is_todo && bTodoStatus.is_todo) return 1;
-      
+
       // 2. 都是待办项目时，先按优先级排序（高优先级在前），再按标记时间倒序
       if (aTodoStatus.is_todo && bTodoStatus.is_todo) {
         // 优先级比较
@@ -86,25 +101,33 @@ export const useProjectData = () => {
         }
         return 0;
       }
-      
-      // 3. 都不是待办项目时，按论文进度日期倒序排列
+
+      // 3. 都不是待办项目时，先按状态优先级排序，再按论文进度日期倒序
+      // 状态优先级：writing(撰写中) → submitting(投稿中) → published(已发表)
+      const aStatusPriority = STATUS_PRIORITY[a.status] || 999;
+      const bStatusPriority = STATUS_PRIORITY[b.status] || 999;
+      if (aStatusPriority !== bStatusPriority) {
+        return aStatusPriority - bStatusPriority;
+      }
+
+      // 4. 状态相同时，按论文进度日期倒序排列
       // 获取最新论文进度记录的日期
       const getLatestCommunicationDate = (project: ResearchProject) => {
         const logs = project.communication_logs || [];
         if (logs.length === 0) return null;
-        
+
         const sortedLogs = [...logs].sort((logA, logB) => {
           const dateA = new Date(logA.communication_date || logA.created_at);
           const dateB = new Date(logB.communication_date || logB.created_at);
           return dateB.getTime() - dateA.getTime();
         });
-        
+
         const latestLog = sortedLogs[0];
         if (!latestLog) return null;
-        
+
         return new Date(latestLog.communication_date || latestLog.created_at);
       };
-      
+
       const aLatestDate = getLatestCommunicationDate(a);
       const bLatestDate = getLatestCommunicationDate(b);
 

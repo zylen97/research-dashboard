@@ -19,7 +19,11 @@ router = APIRouter()
 async def get_research_projects(
     skip: int = 0,
     limit: int = 100,
-    status_filter: str = None,
+    status: Optional[str] = None,
+    my_role: Optional[str] = None,
+    research_method: Optional[str] = None,
+    target_journal: Optional[str] = None,
+    reference_journal: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """获取研究项目列表（数据共享，包含交流记录）"""
@@ -28,8 +32,27 @@ async def get_research_projects(
         joinedload(ResearchProject.collaborators),
         joinedload(ResearchProject.communication_logs)
     )
-    if status_filter:
-        query = query.filter(ResearchProject.status == status_filter)
+
+    # 按状态筛选
+    if status:
+        query = query.filter(ResearchProject.status == status)
+
+    # 按我的身份筛选
+    if my_role:
+        query = query.filter(ResearchProject.my_role == my_role)
+
+    # 按研究方法筛选（模糊匹配）
+    if research_method:
+        query = query.filter(ResearchProject.research_method.like(f"%{research_method}%"))
+
+    # 按投稿期刊筛选（模糊匹配）
+    if target_journal:
+        query = query.filter(ResearchProject.target_journal.like(f"%{target_journal}%"))
+
+    # 按参考期刊筛选（模糊匹配）
+    if reference_journal:
+        query = query.filter(ResearchProject.reference_journal.like(f"%{reference_journal}%"))
+
     projects = query.offset(skip).limit(limit).all()
     return projects
 

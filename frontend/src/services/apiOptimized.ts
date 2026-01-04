@@ -135,7 +135,13 @@ export const collaboratorApi = {
 // 研究项目API - 手动定义以包含所有方法别名
 export const researchApi = {
   // 基础CRUD操作（向后兼容别名）
-  getProjects: () => api.get('/research/'),
+  getProjects: (params?: {
+    status?: string;
+    my_role?: string;
+    research_method?: string;
+    target_journal?: string;
+    reference_journal?: string;
+  }) => api.get('/research/', { params }),
   getList: (params?: any) => api.get('/research/', { params }),
   getById: (id: number) => api.get(`/research/${id}`),
   createProject: (data: ResearchProjectCreate) => api.post('/research/', data),
