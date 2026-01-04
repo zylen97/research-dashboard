@@ -334,7 +334,7 @@ const ResearchDashboard: React.FC = () => {
         filterControls={
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(6, 1fr)',
+            gridTemplateColumns: '1fr 1fr 1.2fr 2fr 2fr auto',
             gap: '12px',
             alignItems: 'start',
           }}>
