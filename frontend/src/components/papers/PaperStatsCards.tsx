@@ -43,28 +43,37 @@ const PaperStatsCards: React.FC<PaperStatsCardsProps> = ({ stats, loading = fals
   const pending = 'by_status' in stats ? stats.by_status.pending : stats.pending_papers;
   const analyzed = 'by_status' in stats ? stats.by_status.analyzed : stats.analyzed_papers;
 
+  const statisticStyle = {
+    fontSize: 20,
+    fontWeight: 600 as const,
+  };
+
   return (
     <Row gutter={16} style={{ marginBottom: 16 }}>
       <Col span={8}>
-        <Card loading={loading}>
-          <Statistic title="总论文数" value={total} />
-        </Card>
-      </Col>
-      <Col span={8}>
-        <Card loading={loading}>
+        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
           <Statistic
-            title="待分析"
-            value={pending}
-            valueStyle={{ color: '#999' }}
+            title={<span style={{ fontSize: 12 }}>总论文数</span>}
+            value={total}
+            valueStyle={statisticStyle}
           />
         </Card>
       </Col>
       <Col span={8}>
-        <Card loading={loading}>
+        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
           <Statistic
-            title="已分析"
+            title={<span style={{ fontSize: 12 }}>待分析</span>}
+            value={pending}
+            valueStyle={{ ...statisticStyle, color: '#999' }}
+          />
+        </Card>
+      </Col>
+      <Col span={8}>
+        <Card loading={loading} bodyStyle={{ padding: '12px 16px' }}>
+          <Statistic
+            title={<span style={{ fontSize: 12 }}>已分析</span>}
             value={analyzed}
-            valueStyle={{ color: '#333' }}
+            valueStyle={{ ...statisticStyle, color: '#333' }}
           />
         </Card>
       </Col>

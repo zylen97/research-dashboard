@@ -369,6 +369,23 @@ const JournalsManagement: React.FC = () => {
                             {journal.name}
                           </Text>
 
+                          {/* 分隔符 */}
+                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+
+                          {/* 备注（如果有） */}
+                          {journal.notes && (
+                            <Text
+                              type="secondary"
+                              style={{ fontSize: 12 }}
+                              ellipsis={{ tooltip: journal.notes }}
+                            >
+                              {journal.notes}
+                            </Text>
+                          )}
+
+                          {/* 分隔符 */}
+                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+
                           {/* 标签 */}
                           {(!journal.tags || journal.tags.length === 0) ? (
                             <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
@@ -380,10 +397,9 @@ const JournalsManagement: React.FC = () => {
                             ))
                           )}
 
-                          {/* 统计信息 - 简化为只显示核心数据 */}
+                          {/* 统计信息 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
-                            参考{journal.reference_count || 0} ·
-                            论文{journal.paper_count || 0}
+                            参考{journal.reference_count || 0} · 论文{journal.paper_count || 0}
                           </Text>
 
                           {/* 操作按钮 */}
@@ -916,6 +932,23 @@ const JournalsManagement: React.FC = () => {
                             {journal.name}
                           </Text>
 
+                          {/* 分隔符 */}
+                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+
+                          {/* 备注（如果有） */}
+                          {journal.notes && (
+                            <Text
+                              type="secondary"
+                              style={{ fontSize: 12 }}
+                              ellipsis={{ tooltip: journal.notes }}
+                            >
+                              {journal.notes}
+                            </Text>
+                          )}
+
+                          {/* 分隔符 */}
+                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+
                           {/* 标签 */}
                           {(!journal.tags || journal.tags.length === 0) ? (
                             <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
@@ -927,10 +960,9 @@ const JournalsManagement: React.FC = () => {
                             ))
                           )}
 
-                          {/* 统计信息 - 简化为只显示核心数据 */}
+                          {/* 统计信息 */}
                           <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
-                            参考{journal.reference_count || 0} ·
-                            论文{journal.paper_count || 0}
+                            参考{journal.reference_count || 0} · 论文{journal.paper_count || 0}
                           </Text>
 
                           {/* 操作按钮 */}

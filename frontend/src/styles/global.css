@@ -66,6 +66,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-top: 8px;
   margin-bottom: 16px;
 }
 
@@ -258,19 +259,23 @@
 
 /* 输入框焦点效果 - 已在上方Line 184-196统一定义，此处删除重复 */
 
-/* 统一所有面板的 Content 区域留白（桌面端） */
+/* 适配固定顶部导航的 Content 区域留白（桌面端） */
 @media (min-width: 768px) {
   .ant-layout-content {
-    margin: 12px !important;
-    padding: 16px !important;
+    margin: 0 !important;
+    padding-right: 16px !important;
+    padding-bottom: 16px !important;
+    padding-left: 16px !important;
   }
 }
 
 /* 优化移动端间距 */
 @media (max-width: 576px) {
   .ant-layout-content {
-    margin: 8px !important;
-    padding: 12px !important;
+    margin: 0 !important;
+    padding-right: 12px !important;
+    padding-bottom: 12px !important;
+    padding-left: 12px !important;
   }
   
   .page-header {

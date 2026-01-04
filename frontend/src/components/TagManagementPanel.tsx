@@ -10,6 +10,7 @@ import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tagApi } from '../services/apiOptimized';
 import { Tag as TagType, TagCreate, TagUpdate } from '../types/journals';
+import ValidationPromptModal from './ValidationPromptModal';
 
 const { TextArea } = Input;
 
@@ -17,6 +18,8 @@ export const TagManagementPanel: React.FC = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingTag, setEditingTag] = useState<TagType | null>(null);
+  const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const queryClient = useQueryClient();
 
   // 查询标签列表
@@ -99,8 +102,11 @@ export const TagManagementPanel: React.FC = () => {
       } else {
         createMutation.mutate(tagData);
       }
-    } catch (error) {
-      console.error('表单验证失败:', error);
+    } catch (error: any) {
+      const errorFields = error.errorFields || [];
+      const missingFields = errorFields.map((e: any) => `${e.errors[0]}`);
+      setValidationErrors(missingFields);
+      setIsValidationModalVisible(true);
     }
   };
 
@@ -252,6 +258,13 @@ export const TagManagementPanel: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 表单验证提示模态框 */}
+      <ValidationPromptModal
+        visible={isValidationModalVisible}
+        onClose={() => setIsValidationModalVisible(false)}
+        missingFields={validationErrors}
+      />
     </>
   );
 };

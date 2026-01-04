@@ -395,7 +395,7 @@ const DatabaseBackup: React.FC = () => {
         title={
           <Title level={3} style={{ margin: 0 }}>
             <DatabaseOutlined style={{ marginRight: 8 }} />
-            数据库备份管理
+            备份
           </Title>
         }
         actions={

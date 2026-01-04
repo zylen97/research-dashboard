@@ -20,6 +20,7 @@ import {
 import { ResearchProject, CommunicationLog, CommunicationLogCreate, Collaborator } from '../types';
 import { researchApi } from '../services/apiOptimized';
 import dayjs from 'dayjs';
+import ValidationPromptModal from './ValidationPromptModal';
 
 interface CommunicationFormValues {
   title: string;
@@ -48,6 +49,8 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingLog, setEditingLog] = useState<CommunicationLog | null>(null);
   const [form] = Form.useForm();
+  const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // 获取论文进度记录
   const fetchLogs = useCallback(async () => {
@@ -90,20 +93,32 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
     try {
       if (editingLog) {
         await researchApi.updateCommunicationLog(project.id, editingLog.id, logData);
-        message.success('更新论文进度成功');
+        message.success('更新成功');
       } else {
         await researchApi.createCommunicationLog(project.id, logData);
-        message.success('添加论文进度成功');
+        message.success('添加成功');
       }
-
-      form.resetFields();
       setIsAddModalVisible(false);
       setEditingLog(null);
+      form.resetFields();
       fetchLogs();
       onUpdate?.();
     } catch (error) {
-      message.error(editingLog ? '更新论文进度失败' : '添加论文进度失败');
-      console.error('提交论文进度失败:', error);
+      message.error('操作失败');
+      console.error('操作失败:', error);
+    }
+  };
+
+  // 处理模态框确认按钮点击 - 带验证提示
+  const handleOkClick = async () => {
+    try {
+      await form.validateFields();
+      form.submit();
+    } catch (error: any) {
+      const errorFields = error.errorFields || [];
+      const missingFields = errorFields.map((e: any) => `${e.errors[0]}`);
+      setValidationErrors(missingFields);
+      setIsValidationModalVisible(true);
     }
   };
 
@@ -248,7 +263,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
           setEditingLog(null);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
+        onOk={handleOkClick}
         width={600}
       >
         <Form
@@ -272,6 +287,13 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
             label="记录时间"
             rules={[{ required: true, message: '请选择记录时间' }]}
             initialValue={dayjs()}
+            getValueProps={(value) => ({
+              value: value ? dayjs(value) : null,
+            })}
+            normalize={(value) => {
+              // 确保返回的是 dayjs 对象
+              return value && dayjs.isDayjs(value) ? value : dayjs(value);
+            }}
           >
             <DatePicker
               format="YYYY-MM-DD"
@@ -280,6 +302,13 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 表单验证提示模态框 */}
+      <ValidationPromptModal
+        visible={isValidationModalVisible}
+        onClose={() => setIsValidationModalVisible(false)}
+        missingFields={validationErrors}
+      />
     </>
   );
 };

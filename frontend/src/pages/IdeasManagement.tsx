@@ -414,7 +414,7 @@ const IdeasManagementPage: React.FC = () => {
       <PageHeader
         title={<Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
           <BulbOutlined style={{ marginRight: 8, color: '#666666' }} />
-          Idea面板
+          Idea
         </Title>}
         actions={
           <Space>
@@ -537,9 +537,6 @@ const IdeasManagementPage: React.FC = () => {
           <Form.Item
             name="responsible_person_ids"
             label="负责人"
-            rules={[
-              { required: true, message: '请选择负责人' },
-            ]}
           >
             <Select
               mode="multiple"

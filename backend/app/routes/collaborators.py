@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import delete
 from typing import List
 from pydantic import BaseModel
 import pandas as pd
@@ -8,7 +9,8 @@ import re
 from datetime import datetime
 from ..models import (
     get_db, Collaborator, CollaboratorSchema,
-    CollaboratorCreate, CollaboratorUpdate, FileUploadResponse
+    CollaboratorCreate, CollaboratorUpdate, FileUploadResponse,
+    project_collaborators, idea_responsible_persons
 )
 from ..services import AuditService
 from ..utils import DataValidator
@@ -445,6 +447,18 @@ async def delete_collaborator(
             status_code=status.HTTP_409_CONFLICT,
             detail=error_details
         )
+
+    # 清理关联表记录（project_collaborators 和 idea_responsible_persons）
+    db.execute(
+        delete(project_collaborators).where(
+            project_collaborators.c.collaborator_id == collaborator_id
+        )
+    )
+    db.execute(
+        delete(idea_responsible_persons).where(
+            idea_responsible_persons.c.collaborator_id == collaborator_id
+        )
+    )
 
     # 保存旧值用于审计
     old_values = AuditService.serialize_model_instance(db_collaborator)

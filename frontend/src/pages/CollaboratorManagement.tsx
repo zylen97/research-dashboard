@@ -299,7 +299,7 @@ const CollaboratorManagement: React.FC = () => {
           <>
             <Title level={3} style={{ margin: 0 }}>
               <TeamOutlined style={{ marginRight: 8 }} />
-              合作者管理
+              合作者
             </Title>
             <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
               管理所有合作者信息

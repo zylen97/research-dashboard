@@ -286,7 +286,7 @@ const ResearchDashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
             <Title level={3} style={{ margin: 0 }}>
               <ProjectOutlined style={{ marginRight: 8 }} />
-              研究看板
+              研究
             </Title>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span>显示已发表项目</span>

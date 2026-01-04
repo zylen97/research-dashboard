@@ -15,6 +15,7 @@ from .database import (
     Paper,
     ResearchMethod,
     project_collaborators,
+    idea_responsible_persons,
     journal_tags
 )
 
@@ -88,7 +89,7 @@ from .schemas import (
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
     "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "Paper", "ResearchMethod",
-    "project_collaborators", "journal_tags",
+    "project_collaborators", "idea_responsible_persons", "journal_tags",
     "ResearchMethodBase", "ResearchMethodCreate", "ResearchMethodUpdate", "ResearchMethodSchema",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
