@@ -81,9 +81,9 @@ const ResearchDashboard: React.FC = () => {
     return saved === 'true';
   });
   const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    // 从localStorage读取保存的列宽
+    // 从localStorage读取保存的列宽，并与默认值合并
     const saved = localStorage.getItem('research-table-columns');
-    return saved ? JSON.parse(saved) : DEFAULT_COLUMN_WIDTHS;
+    return saved ? { ...DEFAULT_COLUMN_WIDTHS, ...JSON.parse(saved) } : DEFAULT_COLUMN_WIDTHS;
   });
   const [form] = Form.useForm();
 
