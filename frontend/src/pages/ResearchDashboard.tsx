@@ -45,7 +45,10 @@ const { TextArea } = Input;
 const DEFAULT_COLUMN_WIDTHS = {
   index: 50,
   title: 180,
+  target_journal: 150,
   research_method: 60,
+  reference_paper: 200,
+  reference_journal: 150,
   status: 70,
   my_role: 80,
   collaborators: 180,
