@@ -7,7 +7,7 @@ import React from 'react';
 import { Dropdown, Button, Checkbox, Space } from 'antd';
 import { SettingOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { ColumnConfig } from './tableColumnsConfig';
+import { ColumnConfig, getDefaultVisibleColumns } from './tableColumnsConfig';
 
 interface ColumnFilterProps {
   availableColumns: ColumnConfig[];
@@ -108,23 +108,30 @@ const ColumnFilter: React.FC<ColumnFilterProps> = ({
  */
 export const useColumnVisibility = (
   storageKey: string,
-  _includeListOnly: boolean = false
+  includeListOnly: boolean = false
 ) => {
   const [visibleColumns, setVisibleColumns] = React.useState<string[]>(() => {
-    // 从 localStorage 读取初始值
+    // 从 localStorage 读取初始值，并与默认值合并
     try {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
-        const parsed = JSON.parse(stored);
+        const parsed = JSON.parse(stored) as string[];
         if (Array.isArray(parsed)) {
-          return parsed;
+          // 获取默认可见列
+          const defaultColumns = getDefaultVisibleColumns(includeListOnly);
+          // 合并：添加新添加的默认列，移除已删除的列
+          const merged = [
+            ...defaultColumns,
+            ...parsed.filter(col => !defaultColumns.includes(col))
+          ];
+          return merged;
         }
       }
     } catch (e) {
       console.warn(`Failed to load column visibility from ${storageKey}:`, e);
     }
-    // 默认值：只显示核心列
-    return [];
+    // 默认值：显示默认可见列
+    return getDefaultVisibleColumns(includeListOnly);
   });
 
   // 当 visibleColumns 变化时，保存到 localStorage
