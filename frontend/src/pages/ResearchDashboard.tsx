@@ -28,6 +28,7 @@ import {
 } from '../components/research-dashboard';
 import CommunicationLogModal from '../components/CommunicationLogModal';
 import ProjectPreviewModal from '../components/research-dashboard/ProjectPreviewModal';
+import ValidationPromptModal from '../components/ValidationPromptModal';
 import JournalSelect from '../components/JournalSelect';
 import { PageHeader } from '../styles/components';
 
@@ -52,6 +53,8 @@ const ResearchDashboard: React.FC = () => {
   const [isCommunicationModalVisible, setIsCommunicationModalVisible] = useState(false);
   const [isPreviewModalVisible, setIsPreviewModalVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<ResearchProject | null>(null);
+  const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [showArchived, setShowArchived] = useState(() => {
@@ -133,6 +136,22 @@ const ResearchDashboard: React.FC = () => {
   const handlePreview = (project: ResearchProject) => {
     setSelectedProject(project);
     setIsPreviewModalVisible(true);
+  };
+
+  // 处理模态框确认按钮点击 - 带验证提示
+  const handleOkClick = async () => {
+    try {
+      // 尝试验证表单
+      await form.validateFields();
+      // 验证通过，提交表单
+      form.submit();
+    } catch (error: any) {
+      // 验证失败，收集错误信息并显示对话框
+      const errorFields = error.errorFields || [];
+      const missingFields = errorFields.map((e: any) => `${e.errors[0]}`);
+      setValidationErrors(missingFields);
+      setIsValidationModalVisible(true);
+    }
   };
 
   // 过滤项目数据
@@ -313,7 +332,7 @@ const ResearchDashboard: React.FC = () => {
           setEditingProject(null);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
+        onOk={handleOkClick}
         confirmLoading={isCreating || isUpdating}
         width={800}
       >
@@ -468,6 +487,13 @@ const ResearchDashboard: React.FC = () => {
           setIsPreviewModalVisible(false);
           setSelectedProject(null);
         }}
+      />
+
+      {/* 表单验证提示模态框 */}
+      <ValidationPromptModal
+        visible={isValidationModalVisible}
+        onClose={() => setIsValidationModalVisible(false)}
+        missingFields={validationErrors}
       />
     </div>
   );

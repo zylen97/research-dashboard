@@ -33,6 +33,7 @@ import { ideasApi, collaboratorApi } from '../services/apiOptimized';
 import { Idea, IdeaUpdate, MATURITY_OPTIONS } from '../types/ideas';
 import { PageContainer, PageHeader, TableContainer } from '../styles/components';
 import JournalSelect from '../components/JournalSelect';
+import ValidationPromptModal from '../components/ValidationPromptModal';
 
 const { Title } = Typography;
 const { TextArea } = Input;
@@ -42,6 +43,8 @@ const IdeasManagementPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [editingIdea, setEditingIdea] = useState<Idea | null>(null);
   const [convertingIdeaId, setConvertingIdeaId] = useState<number | null>(null);
+  const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
 
@@ -194,7 +197,7 @@ const IdeasManagementPage: React.FC = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingIdea) {
         // 更新
         updateMutation.mutate({ id: editingIdea.id, data: values });
@@ -202,9 +205,14 @@ const IdeasManagementPage: React.FC = () => {
         // 创建
         createMutation.mutate(values);
       }
-    } catch (error) {
-      // 表单验证失败
-      console.error('Form validation failed:', error);
+    } catch (error: any) {
+      // 表单验证失败 - 显示验证提示对话框
+      const errorFields = error.errorFields || [];
+      const missingFields = errorFields.map((e: any) => {
+        return `${e.errors[0]}`;
+      });
+      setValidationErrors(missingFields);
+      setIsValidationModalVisible(true);
     }
   };
 
@@ -569,6 +577,13 @@ const IdeasManagementPage: React.FC = () => {
           </Form.Item>
         </Form>
       </Modal>
+
+      {/* 表单验证提示模态框 */}
+      <ValidationPromptModal
+        visible={isValidationModalVisible}
+        onClose={() => setIsValidationModalVisible(false)}
+        missingFields={validationErrors}
+      />
     </PageContainer>
   );
 };

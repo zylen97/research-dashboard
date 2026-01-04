@@ -46,6 +46,7 @@ import { TagManagementPanel } from '../components/TagManagementPanel';
 import { GRAYSCALE_SYSTEM } from '../config/colors';
 import JournalPapersTab from '../components/JournalPapersTab';
 import { PageContainer, PageHeader, FilterSection, TableContainer } from '../styles/components';
+import ValidationPromptModal from '../components/ValidationPromptModal';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -67,6 +68,8 @@ const JournalsManagement: React.FC = () => {
   const [isStatsDrawerVisible, setIsStatsDrawerVisible] = useState(false);
   const [editingJournal, setEditingJournal] = useState<Journal | null>(null);
   const [selectedJournalId, setSelectedJournalId] = useState<number | null>(null);
+  const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // 筛选状态
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -236,6 +239,24 @@ const JournalsManagement: React.FC = () => {
   const handleViewStats = (journal: Journal) => {
     setSelectedJournalId(journal.id);
     setIsStatsDrawerVisible(true);
+  };
+
+  // 处理模态框确认按钮点击 - 带验证提示
+  const handleOkClick = async () => {
+    try {
+      // 尝试验证表单
+      await form.validateFields();
+      // 验证通过，提交表单
+      form.submit();
+    } catch (error: any) {
+      // 验证失败，收集错误信息并显示对话框
+      const errorFields = error.errorFields || [];
+      const missingFields = errorFields.map((e: any) => {
+        return `${e.errors[0]}`;
+      });
+      setValidationErrors(missingFields);
+      setIsValidationModalVisible(true);
+    }
   };
 
   return (
@@ -421,7 +442,7 @@ const JournalsManagement: React.FC = () => {
           setEditingJournal(null);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
+        onOk={handleOkClick}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={800}
       >
@@ -976,7 +997,7 @@ const JournalsManagement: React.FC = () => {
           setEditingJournal(null);
           form.resetFields();
         }}
-        onOk={() => form.submit()}
+        onOk={handleOkClick}
         confirmLoading={createMutation.isPending || updateMutation.isPending}
         width={800}
       >
@@ -1400,6 +1421,13 @@ const JournalsManagement: React.FC = () => {
             children: <TagManagementPanel />,
           },
         ]}
+      />
+
+      {/* 表单验证提示模态框 */}
+      <ValidationPromptModal
+        visible={isValidationModalVisible}
+        onClose={() => setIsValidationModalVisible(false)}
+        missingFields={validationErrors}
       />
     </PageContainer>
   );
