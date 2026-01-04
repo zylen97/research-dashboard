@@ -354,8 +354,8 @@ const ResearchDashboard: React.FC = () => {
               value={filterMyRole || null}
               onChange={setFilterMyRole}
             >
-              <Select.Option value="first_author">第一作者</Select.Option>
-              <Select.Option value="corresponding_author">通讯作者</Select.Option>
+              <Select.Option value="first_author">一作</Select.Option>
+              <Select.Option value="corresponding_author">通讯</Select.Option>
             </Select>
             <Select
               placeholder="研究方法"
@@ -529,10 +529,10 @@ const ResearchDashboard: React.FC = () => {
           >
             <Select placeholder="选择您的身份">
               <Select.Option value="first_author">
-                <span style={{ fontWeight: 'bold', color: '#333333' }}><CrownOutlined style={{ marginRight: 8 }} />第一作者</span>
+                <span style={{ fontWeight: 'bold', color: '#333333' }}><CrownOutlined style={{ marginRight: 8 }} />一作</span>
               </Select.Option>
               <Select.Option value="corresponding_author">
-                <span style={{ fontWeight: 'bold', color: '#666666' }}><MailOutlined style={{ marginRight: 8 }} />通讯作者</span>
+                <span style={{ fontWeight: 'bold', color: '#666666' }}><MailOutlined style={{ marginRight: 8 }} />通讯</span>
               </Select.Option>
             </Select>
           </Form.Item>
