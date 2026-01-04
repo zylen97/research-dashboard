@@ -173,10 +173,16 @@ class SecurityValidator:
                 sanitized_data['target_journal'] = cls.sanitize_string(target_journal, max_length=200)
         
         # 验证状态
-        status = data.get('status', 'active')
-        if status not in ['active', 'paused', 'completed', 'reviewing', 'revising']:
+        status = data.get('status', 'writing')
+        if status not in ['writing', 'submitting', 'published']:
             errors.append("无效的项目状态")
         sanitized_data['status'] = status
+
+        # 验证角色
+        my_role = data.get('my_role', 'first_author')
+        if my_role not in ['first_author', 'corresponding_author']:
+            errors.append("无效的角色")
+        sanitized_data['my_role'] = my_role
         
         # 验证进度
         progress = data.get('progress')
