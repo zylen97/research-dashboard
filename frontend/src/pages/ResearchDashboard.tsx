@@ -33,7 +33,7 @@ import ProjectPreviewModal from '../components/research-dashboard/ProjectPreview
 import ValidationPromptModal from '../components/ValidationPromptModal';
 import JournalSelect from '../components/JournalSelect';
 import ResearchMethodSelect from '../components/ResearchMethodSelect';
-import AccordionJournalFilter from '../components/AccordionJournalFilter';
+import CompactJournalFilter from '../components/CompactJournalFilter';
 import { PageHeader, FilterSection } from '../styles/components';
 import { researchMethodApi } from '../services/apiOptimized';
 import { ResearchMethod } from '../types/research-methods';
@@ -334,7 +334,7 @@ const ResearchDashboard: React.FC = () => {
         filterControls={
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(5, 1fr)',
+            gridTemplateColumns: 'repeat(6, 1fr)',
             gap: '12px',
             alignItems: 'start',
           }}>
@@ -371,11 +371,15 @@ const ResearchDashboard: React.FC = () => {
                 value: m.name
               }))}
             />
-            <AccordionJournalFilter
-              targetJournal={filterTargetJournal}
-              referenceJournal={filterReferenceJournal}
-              onTargetJournalChange={(val) => setFilterTargetJournal(val ?? '')}
-              onReferenceJournalChange={(val) => setFilterReferenceJournal(val ?? '')}
+            <CompactJournalFilter
+              value={filterTargetJournal}
+              onChange={(val) => setFilterTargetJournal(val ?? '')}
+              placeholder="投稿期刊"
+            />
+            <CompactJournalFilter
+              value={filterReferenceJournal}
+              onChange={(val) => setFilterReferenceJournal(val ?? '')}
+              placeholder="参考期刊"
             />
             <Button
               icon={<ClearOutlined />}
