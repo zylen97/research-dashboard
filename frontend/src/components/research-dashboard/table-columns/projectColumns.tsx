@@ -181,7 +181,7 @@ export const createProjectColumns = ({
     title: '我的身份',
     dataIndex: 'my_role',
     key: 'my_role',
-    width: 120,
+    width: 80,
     render: (my_role: string) => {
       return <RoleIcon role={(my_role as AuthorRole) || 'first_author'} showLabel={true} showIcon={false} />;
     },

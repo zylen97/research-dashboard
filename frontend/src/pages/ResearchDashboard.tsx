@@ -47,6 +47,7 @@ const DEFAULT_COLUMN_WIDTHS = {
   title: 180,
   research_method: 60,
   status: 70,
+  my_role: 80,
   collaborators: 180,
   communication_progress: 200,
   actions: 150,
