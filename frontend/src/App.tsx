@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import './styles/resizable-table.css';
 import bauHausTheme from './config/theme';
 import MainLayout from './components/MainLayout';
 import ResearchDashboard from './pages/ResearchDashboard';

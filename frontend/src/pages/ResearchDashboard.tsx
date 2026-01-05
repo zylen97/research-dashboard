@@ -1,18 +1,15 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Button,
   Modal,
   Form,
   Input,
   Select,
-  Typography,
   Table,
-  Switch,
   DatePicker,
 } from 'antd';
 import {
   PlusOutlined,
-  ProjectOutlined,
   ReloadOutlined,
   CrownOutlined,
   MailOutlined,
@@ -37,8 +34,8 @@ import CompactJournalFilter from '../components/CompactJournalFilter';
 import { PageHeader, FilterSection } from '../styles/components';
 import { researchMethodApi } from '../services/apiOptimized';
 import { ResearchMethod } from '../types/research-methods';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 
 // 默认列宽配置
@@ -75,16 +72,12 @@ const ResearchDashboard: React.FC = () => {
   const [filterTargetJournal, setFilterTargetJournal] = useState<string>('');
   const [filterReferenceJournal, setFilterReferenceJournal] = useState<string>('');
 
-  const [showArchived, setShowArchived] = useState(() => {
-    // 从localStorage读取用户偏好
-    const saved = localStorage.getItem('showArchivedProjects');
-    return saved === 'true';
+  // 使用列宽调整Hook
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'research-table-columns',
   });
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>(() => {
-    // 从localStorage读取保存的列宽，并与默认值合并
-    const saved = localStorage.getItem('research-table-columns');
-    return saved ? { ...DEFAULT_COLUMN_WIDTHS, ...JSON.parse(saved) } : DEFAULT_COLUMN_WIDTHS;
-  });
+
   const [form] = Form.useForm();
 
   // 查询研究方法列表（用于筛选）
@@ -196,31 +189,6 @@ const ResearchDashboard: React.FC = () => {
     }
   };
 
-  // 过滤项目数据
-  const filteredProjects = useMemo(() => {
-    if (showArchived) {
-      return sortedProjects;
-    }
-    // 默认过滤掉已发表状态的项目
-    return sortedProjects.filter((project: ResearchProject) => project.status !== 'published');
-  }, [sortedProjects, showArchived]);
-
-  // 处理显示存档开关变化
-  const handleShowArchivedChange = (checked: boolean) => {
-    setShowArchived(checked);
-    localStorage.setItem('showArchivedProjects', checked.toString());
-  };
-
-  // 处理列宽调整
-  const handleResize = useCallback((key: string) => (_e: any, { size }: any) => {
-    setColumnWidths((prev) => {
-      const newWidths = { ...prev, [key]: size.width };
-      // 保存到localStorage
-      localStorage.setItem('research-table-columns', JSON.stringify(newWidths));
-      return newWidths;
-    });
-  }, []);
-
   // 表格列配置
   const baseColumns = createProjectColumns({
     actions: {
@@ -236,24 +204,11 @@ const ResearchDashboard: React.FC = () => {
   });
 
   // 为列添加可调整宽度的功能
-  const columns = baseColumns.map((col: any) => {
-    const key = col.key || col.dataIndex;
-    if (!columnWidths[key]) {
-      return col;
-    }
-    return {
-      ...col,
-      width: columnWidths[key],
-      onHeaderCell: () => ({
-        width: columnWidths[key],
-        onResize: handleResize(key),
-      }),
-    };
-  });
+  const columns = enhanceColumns(baseColumns);
 
   return (
     <div>
-      {/* 待办项目行样式和可调整列宽样式 */}
+      {/* 待办项目行样式 */}
       <style>{`
         .todo-project-row {
           background-color: #F5F5F5 !important;
@@ -262,46 +217,10 @@ const ResearchDashboard: React.FC = () => {
         .todo-project-row:hover {
           background-color: #E8E8E8 !important;
         }
-        
-        .resizable-table .react-resizable {
-          position: relative;
-          background-clip: padding-box;
-        }
-        
-        .resizable-table .react-resizable-handle {
-          position: absolute;
-          inset-inline-end: -5px;
-          bottom: 0;
-          z-index: 1;
-          width: 10px;
-          height: 100%;
-          cursor: col-resize;
-        }
-        
-        .resizable-table .react-resizable-handle:hover {
-          background-color: #666666;
-          opacity: 0.3;
-        }
       `}</style>
 
-      {/* 页面标题和操作按钮 */}
+      {/* 页面操作按钮 */}
       <PageHeader
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
-            <Title level={3} style={{ margin: 0 }}>
-              <ProjectOutlined style={{ marginRight: 8 }} />
-              研究
-            </Title>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '13px' }}>显示已发表研究</span>
-              <Switch
-                checked={showArchived}
-                onChange={handleShowArchivedChange}
-                size="small"
-              />
-            </div>
-          </div>
-        }
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
             <Button
@@ -400,7 +319,7 @@ const ResearchDashboard: React.FC = () => {
       <div className="table-container resizable-table">
         <Table
           size="small"
-          dataSource={filteredProjects}
+          dataSource={sortedProjects}
           columns={columns}
           rowKey="id"
           loading={isLoading}

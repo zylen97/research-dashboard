@@ -11,7 +11,7 @@ export const PageContainer: React.FC<{ children: React.ReactNode }> = ({ childre
 
 // 页面头部组件
 export const PageHeader: React.FC<{
-  title: React.ReactNode;
+  title?: React.ReactNode;
   actions?: React.ReactNode;
 }> = ({ title, actions }) => (
   <div className="page-header">

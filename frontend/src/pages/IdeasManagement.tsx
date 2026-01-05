@@ -13,7 +13,6 @@ import {
   Select,
   Space,
   Popconfirm,
-  Typography,
   Tag,
   message,
   Tooltip,
@@ -22,7 +21,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  BulbOutlined,
   SwapRightOutlined,
   ReloadOutlined,
 } from '@ant-design/icons';
@@ -35,10 +33,25 @@ import { PageContainer, PageHeader, TableContainer } from '../styles/components'
 import JournalSelect from '../components/JournalSelect';
 import ResearchMethodSelect from '../components/ResearchMethodSelect';
 import ValidationPromptModal from '../components/ValidationPromptModal';
+import { ResizableTitle } from '../components/research-dashboard';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
-const { Title } = Typography;
 const { TextArea } = Input;
 const { Option } = Select;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  index: 60,
+  project_name: 180,
+  research_method: 120,
+  reference_paper: 200,
+  reference_journal: 150,
+  target_journal: 150,
+  responsible_persons: 150,
+  maturity: 100,
+  created_at: 120,
+  actions: 150,
+};
 
 const IdeasManagementPage: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -48,6 +61,12 @@ const IdeasManagementPage: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+
+  // 使用列宽调整Hook
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'ideas-table-columns',
+  });
 
   // 查询合作者列表（用于下拉选择器）
   const { data: collaborators = [] } = useQuery({
@@ -399,12 +418,8 @@ const IdeasManagementPage: React.FC = () => {
 
   return (
     <PageContainer>
-      {/* 页面标题和操作区 */}
+      {/* 页面操作区 */}
       <PageHeader
-        title={<Title level={3} style={{ margin: 0, display: 'flex', alignItems: 'center' }}>
-          <BulbOutlined style={{ marginRight: 8, color: '#666666' }} />
-          Idea
-        </Title>}
         actions={
           <Space>
             <Button
@@ -426,12 +441,17 @@ const IdeasManagementPage: React.FC = () => {
       />
 
       {/* 表格区域 */}
-      <TableContainer>
+      <TableContainer className="resizable-table">
         <Table
-          columns={columns}
+          columns={enhanceColumns(columns)}
           dataSource={ideas}
           rowKey="id"
           loading={isLoading}
+          components={{
+            header: {
+              cell: ResizableTitle,
+            },
+          }}
           scroll={{ x: 1200 }}
           pagination={{
             showSizeChanger: true,

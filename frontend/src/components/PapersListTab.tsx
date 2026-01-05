@@ -42,9 +42,29 @@ import {
 } from './papers';
 import PaperStatsCards from './papers/PaperStatsCards';
 import ColumnFilter from './papers/ColumnFilter';
+import { ResizableTitle } from './research-dashboard';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
 const { Text, Paragraph } = Typography;
 const { Search } = Input;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  title: 250,
+  journal: 150,
+  year: 80,
+  status: 100,
+  created_at: 120,
+  migration_potential: 100,
+  link: 200,
+  authors: 200,
+  volume: 80,
+  issue: 80,
+  abstract: 300,
+  abstract_summary: 300,
+  ai_analysis: 200,
+  actions: 180,
+};
 
 interface PapersListTabProps {
   // 可选的筛选器初始值
@@ -75,6 +95,13 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
     COLUMN_VISIBILITY_KEYS.PAPERS_LIST,
     true
   );
+
+  // 使用列宽调整Hook
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'papers-list-table-columns',
+  });
+
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
   const [selectedPaper, setSelectedPaper] = useState<Paper | null>(null);
 
@@ -463,10 +490,16 @@ const PapersListTab: React.FC<PapersListTabProps> = ({
 
       {/* 论文列表 */}
       <Table
-        columns={columns}
+        columns={enhanceColumns(columns)}
         dataSource={filteredPapers}
         rowKey="id"
         loading={isLoading}
+        className="resizable-table"
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
+        }}
         scroll={{ x: 1200 }}
         rowSelection={{
           selectedRowKeys,

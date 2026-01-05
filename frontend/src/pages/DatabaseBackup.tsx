@@ -18,7 +18,6 @@ import {
   CloudUploadOutlined,
   DeleteOutlined,
   ReloadOutlined,
-  DatabaseOutlined,
   ClockCircleOutlined,
   FolderOpenOutlined,
   TeamOutlined,
@@ -35,7 +34,7 @@ import { backupApi } from '../services/apiOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { BackupItem } from '../types';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 const DatabaseBackup: React.FC = () => {
   const [restoring, setRestoring] = useState<string | null>(null);
@@ -338,12 +337,6 @@ const DatabaseBackup: React.FC = () => {
   return (
     <div>
       <PageHeader
-        title={
-          <Title level={3} style={{ margin: 0 }}>
-            <DatabaseOutlined style={{ marginRight: 8 }} />
-            备份
-          </Title>
-        }
         actions={
           <Space>
             <Button

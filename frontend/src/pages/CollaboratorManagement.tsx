@@ -13,7 +13,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  TeamOutlined,
   ReloadOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
@@ -26,8 +25,20 @@ import CollaboratorFormModal from '../components/collaborator/CollaboratorFormMo
 import CollaboratorProjectsModal from '../components/collaborator/CollaboratorProjectsModal';
 import { safeForEach, safeFilter } from '../utils/arrayHelpers';
 import { PageHeader } from '../styles/components';
+import { ResizableTitle } from '../components/research-dashboard';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  index: 60,
+  name: 150,
+  background: 250,
+  project_count: 120,
+  idea_count: 120,
+  actions: 160,
+};
 
 /**
  * 合作者管理页面（简化版）
@@ -42,6 +53,12 @@ const CollaboratorManagement: React.FC = () => {
   const [pageSize, setPageSize] = useState(50);
   const [form] = Form.useForm();
   const queryClient = useQueryClient();
+
+  // 使用列宽调整Hook
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'collaborators-table-columns',
+  });
 
   // 清理旧的localStorage小组标记数据（组件mount时执行一次）
   useEffect(() => {
@@ -293,19 +310,8 @@ const CollaboratorManagement: React.FC = () => {
 
   return (
     <div>
-      {/* 页面标题和操作按钮 */}
+      {/* 页面操作按钮 */}
       <PageHeader
-        title={
-          <>
-            <Title level={3} style={{ margin: 0 }}>
-              <TeamOutlined style={{ marginRight: 8 }} />
-              合作者
-            </Title>
-            <Text type="secondary" style={{ marginTop: 8, display: 'block' }}>
-              管理所有合作者信息
-            </Text>
-          </>
-        }
         actions={
           <Space>
             <Button
@@ -332,7 +338,7 @@ const CollaboratorManagement: React.FC = () => {
       />
 
       {/* 合作者列表 */}
-      <div className="table-container">
+      <div className="table-container resizable-table">
         <Table
           size="small"
           dataSource={sortedCollaborators}
@@ -352,7 +358,12 @@ const CollaboratorManagement: React.FC = () => {
             showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条，共 ${total} 条`,
           }}
           scroll={{ x: 1000 }}
-          columns={[
+          components={{
+            header: {
+              cell: ResizableTitle,
+            },
+          }}
+          columns={enhanceColumns([
             {
               title: '序号',
               key: 'index',
@@ -440,7 +451,7 @@ const CollaboratorManagement: React.FC = () => {
                 </Space>
               ),
             },
-          ]}
+          ])}
         />
       </div>
 

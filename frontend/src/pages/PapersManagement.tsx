@@ -6,7 +6,6 @@ import React, { useState } from 'react';
 import {
   Card,
   Tabs,
-  Typography,
   Space,
 } from 'antd';
 import {
@@ -17,22 +16,12 @@ import {
 import PapersListTab from '../components/PapersListTab';
 import BatchAnalysisTab from '../components/BatchAnalysisTab';
 
-const { Title } = Typography;
-
 const PapersManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState('papers');
 
   return (
     <div>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
-        {/* 页面标题 */}
-        <div>
-          <Title level={3} style={{ marginBottom: 8 }}>
-            <FileTextOutlined style={{ marginRight: 8 }} />
-            论文库
-          </Title>
-        </div>
-
         {/* 主内容区域 */}
         <Card>
           <Tabs

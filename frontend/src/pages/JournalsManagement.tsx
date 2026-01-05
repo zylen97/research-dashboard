@@ -23,7 +23,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  GlobalOutlined,
   ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
@@ -261,21 +260,13 @@ const JournalsManagement: React.FC = () => {
 
   return (
     <PageContainer>
-      {/* 页面标题和操作栏 */}
+      {/* 页面操作栏 */}
       <PageHeader
-        title={
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <Title level={3} style={{ margin: 0 }}>
-              <GlobalOutlined style={{ marginRight: 8 }} />
-              期刊库管理
-            </Title>
+        actions={
+          <Space>
             <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}>
               {journals.length} 个期刊
             </Tag>
-          </div>
-        }
-        actions={
-          <Space>
             <Button
               icon={<ReloadOutlined />}
               onClick={() => refetch()}
