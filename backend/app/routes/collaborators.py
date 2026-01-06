@@ -418,12 +418,12 @@ async def delete_collaborator(
     if dependencies.get("responsible_ideas_count", 0) > 0:
         error_details = {
             "error": "无法删除该合作者",
-            "reason": "该合作者是项目想法的负责人（外键约束）",
+            "reason": "该合作者参与了项目想法（外键约束）",
             "details": {
                 "responsible_ideas_count": dependencies.get("responsible_ideas_count", 0),
                 "responsible_idea_names": dependencies.get("responsible_idea_names", [])
             },
-            "suggestion": "请先将这些项目想法的负责人更改为其他合作者，或删除这些项目想法后再尝试删除该合作者"
+            "suggestion": "请先将这些项目想法的合作者更改为其他合作者，或删除这些项目想法后再尝试删除该合作者"
         }
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,

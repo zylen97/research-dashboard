@@ -78,7 +78,7 @@ class DataValidator:
             warnings.append(f"合作者有 {communication_logs} 条交流记录")
             can_hard_delete = False  # 有交流记录，不能永久删除（外键约束）
         if responsible_ideas:
-            warnings.append(f"合作者是 {len(responsible_ideas)} 个项目想法的负责人")
+            warnings.append(f"合作者参与了 {len(responsible_ideas)} 个项目想法")
             can_hard_delete = False  # 有外键约束，不能删除（包括软删除）
 
         return {

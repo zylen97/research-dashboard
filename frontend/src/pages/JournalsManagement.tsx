@@ -745,7 +745,7 @@ const JournalsManagement: React.FC = () => {
                             title={item.project_name}
                             description={
                               <Space>
-                                <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
+                                <Text type="secondary">合作者: {item.responsible_person || '-'}</Text>
                                 <Tag
                                   style={{
                                     backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
@@ -803,7 +803,7 @@ const JournalsManagement: React.FC = () => {
                             title={item.project_name}
                             description={
                               <Space>
-                                <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
+                                <Text type="secondary">合作者: {item.responsible_person || '-'}</Text>
                                 <Tag
                                   style={{
                                     backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
@@ -1308,7 +1308,7 @@ const JournalsManagement: React.FC = () => {
                             title={item.project_name}
                             description={
                               <Space>
-                                <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
+                                <Text type="secondary">合作者: {item.responsible_person || '-'}</Text>
                                 <Tag
                                   style={{
                                     backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,
@@ -1366,7 +1366,7 @@ const JournalsManagement: React.FC = () => {
                             title={item.project_name}
                             description={
                               <Space>
-                                <Text type="secondary">负责人: {item.responsible_person || '-'}</Text>
+                                <Text type="secondary">合作者: {item.responsible_person || '-'}</Text>
                                 <Tag
                                   style={{
                                     backgroundColor: item.maturity === 'mature' ? GRAYSCALE_SYSTEM.bg_tertiary : GRAYSCALE_SYSTEM.bg_secondary,

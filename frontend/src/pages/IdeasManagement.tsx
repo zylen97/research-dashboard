@@ -320,7 +320,7 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
-      title: '负责人',
+      title: '合作者',
       dataIndex: 'responsible_persons',
       key: 'responsible_persons',
       render: (persons: any[]) => {
@@ -546,11 +546,11 @@ const IdeasManagementPage: React.FC = () => {
 
           <Form.Item
             name="responsible_person_ids"
-            label="负责人"
+            label="合作者"
           >
             <Select
               mode="multiple"
-              placeholder="选择负责人（可多选）"
+              placeholder="选择合作者（可多选）"
               showSearch
               filterOption={(input, option) =>
                 (option?.children?.toString() || '').toLowerCase().indexOf(input.toLowerCase()) >= 0
