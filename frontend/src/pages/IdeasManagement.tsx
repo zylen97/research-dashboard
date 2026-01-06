@@ -263,7 +263,7 @@ const IdeasManagementPage: React.FC = () => {
       },
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
-          <span>{text}</span>
+          <span style={{ fontWeight: 'bold' }}>{text}</span>
         </Tooltip>
       ),
     },
@@ -446,6 +446,7 @@ const IdeasManagementPage: React.FC = () => {
           columns={enhanceColumns(columns)}
           dataSource={ideas}
           rowKey="id"
+          size="small"
           loading={isLoading}
           components={{
             header: {

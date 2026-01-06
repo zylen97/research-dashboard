@@ -16,6 +16,7 @@ from ..models.schemas import BatchDeleteRequest, BatchUpdateMaturityRequest
 from ..services.audit import AuditService
 from ..utils.crud_base import CRUDBase
 from ..utils.response import success_response
+from ..utils.research_method_helper import update_research_method_usage
 
 logger = logging.getLogger(__name__)
 
@@ -105,6 +106,10 @@ async def create_idea(
             if persons and not new_idea.responsible_person_id:
                 new_idea.responsible_person_id = persons[0].id
 
+        # 更新研究方法使用次数
+        if new_idea.research_method:
+            update_research_method_usage(db, new_idea.research_method, 1)
+
         db.commit()
         db.refresh(new_idea)
 
@@ -147,6 +152,9 @@ async def update_idea(
         if not db_idea:
             raise HTTPException(status_code=404, detail="Idea not found")
 
+        # 保存旧的研究方法，用于更新usage_count
+        old_research_method = db_idea.research_method
+
         # 验证maturity值（如果提供）
         if idea_update.maturity and idea_update.maturity not in ['mature', 'immature']:
             raise HTTPException(status_code=400, detail="Maturity must be 'mature' or 'immature'")
@@ -179,6 +187,14 @@ async def update_idea(
             # 如果有多个负责人且没有主负责人，将第一个设为主负责人
             if persons and not db_idea.responsible_person_id:
                 db_idea.responsible_person_id = persons[0].id
+
+        # 更新研究方法使用次数
+        new_research_method = db_idea.research_method
+        if old_research_method != new_research_method:
+            if old_research_method:
+                update_research_method_usage(db, old_research_method, -1)
+            if new_research_method:
+                update_research_method_usage(db, new_research_method, 1)
 
         db.commit()
         db.refresh(db_idea)
@@ -219,11 +235,18 @@ async def delete_idea(
         if not db_idea:
             raise HTTPException(status_code=404, detail="Idea not found")
 
+        # 保存研究方法，用于更新usage_count
+        research_method = db_idea.research_method
+
         # 使用序列化服务记录审计日志
         old_values = AuditService.serialize_model_instance(db_idea)
 
         # 使用CRUD基类删除
         idea_crud.remove(db, id=idea_id)
+
+        # 更新研究方法使用次数
+        if research_method:
+            update_research_method_usage(db, research_method, -1)
 
         # 记录审计日志
         try:
@@ -269,7 +292,7 @@ async def convert_to_project(
             reference_journal=idea.reference_journal if idea.reference_journal else None,
             target_journal=idea.target_journal if idea.target_journal else None,
             source=idea.source if (not idea.reference_paper and not idea.reference_journal) else None,
-            status="active",
+            status="writing",
             progress=0.0,
             my_role='first_author'  # 新增：默认设置为第一作者
         )
@@ -282,6 +305,12 @@ async def convert_to_project(
 
         # 添加到数据库
         db.add(new_project)
+
+        # 🔥 关键修复：更新研究方法usage_count
+        # Idea将被删除（-1），Project被创建（+1），净变化应为0
+        # 但由于我们直接创建对象不走create函数，需要手动+1
+        if idea.research_method:
+            update_research_method_usage(db, idea.research_method, 1)
 
         # 删除已转化的Idea
         db.delete(idea)
@@ -337,6 +366,9 @@ async def batch_delete_ideas(
         ideas_to_delete = db.query(Idea).filter(Idea.id.in_(request_data.ids)).all()
         deleted_count = len(ideas_to_delete)
 
+        # 收集所有研究方法，用于更新usage_count
+        research_methods = [idea.research_method for idea in ideas_to_delete if idea.research_method]
+
         # 记录审计日志
         for idea in ideas_to_delete:
             try:
@@ -356,6 +388,10 @@ async def batch_delete_ideas(
         # 批量删除
         db.query(Idea).filter(Idea.id.in_(request_data.ids)).delete(synchronize_session=False)
         db.commit()
+
+        # 更新研究方法使用次数
+        for method in research_methods:
+            update_research_method_usage(db, method, -1)
 
         return success_response(
             message=f"Successfully deleted {deleted_count} ideas",

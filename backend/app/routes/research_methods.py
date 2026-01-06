@@ -128,10 +128,18 @@ async def delete_research_method(
         .filter(ResearchProject.research_method == method.name)\
         .scalar() or 0
 
-    if project_count > 0:
+    # 检查Idea是否也在使用
+    from app.models.database import Idea
+    idea_count = db.query(func.count(Idea.id))\
+        .filter(Idea.research_method == method.name)\
+        .scalar() or 0
+
+    total_usage = project_count + idea_count
+
+    if total_usage > 0:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"无法删除研究方法 '{method.name}'，有 {project_count} 个研究项目正在使用此方法。"
+            detail=f"无法删除研究方法 '{method.name}'，有 {project_count} 个研究项目和 {idea_count} 个Idea正在使用此方法。"
         )
 
     # 删除研究方法
@@ -212,3 +220,31 @@ async def get_or_create_research_method(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"创建研究方法 '{name}' 失败，请重试"
         )
+
+
+@router.post("/cleanup-unused", status_code=status.HTTP_200_OK, summary="清理未使用的研究方法")
+async def cleanup_unused_research_methods(
+    db: Session = Depends(get_db)
+):
+    """
+    自动删除usage_count为0的研究方法
+
+    - 返回：删除的方法数量和列表
+    """
+    from ..utils.research_method_helper import cleanup_unused_methods
+
+    # 获取未使用的方法列表（用于返回信息）
+    unused_methods = db.query(ResearchMethodModel).filter(
+        ResearchMethodModel.usage_count == 0
+    ).all()
+
+    method_names = [method.name for method in unused_methods]
+
+    # 执行清理
+    deleted_count = cleanup_unused_methods(db)
+
+    return {
+        "message": f"成功删除 {deleted_count} 个未使用的研究方法",
+        "deleted_count": deleted_count,
+        "deleted_methods": method_names
+    }

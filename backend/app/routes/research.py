@@ -13,25 +13,9 @@ from ..models import (
 from ..utils import DataValidator
 from ..utils.security_validators import SecurityValidator
 from ..utils.response import success_response
+from ..utils.research_method_helper import update_research_method_usage
 
 router = APIRouter()
-
-
-def update_research_method_usage(db: Session, method_name: str, increment: int = 1):
-    """
-    更新研究方法的使用次数
-
-    Args:
-        db: 数据库会话
-        method_name: 研究方法名称
-        increment: 增量（正数增加，负数减少）
-    """
-    if not method_name:
-        return
-
-    method = db.query(ResearchMethod).filter(ResearchMethod.name == method_name).first()
-    if method:
-        method.usage_count = max(0, method.usage_count + increment)
 
 @router.get("/", response_model=List[ResearchProjectSchema])
 async def get_research_projects(
