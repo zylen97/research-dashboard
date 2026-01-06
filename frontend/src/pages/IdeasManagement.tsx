@@ -43,10 +43,10 @@ const { Option } = Select;
 const DEFAULT_COLUMN_WIDTHS = {
   index: 60,
   project_name: 180,
+  target_journal: 150,
   research_method: 120,
   reference_paper: 200,
   reference_journal: 150,
-  target_journal: 150,
   responsible_persons: 150,
   maturity: 100,
   created_at: 120,
@@ -268,6 +268,19 @@ const IdeasManagementPage: React.FC = () => {
       ),
     },
     {
+      title: '投稿期刊',
+      dataIndex: 'target_journal',
+      key: 'target_journal',
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip placement="topLeft" title={text}>
+          <span>{text || '-'}</span>
+        </Tooltip>
+      ),
+    },
+    {
       title: '研究方法',
       dataIndex: 'research_method',
       key: 'research_method',
@@ -297,19 +310,6 @@ const IdeasManagementPage: React.FC = () => {
       title: '参考期刊',
       dataIndex: 'reference_journal',
       key: 'reference_journal',
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          <span>{text || '-'}</span>
-        </Tooltip>
-      ),
-    },
-    {
-      title: '投稿期刊',
-      dataIndex: 'target_journal',
-      key: 'target_journal',
       ellipsis: {
         showTitle: false,
       },

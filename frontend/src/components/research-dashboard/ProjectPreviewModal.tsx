@@ -1,6 +1,7 @@
-import React from 'react';
-import { Modal, Descriptions, Space, Typography } from 'antd';
+import React, { useState } from 'react';
+import { Modal, Descriptions, Space, Typography, Button, Popconfirm } from 'antd';
 import { ResearchProject } from '../../types';
+import { SwapRightOutlined } from '@ant-design/icons';
 import {
   TeamOutlined,
   CalendarOutlined,
@@ -22,15 +23,30 @@ interface ProjectPreviewModalProps {
   visible: boolean;
   project: ResearchProject | null;
   onClose: () => void;
+  onConvertToIdea?: (project: ResearchProject) => void;
 }
 
 // 包豪斯：删除彩色映射，使用STATUS_VISUAL_SYSTEM
 
-const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({ 
-  visible, 
-  project, 
-  onClose 
+const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
+  visible,
+  project,
+  onClose,
+  onConvertToIdea
 }) => {
+  const [converting, setConverting] = useState(false);
+
+  const handleConvertToIdea = async () => {
+    if (!project) return;
+    setConverting(true);
+    try {
+      await onConvertToIdea?.(project);
+      onClose();
+    } finally {
+      setConverting(false);
+    }
+  };
+
   if (!project) {
     return null;
   }
@@ -45,7 +61,27 @@ const ProjectPreviewModal: React.FC<ProjectPreviewModalProps> = ({
       }
       open={visible}
       onCancel={onClose}
-      footer={null}
+      footer={
+        <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <Button onClick={onClose}>取消</Button>
+          <Popconfirm
+            title="确认转化为Idea?"
+            description="转化后将删除原研究项目，此操作不可撤销"
+            onConfirm={handleConvertToIdea}
+            okText="确认"
+            cancelText="取消"
+          >
+            <Button
+              type="primary"
+              danger
+              icon={<SwapRightOutlined />}
+              loading={converting}
+            >
+              转化为Idea
+            </Button>
+          </Popconfirm>
+        </Space>
+      }
       width={800}
       style={{ top: 20 }}
     >

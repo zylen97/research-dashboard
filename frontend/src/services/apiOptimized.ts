@@ -180,6 +180,9 @@ export const researchApi = {
 
   // 依赖检查
   checkProjectDependencies: (id: number) => api.get(`/research/${id}/check-dependencies`),
+
+  // 转化为Idea
+  convertToIdea: (projectId: number) => api.post(`/research/${projectId}/convert-to-idea`),
 };
 
 // 已移除认证系统 - authApi 已删除

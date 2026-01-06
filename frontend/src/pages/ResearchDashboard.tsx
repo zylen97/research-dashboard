@@ -16,7 +16,8 @@ import {
   ClearOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { message } from 'antd';
 import { ResearchProject, ResearchProjectCreate } from '../types';
 import {
   StatisticsCards,
@@ -32,7 +33,7 @@ import JournalSelect from '../components/JournalSelect';
 import ResearchMethodSelect from '../components/ResearchMethodSelect';
 import CompactJournalFilter from '../components/CompactJournalFilter';
 import { PageHeader, FilterSection } from '../styles/components';
-import { researchMethodApi } from '../services/apiOptimized';
+import { researchMethodApi, researchApi } from '../services/apiOptimized';
 import { ResearchMethod } from '../types/research-methods';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 
@@ -128,6 +129,17 @@ const ResearchDashboard: React.FC = () => {
     revertLocalTodoStatus,
   });
 
+  // 转化为Idea的mutation
+  const convertToIdeaMutation = useMutation({
+    mutationFn: (projectId: number) => researchApi.convertToIdea(projectId),
+    onSuccess: () => {
+      message.success('已转化为Idea');
+      refetch();
+    },
+    onError: (error: any) => {
+      message.error(`转化失败: ${error.response?.data?.detail || '未知错误'}`);
+    },
+  });
 
   // 处理表单提交
   const handleSubmit = async (values: any) => {
@@ -504,6 +516,9 @@ const ResearchDashboard: React.FC = () => {
         onClose={() => {
           setIsPreviewModalVisible(false);
           setSelectedProject(null);
+        }}
+        onConvertToIdea={(project) => {
+          convertToIdeaMutation.mutate(project.id);
         }}
       />
 

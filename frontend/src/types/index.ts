@@ -111,6 +111,13 @@ export interface ResearchProjectUpdate {
   my_role?: 'first_author' | 'corresponding_author';
 }
 
+// Project→Idea转化响应
+export interface ConvertToIdeaResponse {
+  message: string;
+  idea_id: number;
+  project_name: string;
+  collaborators_preserved: number;
+}
 
 // 论文进度类型
 export interface CommunicationLog {

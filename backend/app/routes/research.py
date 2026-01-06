@@ -5,7 +5,7 @@ from typing import List, Optional
 from datetime import datetime
 import json
 from ..models import (
-    get_db, ResearchProject, Collaborator, CommunicationLog,
+    get_db, ResearchProject, Collaborator, CommunicationLog, Idea,
     ResearchProjectSchema, ResearchProjectCreate, ResearchProjectUpdate,
     CommunicationLogSchema, CommunicationLogCreate, CommunicationLogUpdate,
     ResearchMethod
@@ -88,6 +88,71 @@ async def get_research_project(project_id: int, db: Session = Depends(get_db)):
             detail="Research project not found"
         )
     return project
+
+@router.post("/{project_id}/convert-to-idea")
+async def convert_project_to_idea(
+    project_id: int,
+    db: Session = Depends(get_db)
+):
+    """将研究项目转化为Idea（删除原项目）"""
+    try:
+        # 预加载collaborators关系
+        project = db.query(ResearchProject).options(
+            joinedload(ResearchProject.collaborators)
+        ).filter(ResearchProject.id == project_id).first()
+
+        if not project:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Research project not found"
+            )
+
+        # 创建新Idea（映射共有字段）
+        new_idea = Idea(
+            project_name=project.title,
+            project_description=project.idea_description,
+            research_method=project.research_method,
+            reference_paper=project.reference_paper if project.reference_paper else None,
+            reference_journal=project.reference_journal if project.reference_journal else None,
+            target_journal=project.target_journal if project.target_journal else None,
+            maturity='mature',  # 回滚后默认为成熟
+            responsible_person_id=project.collaborators[0].id if project.collaborators else None
+        )
+
+        # 映射合作者:Project.collaborators → Idea.responsible_persons
+        if project.collaborators:
+            new_idea.responsible_persons = project.collaborators
+
+        # 添加到数据库
+        db.add(new_idea)
+        db.flush()  # 获取new_idea的ID
+
+        # 更新研究方法使用次数
+        if project.research_method:
+            update_research_method_usage(db, project.research_method, 1)
+
+        # 删除原研究项目
+        db.delete(project)
+
+        # 提交事务
+        db.commit()
+        db.refresh(new_idea)
+
+        return {
+            "message": "Research project successfully converted to idea",
+            "idea_id": new_idea.id,
+            "project_name": new_idea.project_name,
+            "collaborators_preserved": len(project.collaborators)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to convert to idea: {str(e)}"
+        )
 
 @router.post("/", response_model=ResearchProjectSchema)
 async def create_research_project(
