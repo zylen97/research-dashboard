@@ -11,6 +11,7 @@ import IdeasManagement from './pages/IdeasManagement';
 import JournalsManagement from './pages/JournalsManagement';
 import PapersManagement from './pages/PapersManagement';
 import DatabaseBackup from './pages/DatabaseBackup';
+import PromptsManagement from './pages/PromptsManagement';
 
 const App: React.FC = () => {
   return (
@@ -24,6 +25,7 @@ const App: React.FC = () => {
           <Route path="/ideas-management" element={<IdeasManagement />} />
           <Route path="/journals" element={<JournalsManagement />} />
           <Route path="/papers" element={<PapersManagement />} />
+          <Route path="/prompts" element={<PromptsManagement />} />
           <Route path="/backup" element={<DatabaseBackup />} />
         </Routes>
       </MainLayout>

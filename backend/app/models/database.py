@@ -44,6 +44,15 @@ journal_tags = Table(
     Column('created_at', DateTime, default=datetime.utcnow)
 )
 
+# Association table for many-to-many relationship between prompts and tags (v4.8)
+prompt_tags = Table(
+    'prompt_tags',
+    Base.metadata,
+    Column('prompt_id', Integer, ForeignKey('prompts.id', ondelete='CASCADE'), primary_key=True),
+    Column('tag_id', Integer, ForeignKey('tags.id', ondelete='CASCADE'), primary_key=True),
+    Column('created_at', DateTime, default=datetime.utcnow)
+)
+
 # Association table for many-to-many relationship between projects and collaborators
 
 class Collaborator(Base):
@@ -299,6 +308,38 @@ class Journal(Base):
     tags = relationship("Tag", secondary="journal_tags", back_populates="journals")
 
     # Pydantic 配置，启用 ORM 模式
+    class Config:
+        from_attributes = True
+
+
+class Prompt(Base):
+    """提示词管理模型（v4.8）"""
+    __tablename__ = "prompts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False, index=True, comment="提示词标题")
+    content = Column(Text, nullable=False, comment="提示词内容")
+    category = Column(String(50), nullable=False, index=True, comment="分类: reading/writing/polishing/reviewer/horizontal")
+    description = Column(Text, nullable=True, comment="详细说明")
+    variables = Column(Text, nullable=True, comment="变量列表JSON: [\"title\", \"abstract\"]")
+    usage_count = Column(Integer, default=0, comment="使用次数")
+    is_favorite = Column(Boolean, default=False, index=True, comment="是否收藏")
+    is_active = Column(Boolean, default=True, index=True, comment="是否启用")
+    created_at = Column(DateTime, default=datetime.utcnow, comment="创建时间")
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新时间")
+
+    # 关联关系
+    tags = relationship("Tag", secondary="prompt_tags", backref="prompts")
+
+    # 索引优化
+    __table_args__ = (
+        Index('idx_prompts_category', 'category'),
+        Index('idx_prompts_favorite', 'is_favorite'),
+        Index('idx_prompts_usage', 'usage_count'),
+        Index('idx_prompts_active', 'is_active'),
+    )
+
+    # Pydantic 配置
     class Config:
         from_attributes = True
 

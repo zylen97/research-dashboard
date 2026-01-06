@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 from datetime import datetime
 from enum import Enum
 
@@ -521,3 +521,85 @@ class BatchUpdateMaturityRequest(BaseModel):
         if v not in ['mature', 'immature']:
             raise ValueError('maturity must be either "mature" or "immature"')
         return v
+
+
+# ===== Prompt Schemas (v4.8) =====
+
+class PromptCategory(str, Enum):
+    """提示词分类枚举"""
+    READING = "reading"           # 文章精读和迁移
+    WRITING = "writing"           # 论文写作
+    POLISHING = "polishing"       # 论文润色
+    REVIEWER = "reviewer"         # 审稿人
+    HORIZONTAL = "horizontal"     # 横向课题
+
+
+class PromptBase(BaseModel):
+    """提示词基础数据模型"""
+    title: str = Field(..., min_length=1, max_length=200, description="提示词标题")
+    content: str = Field(..., min_length=1, description="提示词内容")
+    category: PromptCategory = Field(..., description="分类")
+    description: Optional[str] = Field(None, description="详细说明")
+    tag_ids: List[int] = Field(default=[], description="关联的标签ID列表")
+
+    @field_validator('title')
+    @classmethod
+    def validate_title(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError('提示词标题不能为空')
+        return v
+
+
+class PromptCreate(PromptBase):
+    """创建提示词的数据模型"""
+    pass
+
+
+class PromptUpdate(BaseModel):
+    """更新提示词的数据模型"""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = None
+    category: Optional[PromptCategory] = None
+    description: Optional[str] = None
+    tag_ids: Optional[List[int]] = None
+    is_favorite: Optional[bool] = None
+    is_active: Optional[bool] = None
+
+
+class Prompt(PromptBase):
+    """完整的提示词数据模型"""
+    id: int
+    variables: List[str] = Field(default=[], description="变量列表")
+    usage_count: int = Field(default=0, description="使用次数")
+    is_favorite: bool = Field(default=False, description="是否收藏")
+    is_active: bool = Field(default=True, description="是否启用")
+    created_at: datetime
+    updated_at: datetime
+    tags: List[Tag] = Field(default=[], description="关联的标签列表")
+
+    class Config:
+        from_attributes = True
+
+
+class PromptCopyRequest(BaseModel):
+    """复制提示词请求模型"""
+    variables: Optional[Dict[str, str]] = Field(None, description="变量值映射")
+
+
+class PromptCopyResponse(BaseModel):
+    """复制提示词响应模型"""
+    content: str = Field(..., description="替换后的完整文本")
+    title: str = Field(..., description="提示词标题")
+    variables_used: List[str] = Field(default=[], description="使用的变量列表")
+
+
+class PromptStats(BaseModel):
+    """提示词统计模型"""
+    total_count: int = Field(..., description="总数量")
+    by_category: Dict[str, int] = Field(default={}, description="按分类统计")
+    top_prompts: List[Dict[str, Any]] = Field(default=[], description="最常用的提示词")
+
+
+# Update forward references
+ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference

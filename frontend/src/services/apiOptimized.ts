@@ -24,6 +24,11 @@ import {
   PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate,
   UserConfig, VolumeStats
 } from '../types/papers';
+import {
+  Prompt, PromptCreate, PromptUpdate,
+  PromptCopyRequest, PromptCopyResponse,
+  PromptStats, PromptCategoriesResponse
+} from '../types/prompts';
 import { ResearchMethod, ResearchMethodCreate, ResearchMethodUpdate } from '../types/research-methods';
 import { AIConfig, AIConfigUpdate, AITestRequest, AITestResponse as AIConfigTestResponse } from '../types/ai';
 import { errorInterceptorOptimized } from '../utils/errorHandlerOptimized';
@@ -624,6 +629,57 @@ export const aiConfigApi = {
   // 测试AI连接
   testConnection: (request: AITestRequest): Promise<AIConfigTestResponse> =>
     api.post('/ai-config/test', request),
+};
+
+// 提示词管理API（v4.8）- 用于管理科研提示词
+export const promptsApi = {
+  // 获取提示词列表
+  getAll: async (params?: {
+    category?: string;
+    search?: string;
+    is_favorite?: boolean;
+    is_active?: boolean;
+  }): Promise<Prompt[]> => {
+    try {
+      const response = await api.get('/prompts/', { params });
+      return handleListResponse<Prompt>(response, 'API.getPrompts');
+    } catch (error) {
+      console.error('获取提示词列表失败:', error);
+      return [];
+    }
+  },
+
+  // 获取单个提示词详情
+  getById: (id: number): Promise<Prompt> =>
+    api.get(`/prompts/${id}`),
+
+  // 创建提示词
+  create: (data: PromptCreate): Promise<Prompt> =>
+    api.post('/prompts/', data),
+
+  // 更新提示词
+  update: (id: number, data: PromptUpdate): Promise<Prompt> =>
+    api.put(`/prompts/${id}`, data),
+
+  // 删除提示词
+  delete: (id: number): Promise<{ message: string; prompt_id: number }> =>
+    api.delete(`/prompts/${id}`),
+
+  // 复制提示词（带变量替换）
+  copy: (id: number, request: PromptCopyRequest): Promise<PromptCopyResponse> =>
+    api.post(`/prompts/${id}/copy`, request),
+
+  // 切换收藏状态
+  toggleFavorite: (id: number): Promise<Prompt> =>
+    api.post(`/prompts/${id}/toggle-favorite`),
+
+  // 获取使用统计
+  getStats: (): Promise<PromptStats> =>
+    api.get('/prompts/stats/usage'),
+
+  // 获取分类统计
+  getCategories: (): Promise<PromptCategoriesResponse> =>
+    api.get('/prompts/categories'),
 };
 
 export default api;
