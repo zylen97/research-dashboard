@@ -1,14 +1,15 @@
 /**
- * PromptCopyModal 组件（v4.8）
- * 复制提示词模态框 - 支持变量替换
+ * PromptCopyModal 组件（v4.9）
+ * 复制提示词模态框 - 支持智能变量识别和期刊选择
  */
 import React, { useEffect, useState } from 'react';
 import { Modal, Form, Input, message, Space, Typography, Alert, Button, Divider } from 'antd';
-import { CopyOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { CopyOutlined, CheckCircleOutlined, SaveOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 
 import { promptsApi } from '../services/apiOptimized';
-import { extractVariables } from '../types/prompts';
+import { parseVariablesWithConfig, VariableConfig } from '../types/prompts';
+import JournalSelectMultiple from './JournalSelectMultiple';
 
 const { TextArea } = Input;
 const { Text } = Typography;
@@ -19,6 +20,34 @@ interface PromptCopyModalProps {
   onCancel: () => void;
 }
 
+// localStorage 键
+const DEFAULTS_KEY = 'prompt_defaults';
+
+/**
+ * 加载默认值
+ */
+const loadDefaults = (promptId: number): Record<string, string> => {
+  try {
+    const allDefaults = JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}');
+    return allDefaults[promptId] || {};
+  } catch {
+    return {};
+  }
+};
+
+/**
+ * 保存默认值
+ */
+const saveDefaults = (promptId: number, values: Record<string, string>) => {
+  try {
+    const allDefaults = JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}');
+    allDefaults[promptId] = values;
+    localStorage.setItem(DEFAULTS_KEY, JSON.stringify(allDefaults));
+  } catch (e) {
+    console.error('Failed to save defaults:', e);
+  }
+};
+
 const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
   visible,
   promptId,
@@ -27,6 +56,8 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
   const [form] = Form.useForm();
   const [copied, setCopied] = useState(false);
   const [finalContent, setFinalContent] = useState<string>('');
+  const [hasDefaults, setHasDefaults] = useState(false);
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
 
   // 获取提示词详情
   const { data: prompt, isLoading } = useQuery({
@@ -35,38 +66,65 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
     enabled: visible && promptId !== null,
   });
 
-  // 当提示词加载完成时，提取变量并设置表单
+  // 获取变量列表
+  const variables = prompt ? parseVariablesWithConfig(prompt.content) : [];
+
+  // 实时计算预览内容
+  const previewContent = React.useMemo(() => {
+    if (!prompt) return '';
+    let content = prompt.content;
+    // 替换已填写的变量
+    Object.entries(formValues).forEach(([key, value]) => {
+      if (value) {
+        content = content.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+      }
+    });
+    return content;
+  }, [prompt, formValues]);
+
+  // 当提示词加载完成时，解析变量并设置表单
   useEffect(() => {
-    if (prompt) {
-      const variables = extractVariables(prompt.content);
+    if (prompt && promptId) {
       if (variables.length > 0) {
-        // 设置表单初始值（如果提示词有默认变量值，可以在这里设置）
-        form.setFieldsValue(
-          variables.reduce((acc, variable) => {
-            acc[variable] = '';
-            return acc;
-          }, {} as Record<string, string>)
-        );
+        // 加载默认值
+        const defaults = loadDefaults(promptId);
+        const hasDefaultsSet = Object.keys(defaults).length > 0;
+        setHasDefaults(hasDefaultsSet);
+
+        // 设置表单初始值
+        const initialValues = variables.reduce((acc, variable) => {
+          acc[variable.name] = defaults[variable.name] || '';
+          return acc;
+        }, {} as Record<string, string>);
+        form.setFieldsValue(initialValues);
+        setFormValues(initialValues);
+      } else {
+        setHasDefaults(false);
       }
     }
-  }, [prompt, form]);
+  }, [prompt, promptId, form, variables]);
 
   // 重置状态
   useEffect(() => {
     if (!visible) {
       setCopied(false);
       setFinalContent('');
+      setHasDefaults(false);
+      setFormValues({});
       form.resetFields();
     }
   }, [visible, form]);
 
   // 处理复制
   const handleCopy = async () => {
-    if (!prompt) return;
+    if (!prompt || !promptId) return;
 
     try {
       // 获取表单值
       const values = form.getFieldsValue();
+
+      // 保存默认值
+      saveDefaults(promptId, values);
 
       // 调用复制API
       const response = await promptsApi.copy(prompt.id, {
@@ -103,13 +161,55 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
     }
   };
 
-  // 获取变量列表
-  const getVariables = (): string[] => {
-    if (!prompt) return [];
-    return extractVariables(prompt.content);
+  // 保存默认值（不复制）
+  const handleSaveDefaults = () => {
+    if (!promptId) return;
+    const values = form.getFieldsValue();
+    saveDefaults(promptId, values);
+    setHasDefaults(true);
+    message.success('默认值已保存');
   };
 
-  const variables = getVariables();
+  // 清除默认值
+  const handleClearDefaults = () => {
+    if (!promptId) return;
+    const allDefaults = JSON.parse(localStorage.getItem(DEFAULTS_KEY) || '{}');
+    delete allDefaults[promptId];
+    localStorage.setItem(DEFAULTS_KEY, JSON.stringify(allDefaults));
+    form.resetFields();
+    setHasDefaults(false);
+    message.success('默认值已清除');
+  };
+
+  // 渲染变量输入组件
+  const renderVariableInput = (variable: VariableConfig) => {
+    switch (variable.type) {
+      case 'journal-multiple':
+        return <JournalSelectMultiple placeholder="选择期刊（手动选择或点击标签快捷填充）" />;
+
+      case 'text-large':
+        return (
+          <TextArea
+            placeholder={`请输入${variable.label}...`}
+            autoSize={{ minRows: variable.rows || 3, maxRows: (variable.rows || 3) * 2 }}
+          />
+        );
+
+      case 'text':
+      default:
+        // topic 变量限制50字
+        if (variable.name === 'topic') {
+          return (
+            <Input
+              placeholder={`请输入${variable.label}...`}
+              maxLength={50}
+              showCount
+            />
+          );
+        }
+        return <Input placeholder={`请输入${variable.label}...`} />;
+    }
+  };
 
   return (
     <Modal
@@ -122,22 +222,28 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
       open={visible}
       onCancel={onCancel}
       width={800}
-      footer={[
+      footer={
         copied ? (
-          <Button key="close" type="primary" icon={<CheckCircleOutlined />} onClick={onCancel}>
+          <Button type="primary" icon={<CheckCircleOutlined />} onClick={onCancel}>
             完成
           </Button>
         ) : (
-          <>
-            <Button key="cancel" onClick={onCancel}>
-              取消
-            </Button>
-            <Button key="copy" type="primary" onClick={handleCopy} loading={isLoading}>
+          <Space>
+            <Button onClick={onCancel}>取消</Button>
+            {variables.length > 0 && hasDefaults && (
+              <Button onClick={handleClearDefaults}>清除默认值</Button>
+            )}
+            {variables.length > 0 && (
+              <Button icon={<SaveOutlined />} onClick={handleSaveDefaults}>
+                保存默认值
+              </Button>
+            )}
+            <Button type="primary" onClick={handleCopy} loading={isLoading}>
               复制到剪贴板
             </Button>
-          </>
-        ),
-      ]}
+          </Space>
+        )
+      }
     >
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: 40 }}>加载中...</div>
@@ -154,24 +260,37 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
           {variables.length > 0 && !copied && (
             <>
               <Alert
-                message="检测到变量，请填写以下内容"
+                message={
+                  <Space>
+                    检测到 {variables.length} 个变量
+                    {hasDefaults && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        (已加载上次保存的默认值)
+                      </Text>
+                    )}
+                  </Space>
+                }
                 description="提示词中包含用 {变量名} 标记的占位符，填写后将自动替换"
-                type="info"
+                type={hasDefaults ? 'success' : 'info'}
                 showIcon
                 style={{ marginBottom: 16 }}
               />
-              <Form form={form} layout="vertical">
+              <Form
+                form={form}
+                layout="vertical"
+                onValuesChange={() => {
+                  const values = form.getFieldsValue();
+                  setFormValues(values);
+                }}
+              >
                 {variables.map((variable) => (
                   <Form.Item
-                    key={variable}
-                    name={variable}
-                    label={variable.toUpperCase()}
-                    rules={[{ required: true, message: `请输入${variable}` }]}
+                    key={variable.name}
+                    name={variable.name}
+                    label={variable.label}
+                    rules={[{ required: true, message: `请输入${variable.label}` }]}
                   >
-                    <TextArea
-                      placeholder={`请输入 ${variable} 的值...`}
-                      autoSize={{ minRows: 1, maxRows: 4 }}
-                    />
+                    {() => renderVariableInput(variable)}
                   </Form.Item>
                 ))}
               </Form>
@@ -194,7 +313,7 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
               overflow: 'auto',
             }}
           >
-            {copied ? finalContent : prompt.content}
+            {copied ? finalContent : previewContent}
           </div>
 
           {/* 复制成功提示 */}

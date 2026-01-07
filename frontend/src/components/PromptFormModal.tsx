@@ -1,17 +1,22 @@
 /**
- * PromptFormModal 组件（v4.8）
+ * PromptFormModal 组件（v4.9）
  * 创建/编辑提示词的表单模态框
  */
 import React, { useEffect } from 'react';
 import { Modal, Form, Input, Select, message, Alert } from 'antd';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 
-import { promptsApi, tagApi } from '../services/apiOptimized';
-import { Prompt, PromptCreate, PromptCategory, PROMPT_CATEGORY_LABELS, extractVariables } from '../types/prompts';
-import { Tag as TagType } from '../types/journals';
+import { promptsApi } from '../services/apiOptimized';
+import { Prompt, PromptCreate, PromptCategory, PROMPT_CATEGORY_LABELS } from '../types/prompts';
 
 const { TextArea } = Input;
 const { Option } = Select;
+
+// 变量说明列表
+const VARIABLE_HELP = [
+  { name: '{journals}', desc: '期刊选择器（手动选择或点击标签快捷填充）' },
+  { name: '{topic}', desc: '主题（50字以内）' },
+];
 
 interface PromptFormModalProps {
   visible: boolean;
@@ -28,12 +33,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
 }) => {
   const [form] = Form.useForm();
   const isEditing = !!prompt;
-
-  // 获取标签列表
-  const { data: tags = [] } = useQuery({
-    queryKey: ['tags'],
-    queryFn: () => tagApi.getTags(),
-  });
 
   // 创建提示词
   const createMutation = useMutation({
@@ -69,8 +68,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
         title: prompt.title,
         content: prompt.content,
         category: prompt.category,
-        description: prompt.description || '',
-        tag_ids: prompt.tags?.map((tag) => tag.id) || [],
       });
     } else {
       form.resetFields();
@@ -86,8 +83,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
         title: values.title,
         content: values.content,
         category: values.category,
-        description: values.description || undefined,
-        tag_ids: values.tag_ids || [],
       };
 
       if (isEditing) {
@@ -98,13 +93,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
     } catch (error) {
       // 表单验证失败
     }
-  };
-
-  // 检测变量
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const content = e.target.value;
-    extractVariables(content);
-    // 可以在这里实时显示检测到的变量
   };
 
   return (
@@ -122,7 +110,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
         layout="vertical"
         initialValues={{
           category: 'writing' as PromptCategory,
-          tag_ids: [],
         }}
       >
         {/* 标题 */}
@@ -157,7 +144,18 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
           extra={
             <Alert
               message="变量提示"
-              description="使用 {变量名} 格式标记可替换的变量，例如：{title}、{abstract} 等"
+              description={
+                <div>
+                  <div>使用以下变量格式标记可替换的内容：</div>
+                  <ul style={{ margin: '8px 0', paddingLeft: 20 }}>
+                    {VARIABLE_HELP.map((v, i) => (
+                      <li key={i}>
+                        <code>{v.name}</code> - {v.desc}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              }
               type="info"
               showIcon
               style={{ marginTop: 8 }}
@@ -167,27 +165,7 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
           <TextArea
             placeholder="请输入提示词内容，支持 {变量名} 格式的变量替换..."
             autoSize={{ minRows: 8, maxRows: 20 }}
-            onChange={handleContentChange}
           />
-        </Form.Item>
-
-        {/* 描述 */}
-        <Form.Item name="description" label="详细说明（可选）">
-          <TextArea
-            placeholder="简要说明这个提示词的用途和使用场景..."
-            autoSize={{ minRows: 2, maxRows: 4 }}
-          />
-        </Form.Item>
-
-        {/* 标签 */}
-        <Form.Item name="tag_ids" label="标签（可选）">
-          <Select mode="multiple" placeholder="选择标签" allowClear>
-            {tags.map((tag: TagType) => (
-              <Option key={tag.id} value={tag.id}>
-                {tag.name}
-              </Option>
-            ))}
-          </Select>
         </Form.Item>
       </Form>
     </Modal>

@@ -669,10 +669,6 @@ export const promptsApi = {
   copy: (id: number, request: PromptCopyRequest): Promise<PromptCopyResponse> =>
     api.post(`/prompts/${id}/copy`, request),
 
-  // 切换收藏状态
-  toggleFavorite: (id: number): Promise<Prompt> =>
-    api.post(`/prompts/${id}/toggle-favorite`),
-
   // 获取使用统计
   getStats: (): Promise<PromptStats> =>
     api.get('/prompts/stats/usage'),

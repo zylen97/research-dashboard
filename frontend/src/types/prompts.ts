@@ -132,3 +132,69 @@ export const extractVariables = (content: string): string[] => {
     ? Array.from(new Set(matches.map((m) => m.slice(1, -1))))
     : [];
 };
+
+/**
+ * 变量类型枚举
+ */
+export type VariableType =
+  | 'journal-multiple'  // 期刊（单选或多选，支持标签快捷选择）
+  | 'text-large'        // 大文本
+  | 'text';             // 普通文本
+
+/**
+ * 变量配置接口
+ */
+export interface VariableConfig {
+  name: string;           // 变量名
+  type: VariableType;     // 变量类型
+  label: string;          // 显示标签
+  rows?: number;          //TextArea 行数（text-large 类型）
+  tagName?: string;       // 标签名（journal-tag 类型）
+}
+
+/**
+ * 预定义变量配置
+ */
+const VARIABLE_CONFIG: Record<string, Omit<VariableConfig, 'name'>> = {
+  // 期刊相关（支持手动选择和标签快捷选择）
+  journals: {
+    type: 'journal-multiple',
+    label: '期刊',
+  },
+  // 主题
+  topic: {
+    type: 'text',
+    label: '主题',
+  },
+};
+
+/**
+ * 根据变量名获取变量配置
+ */
+export const getVariableConfig = (variableName: string): VariableConfig => {
+  // 预定义变量
+  if (VARIABLE_CONFIG[variableName]) {
+    const config = VARIABLE_CONFIG[variableName]!;
+    return {
+      name: variableName,
+      type: config.type!,
+      label: config.label!,
+      ...(config.rows !== undefined && { rows: config.rows }),
+    };
+  }
+
+  // 默认为普通文本
+  return {
+    name: variableName,
+    type: 'text',
+    label: variableName,
+  };
+};
+
+/**
+ * 解析变量及其配置
+ */
+export const parseVariablesWithConfig = (content: string): VariableConfig[] => {
+  const variableNames = extractVariables(content);
+  return variableNames.map(getVariableConfig);
+};

@@ -32,7 +32,8 @@ def extract_variables_from_content(content: str) -> List[str]:
 async def get_prompts(
     category: Optional[str] = Query(None, description="按分类筛选"),
     search: Optional[str] = Query(None, description="搜索关键词（标题或内容）"),
-    is_favorite: Optional[bool] = Query(None, description="只显示收藏的提示词"),
+    ordering: Optional[str] = Query(None, description="排序字段（如：-usage_count）"),
+    limit: Optional[int] = Query(None, description="限制返回数量"),
     is_active: Optional[bool] = Query(True, description="只显示启用的提示词"),
     db: Session = Depends(get_db)
 ):
@@ -41,9 +42,10 @@ async def get_prompts(
 
     - **category**: 可选，按分类筛选（reading/writing/polishing/reviewer/horizontal）
     - **search**: 可选，搜索关键词（标题或内容）
-    - **is_favorite**: 可选，只显示收藏的提示词
+    - **ordering**: 可选，排序字段（如：-usage_count 表示倒序）
+    - **limit**: 可选，限制返回数量
     - **is_active**: 可选，只显示启用的提示词（默认true）
-    - 返回：提示词列表，按使用次数倒序排列
+    - 返回：提示词列表
     """
     query = db.query(PromptModel)
 
@@ -59,16 +61,30 @@ async def get_prompts(
             (PromptModel.description.contains(search))
         )
 
-    # 收藏过滤
-    if is_favorite is not None:
-        query = query.filter(PromptModel.is_favorite == is_favorite)
-
     # 启用状态过滤
     if is_active is not None:
         query = query.filter(PromptModel.is_active == is_active)
 
-    # 按使用次数倒序排列（最常用的在前）
-    prompts = query.order_by(desc(PromptModel.usage_count)).all()
+    # 排序
+    if ordering:
+        if ordering.startswith('-'):
+            # 倒序
+            field = ordering[1:]
+            if hasattr(PromptModel, field):
+                query = query.order_by(desc(getattr(PromptModel, field)))
+        else:
+            # 正序
+            if hasattr(PromptModel, ordering):
+                query = query.order_by(getattr(PromptModel, ordering))
+    else:
+        # 默认按使用次数倒序排列
+        query = query.order_by(desc(PromptModel.usage_count))
+
+    # 限制数量
+    if limit:
+        query = query.limit(limit)
+
+    prompts = query.all()
 
     # 解析变量列表
     for prompt in prompts:
@@ -376,37 +392,3 @@ async def copy_prompt(
         variables_used=variables_used
     )
 
-
-@router.post("/{prompt_id}/toggle-favorite", response_model=PromptSchema, summary="切换收藏状态")
-async def toggle_favorite(
-    prompt_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    切换提示词的收藏状态
-
-    - **prompt_id**: 提示词ID
-    """
-    # 查找提示词
-    prompt = db.query(PromptModel).filter(PromptModel.id == prompt_id).first()
-    if not prompt:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"提示词ID {prompt_id} 不存在"
-        )
-
-    # 切换收藏状态
-    prompt.is_favorite = not prompt.is_favorite
-    db.commit()
-    db.refresh(prompt)
-
-    # 解析变量列表
-    if prompt.variables:
-        try:
-            prompt.variables = json.loads(prompt.variables)
-        except:
-            prompt.variables = []
-    else:
-        prompt.variables = []
-
-    return prompt
