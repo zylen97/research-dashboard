@@ -10,7 +10,7 @@
 - **主数据库**: `backend/data/research_dashboard.db`（单一数据库，无环境区分）
 - **备份目录**: `backend/backups/YYYYMMDD_HHMMSS/`（保留最近7个）
 
-**核心表**：research_projects, ideas, collaborators, journals, tags, journal_tags, communication_logs, audit_logs
+**核心表**：research_projects, ideas, collaborators, journals, tags, journal_tags, prompt_templates, prompt_usage_logs, communication_logs, audit_logs
 
 **期刊系统**：
 - 通过标签对期刊进行分类（标签完全可选）
