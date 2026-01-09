@@ -419,7 +419,7 @@ class Journal(JournalBase):
 
     # 统计字段（API返回时动态计算，v4.2简化）
     reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
-    paper_count: int = Field(default=0, description="论文总数")
+    # paper_count已移除 - Papers功能已删除
 
     class Config:
         from_attributes = True
@@ -428,79 +428,7 @@ class Journal(JournalBase):
 ResearchProject.model_rebuild()  # Fix CommunicationLog forward reference
 
 
-# Paper schemas - 论文管理
-class PaperStatus(str, Enum):
-    """论文状态枚举"""
-    PENDING = "pending"       # 待分析
-    ANALYZED = "analyzed"     # 已分析
-    CONVERTED = "converted"   # 已转换为Idea
-
-class PaperBase(BaseModel):
-    """论文基础数据模型"""
-    title: str = Field(..., min_length=1, max_length=500, description="论文标题")
-    authors: Optional[str] = Field(None, description="作者列表")
-    abstract: Optional[str] = Field(None, description="摘要")
-    keywords: Optional[str] = Field(None, description="关键词")
-    year: Optional[int] = Field(None, ge=1900, le=2100, description="发表年份")
-    volume: Optional[str] = Field(None, max_length=50, description="卷")
-    issue: Optional[str] = Field(None, max_length=50, description="期")
-    pages: Optional[str] = Field(None, max_length=50, description="页码")
-    doi: Optional[str] = Field(None, max_length=200, description="DOI")
-    journal_id: Optional[int] = Field(None, description="关联期刊ID")
-    # 翻译字段 (v3.5)
-    link: Optional[str] = Field(None, max_length=1000, description="文献预览URL")
-    title_translation: Optional[str] = Field(None, description="标题翻译")
-    abstract_translation: Optional[str] = Field(None, description="摘要翻译")
-    abstract_summary: Optional[str] = Field(None, description="摘要总结")
-
-class PaperCreate(PaperBase):
-    """创建论文的数据模型"""
-    pass
-
-class PaperUpdate(BaseModel):
-    """更新论文的数据模型"""
-    title: Optional[str] = Field(None, min_length=1, max_length=500)
-    authors: Optional[str] = None
-    abstract: Optional[str] = None
-    keywords: Optional[str] = None
-    year: Optional[int] = Field(None, ge=1900, le=2100)
-    volume: Optional[str] = None
-    issue: Optional[str] = None
-    pages: Optional[str] = None
-    doi: Optional[str] = None
-    journal_id: Optional[int] = None
-    status: Optional[PaperStatus] = None
-    # 翻译字段 (v3.5)
-    link: Optional[str] = None
-    title_translation: Optional[str] = None
-    abstract_translation: Optional[str] = None
-    abstract_summary: Optional[str] = None
-
-class Paper(PaperBase):
-    """完整的论文数据模型"""
-    id: int
-    # AI分析字段
-    ai_analysis_result: Optional[str] = None
-    migration_potential: Optional[str] = Field(None, description="迁移潜力: high/medium/low")
-    core_idea_summary: Optional[str] = None
-    innovation_points: Optional[str] = None
-    ai_analyzed_at: Optional[datetime] = None
-    # 状态管理
-    source: str = Field(default="cnki", description="来源")
-    import_batch_id: Optional[str] = None
-    status: PaperStatus = Field(default=PaperStatus.PENDING, description="状态")
-    # 系统字段
-    created_at: datetime
-    updated_at: datetime
-    created_by: int = Field(default=1)
-
-    # 关联的期刊
-    journal: Optional[Journal] = None
-
-    class Config:
-        from_attributes = True
-
-PaperSchema = Paper  # 别名
+# Paper schemas 已移除 - 论文功能已删除
 
 
 # ===== 批量操作 Schemas =====

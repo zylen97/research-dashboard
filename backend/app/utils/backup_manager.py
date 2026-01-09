@@ -164,13 +164,6 @@ class BackupManager:
                 # 表不存在，设为0
                 journals_count = 0
 
-            # 🆕 统计论文数量
-            try:
-                cursor.execute("SELECT COUNT(*) FROM papers")
-                papers_count = cursor.fetchone()[0]
-            except sqlite3.OperationalError:
-                papers_count = 0
-
             # 🆕 统计研究方法数量
             try:
                 cursor.execute("SELECT COUNT(*) FROM research_methods")
@@ -200,7 +193,6 @@ class BackupManager:
                 "logs_count": logs_count,
                 "ideas_count": ideas_count,
                 "journals_count": journals_count,
-                "papers_count": papers_count,
                 "research_methods_count": research_methods_count,
                 "tags_count": tags_count,
                 "audit_logs_count": audit_logs_count,

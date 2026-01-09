@@ -48,15 +48,6 @@ export interface Journal extends JournalBase {
 
   // 统计字段（动态计算，v4.2简化）
   reference_count: number;      // 作为参考期刊的引用次数
-  paper_count: number;          // 论文总数
-
-  // 论文统计（可选字段，仅在详情时返回）
-  paper_stats?: {
-    total_papers: number;
-    pending_papers: number;
-    analyzed_papers: number;
-    converted_papers: number;
-  };
 
   // v3.6 期卷号跟踪字段
   latest_volume?: string | null;   // 最新卷号
@@ -147,37 +138,4 @@ export interface JournalBatchImportResponse {
     name: string;
     error: string;
   }>;
-}
-
-// ===== 卷期统计类型定义 =====
-
-// 期号统计项
-export interface IssueStatItem {
-  issue: string;   // 期号
-  count: number;   // 论文数量
-}
-
-// 卷号统计项
-export interface VolumeStatItem {
-  volume: string;              // 卷号
-  count: number;               // 该卷论文总数
-  year: number;                // 年份
-  issues: IssueStatItem[];     // 该卷包含的期号列表
-}
-
-// 覆盖项（按年份分组）
-export interface CoverageItem {
-  volume: string;  // 卷号
-  issue: string;   // 期号
-  count: number;   // 论文数量
-}
-
-// 期刊卷期统计（volume-stats接口返回）
-export interface JournalVolumeStats {
-  total_papers: number;                    // 总论文数
-  volumes: VolumeStatItem[];                // 卷号列表（含期号）
-  issues: IssueStatItem[];                  // 所有期号列表（扁平）
-  coverage_by_year: Record<number, CoverageItem[]>;  // 按年份分组的卷期覆盖
-  latest_volume?: string;                   // 最新卷号
-  latest_issue?: string;                    // 最新期号
 }

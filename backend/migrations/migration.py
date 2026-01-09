@@ -22,7 +22,7 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 logger = setup_migration_logging()
 
 # 迁移版本号
-MIGRATION_VERSION = "v4.8_prompts_table"
+MIGRATION_VERSION = "v5.2_rename_topic_to_text"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,82 +85,46 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 创建提示词管理表，支持科研提示词分类管理')
+        logger.info('🎯 目标: 将提示词中的{topic}变量重命名为{text1}')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v4.8迁移任务：提示词管理表
+        # 🔧 v5.2迁移任务：重命名topic变量为text1
         # 变更：
-        # 1. 创建 prompts 表
-        # 2. 创建 prompt_tags 关联表
-        # 3. 创建索引优化查询
+        # 1. 将所有提示词中的{topic}替换为{text1}
         # ===========================================
 
         # ============================
-        # Step 1: 创建 prompts 表
+        # Step 1: 更新prompts表中的变量
         # ============================
-        logger.info("\n📋 Step 1: 创建 prompts 表")
+        logger.info("\n📋 Step 1: 更新prompts表中的{topic}为{text1}")
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS prompts (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title VARCHAR(200) NOT NULL,
-                content TEXT NOT NULL,
-                category VARCHAR(50) NOT NULL,
-                description TEXT,
-                variables TEXT,
-                usage_count INTEGER DEFAULT 0,
-                is_favorite BOOLEAN DEFAULT 0,
-                is_active BOOLEAN DEFAULT 1,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-            )
+            UPDATE prompts
+            SET content = REPLACE(content, '{topic}', '{text1}')
+            WHERE content LIKE '%{topic}%'
         """)
-        logger.info("   ✅ prompts 表创建成功")
+        affected_rows = cursor.rowcount
+        logger.info(f"   ✅ 已更新 {affected_rows} 条提示词记录")
 
         # ============================
-        # Step 2: 创建 prompt_tags 关联表
+        # Step 2: 验证更新结果
         # ============================
-        logger.info("\n📋 Step 2: 创建 prompt_tags 关联表")
+        logger.info("\n📋 Step 2: 验证更新结果")
 
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS prompt_tags (
-                prompt_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY (prompt_id, tag_id),
-                FOREIGN KEY(prompt_id) REFERENCES prompts(id) ON DELETE CASCADE,
-                FOREIGN KEY(tag_id) REFERENCES tags(id) ON DELETE CASCADE
-            )
-        """)
-        logger.info("   ✅ prompt_tags 关联表创建成功")
-
-        # ============================
-        # Step 3: 创建索引优化查询
-        # ============================
-        logger.info("\n📋 Step 3: 创建索引")
-
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prompts_category ON prompts(category)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prompts_favorite ON prompts(is_favorite)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prompts_usage ON prompts(usage_count DESC)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_prompts_active ON prompts(is_active)")
-        logger.info("   ✅ 索引创建成功")
-
-        # ============================
-        # Step 4: 导入初始提示词数据（可选）
-        # ============================
-        logger.info("\n📋 Step 4: 准备导入初始数据")
-        logger.info("   ℹ️  提示词数据将在后续通过 init_prompts.py 导入")
+        cursor.execute("SELECT id, title, content FROM prompts WHERE content LIKE '%{text1}%'")
+        updated_prompts = cursor.fetchall()
+        for prompt in updated_prompts:
+            logger.info(f"   - Prompt #{prompt[0]}: {prompt[1]}")
+        logger.info(f"   ✅ 验证完成，共 {len(updated_prompts)} 条提示词包含{{text1}}变量")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v4.8 提示词表迁移完成！")
-        logger.info(f"✅ 创建 prompts 表")
-        logger.info(f"✅ 创建 prompt_tags 关联表")
-        logger.info(f"✅ 创建查询索引")
+        logger.info("🎉 v5.2 提示词变量重命名完成！")
+        logger.info("✅ 将{topic}变量重命名为{text1}")
         logger.info("=" * 70)
 
         conn.close()

@@ -6,7 +6,6 @@ import {
   BulbOutlined,
   DatabaseOutlined,
   GlobalOutlined,
-  FileTextOutlined,
   MessageOutlined,
 } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -49,12 +48,6 @@ const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       icon: <GlobalOutlined />,
       label: '期刊',
       onClick: () => navigate('/journals'),
-    },
-    {
-      key: '/papers',
-      icon: <FileTextOutlined />,
-      label: '论文',
-      onClick: () => navigate('/papers'),
     },
     {
       key: '/prompts',

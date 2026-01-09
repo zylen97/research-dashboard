@@ -39,7 +39,7 @@ const JournalSelectMultiple: React.FC<JournalSelectMultipleProps> = ({
   });
 
   // 点击标签快捷填充
-  const handleTagClick = async (tagId: number) => {
+  const handleTagClick = (tagId: number) => {
     // 获取该标签的所有期刊
     const tagJournals = allJournals.filter(j =>
       j.tags?.some(t => t.id === tagId)
@@ -75,7 +75,9 @@ const JournalSelectMultiple: React.FC<JournalSelectMultipleProps> = ({
         style={{ width: '100%' }}
         placeholder={placeholder}
         value={selectedJournals}
-        onChange={(vals) => onChange?.(vals.join(', '))}
+        onChange={(vals) => {
+          onChange?.(vals.join(', '));
+        }}
         disabled={disabled}
         loading={allJournalsLoading}
         filterOption={(input, option) =>

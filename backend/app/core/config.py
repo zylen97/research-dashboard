@@ -45,6 +45,13 @@ class Settings:
 
     def get_database_url(self) -> str:
         """获取数据库URL"""
+        # 如果是相对路径的SQLite，转换为绝对路径
+        if self.DATABASE_URL.startswith("sqlite:///./"):
+            db_path = self.DATABASE_URL.replace("sqlite:///./", "")
+            absolute_db_path = self.BASE_DIR / db_path
+            # 确保父目录存在
+            absolute_db_path.parent.mkdir(parents=True, exist_ok=True)
+            return f"sqlite:///{absolute_db_path}"
         return self.DATABASE_URL
 
     def get_log_config(self) -> dict:

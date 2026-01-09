@@ -19,7 +19,6 @@ import {
   Row,
   Col,
   Tabs,
-  Collapse,
 } from 'antd';
 import {
   PlusOutlined,
@@ -32,7 +31,8 @@ import {
   BookOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { journalApi, tagApi, volumeStatsApi } from '../services/apiOptimized';
+import { journalApi, tagApi } from '../services/apiOptimized';
+import axios from 'axios';
 import EnhancedTagSelect from '../components/EnhancedTagSelect';
 import {
   Journal,
@@ -44,7 +44,6 @@ import {
 } from '../types/journals';
 import { TagManagementPanel } from '../components/TagManagementPanel';
 import { GRAYSCALE_SYSTEM } from '../config/colors';
-import JournalPapersTab from '../components/JournalPapersTab';
 import { PageContainer, PageHeader, FilterSection, TableContainer } from '../styles/components';
 import ValidationPromptModal from '../components/ValidationPromptModal';
 
@@ -69,6 +68,20 @@ const JournalsManagement: React.FC = () => {
   const [selectedJournalId, setSelectedJournalId] = useState<number | null>(null);
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // 期卷号相关状态
+  const [isIssuesDrawerVisible, setIsIssuesDrawerVisible] = useState(false);
+  const [selectedJournalForIssues, setSelectedJournalForIssues] = useState<Journal | null>(null);
+  const [journalIssues, setJournalIssues] = useState<any[]>([]);
+  const [isIssuesLoading, setIsIssuesLoading] = useState(false);
+  const [isIssuesModalVisible, setIsIssuesModalVisible] = useState(false);
+  const [editingIssue, setEditingIssue] = useState<any>(null);
+  const [issueFormData, setIssueFormData] = useState({
+    volume: '',
+    issue: '',
+    year: new Date().getFullYear(),
+    notes: ''
+  });
 
   // 筛选状态
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -120,13 +133,6 @@ const JournalsManagement: React.FC = () => {
     enabled: !!selectedJournalId && isStatsDrawerVisible,
   });
 
-  // 期刊期卷号统计查询（v3.6）
-  const { data: volumeStats } = useQuery({
-    queryKey: ['volume-stats', selectedJournalId],
-    queryFn: () => volumeStatsApi.getVolumeStats(selectedJournalId!),
-    enabled: !!selectedJournalId && isStatsDrawerVisible,
-  });
-
   // 创建期刊
   const createMutation = useMutation({
     mutationFn: (data: JournalCreate) => journalApi.create(data),
@@ -149,9 +155,6 @@ const JournalsManagement: React.FC = () => {
     onSuccess: () => {
       message.success('期刊更新成功');
       queryClient.invalidateQueries({ queryKey: ['journals'] });
-      // 刷新引用该期刊的论文列表
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-      queryClient.invalidateQueries({ queryKey: ['journal-papers'] });
       setIsModalVisible(false);
       setEditingJournal(null);
       form.resetFields();
@@ -167,9 +170,6 @@ const JournalsManagement: React.FC = () => {
     onSuccess: () => {
       message.success('期刊删除成功');
       queryClient.invalidateQueries({ queryKey: ['journals'] });
-      // 刷新引用该期刊的论文列表
-      queryClient.invalidateQueries({ queryKey: ['papers'] });
-      queryClient.invalidateQueries({ queryKey: ['journal-papers'] });
     },
     onError: (error: any) => {
       const detail = error.response?.data?.detail;
@@ -238,6 +238,82 @@ const JournalsManagement: React.FC = () => {
   const handleViewStats = (journal: Journal) => {
     setSelectedJournalId(journal.id);
     setIsStatsDrawerVisible(true);
+  };
+
+  // 期卷号相关函数
+  const fetchJournalIssues = async (journalId: number) => {
+    setIsIssuesLoading(true);
+    try {
+      const response = await axios.get(`/api/journals/${journalId}/issues`);
+      setJournalIssues(response.data.data || []);
+    } catch (error) {
+      message.error('获取期卷号列表失败');
+    } finally {
+      setIsIssuesLoading(false);
+    }
+  };
+
+  const handleViewIssues = (journal: Journal) => {
+    setSelectedJournalForIssues(journal);
+    setIsIssuesDrawerVisible(true);
+    fetchJournalIssues(journal.id);
+  };
+
+  const handleCreateIssue = () => {
+    setEditingIssue(null);
+    setIssueFormData({
+      volume: '',
+      issue: '',
+      year: new Date().getFullYear(),
+      notes: ''
+    });
+    setIsIssuesModalVisible(true);
+  };
+
+  const handleEditIssue = (issue: any) => {
+    setEditingIssue(issue);
+    setIssueFormData({
+      volume: issue.volume,
+      issue: issue.issue,
+      year: issue.year,
+      notes: issue.notes || ''
+    });
+    setIsIssuesModalVisible(true);
+  };
+
+  const handleDeleteIssue = async (issueId: number) => {
+    try {
+      await axios.delete(`/api/journals/${selectedJournalForIssues?.id}/issues/${issueId}`);
+      message.success('删除成功');
+      fetchJournalIssues(selectedJournalForIssues!.id);
+    } catch (error) {
+      message.error('删除失败');
+    }
+  };
+
+  const handleSubmitIssue = async () => {
+    if (!issueFormData.volume || !issueFormData.issue) {
+      message.warning('请输入卷号和期号');
+      return;
+    }
+
+    try {
+      if (editingIssue) {
+        await axios.put(`/api/journals/${selectedJournalForIssues?.id}/issues/${editingIssue.id}`, null, {
+          params: issueFormData
+        });
+        message.success('更新成功');
+      } else {
+        await axios.post(`/api/journals/${selectedJournalForIssues?.id}/issues`, null, {
+          params: issueFormData
+        });
+        message.success('创建成功');
+      }
+      setIsIssuesModalVisible(false);
+      fetchJournalIssues(selectedJournalForIssues!.id);
+    } catch (error: any) {
+      message.error(error.response?.data?.detail || '操作失败');
+    }
   };
 
   // 处理模态框确认按钮点击 - 带验证提示
@@ -341,104 +417,105 @@ const JournalsManagement: React.FC = () => {
                   }
                 />
 
-                {/* 期刊卡片列表（可展开查看论文） */}
+                {/* 期刊卡片列表 */}
                 <TableContainer>
-                  <Collapse
-                    accordion={false}
-                    style={{ backgroundColor: 'transparent' }}
-                    items={filteredJournals.map((journal) => ({
-                    key: journal.id,
-                    label: (
-                      <Card
-                        size="small"
-                        style={{ border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`, backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
-                        bodyStyle={{ padding: '8px 12px' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <Row gutter={[16, 16]}>
+                    {filteredJournals.map((journal) => (
+                      <Col xs={24} sm={12} md={8} lg={6} xl={4} key={journal.id}>
+                        <Card
+                          size="small"
+                          style={{
+                            border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
+                            backgroundColor: GRAYSCALE_SYSTEM.bg_secondary,
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                          bodyStyle={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}
+                          hoverable
+                        >
                           {/* 期刊名称 */}
-                          <Text strong style={{ fontSize: 14, flexShrink: 0 }}>
-                            {journal.name}
-                          </Text>
+                          <div style={{ marginBottom: '8px' }}>
+                            <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: journal.name }}>
+                              {journal.name}
+                            </Text>
+                          </div>
 
-                          {/* 分隔符 */}
-                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+                          {/* 标签 */}
+                          <div style={{ marginBottom: '8px', minHeight: '20px' }}>
+                            {(!journal.tags || journal.tags.length === 0) ? (
+                              <Tag color="warning" style={{ margin: 0, fontSize: 11 }}>未分类</Tag>
+                            ) : (
+                              journal.tags.slice(0, 2).map((tag) => (
+                                <Tag key={tag.id} style={{ margin: '0 4px 4px 0', fontSize: 11 }}>
+                                  {tag.name}
+                                </Tag>
+                              ))
+                            )}
+                            {journal.tags.length > 2 && (
+                              <Tag style={{ margin: '0 4px 4px 0', fontSize: 11 }}>+{journal.tags.length - 2}</Tag>
+                            )}
+                          </div>
 
                           {/* 备注（如果有） */}
                           {journal.notes && (
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: 12 }}
-                              ellipsis={{ tooltip: journal.notes }}
-                            >
-                              {journal.notes}
+                            <div style={{ marginBottom: '8px', flex: 1 }}>
+                              <Text
+                                type="secondary"
+                                style={{ fontSize: 11 }}
+                                ellipsis={{ tooltip: journal.notes }}
+                              >
+                                {journal.notes}
+                              </Text>
+                            </div>
+                          )}
+
+                          {/* 底部统计和操作 */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                            <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                              参考{journal.reference_count || 0}
                             </Text>
-                          )}
 
-                          {/* 分隔符 */}
-                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
-
-                          {/* 标签 */}
-                          {(!journal.tags || journal.tags.length === 0) ? (
-                            <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
-                          ) : (
-                            journal.tags.map((tag) => (
-                              <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
-                                {tag.name}
-                              </Tag>
-                            ))
-                          )}
-
-                          {/* 统计信息 */}
-                          <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
-                            参考{journal.reference_count || 0} · 论文{journal.paper_count || 0}
-                          </Text>
-
-                          {/* 操作按钮 */}
-                          <Space size={4} style={{ flexShrink: 0 }}>
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<BarChartOutlined />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewStats(journal);
-                              }}
-                            />
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(journal);
-                              }}
-                            />
-                            <Popconfirm
-                              title="确定删除该期刊？"
-                              description="如果期刊被引用，将无法删除"
-                              onConfirm={(e) => {
-                                e?.stopPropagation();
-                                handleDelete(journal.id);
-                              }}
-                              okText="确定"
-                              cancelText="取消"
-                            >
+                            <Space size={4}>
                               <Button
                                 type="link"
                                 size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={(e) => e.stopPropagation()}
+                                icon={<BookOutlined />}
+                                onClick={() => handleViewIssues(journal)}
                               />
-                            </Popconfirm>
-                          </Space>
-                        </div>
-                      </Card>
-                    ),
-          children: <JournalPapersTab journalId={journal.id} journalName={journal.name} />,
-        }))}
-      />
-      </TableContainer>
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<BarChartOutlined />}
+                                onClick={() => handleViewStats(journal)}
+                              />
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(journal)}
+                              />
+                              <Popconfirm
+                                title="确定删除该期刊？"
+                                description="如果期刊被引用，将无法删除"
+                                onConfirm={() => handleDelete(journal.id)}
+                                okText="确定"
+                                cancelText="取消"
+                              >
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                />
+                              </Popconfirm>
+                            </Space>
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </TableContainer>
 
       {/* 创建/编辑期刊模态框 */}
       <Modal
@@ -573,154 +650,7 @@ const JournalsManagement: React.FC = () => {
               </Descriptions>
             </Card>
 
-            {/* 期卷号统计（v3.6） */}
-            {volumeStats && (
-              <Card
-                title={
-                  <span>
-                    <BookOutlined style={{ marginRight: 8 }} />
-                    期卷号统计
-                  </span>
-                }
-                style={{ marginBottom: 16 }}
-              >
-                <Row gutter={12}>
-                  <Col span={8}>
-                    <Statistic
-                      title="总论文数"
-                      value={volumeStats.total_papers}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Statistic
-                      title="总卷数"
-                      value={volumeStats.total_volumes}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Statistic
-                      title="总期数"
-                      value={volumeStats.total_issues}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
-                    />
-                  </Col>
-                </Row>
-
-                <Divider />
-
-                <Descriptions column={2} size="small">
-                  <Descriptions.Item label="最新卷期">
-                    <Text strong>
-                      Vol.{volumeStats.latest_volume || '-'} No.{volumeStats.latest_issue || '-'}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="数据库记录">
-                    <Text type="secondary">
-                      Vol.{volumeStats.db_latest_volume || '-'} No.{volumeStats.db_latest_issue || '-'}
-                    </Text>
-                  </Descriptions.Item>
-                </Descriptions>
-
-                {/* 卷期覆盖可视化 */}
-                {Object.keys(volumeStats.coverage_by_year || {}).length > 0 && (
-                  <>
-                    <Divider orientation="left">卷期覆盖情况</Divider>
-                    <div style={{ maxHeight: 400, overflow: 'auto' }}>
-                      {Object.entries(volumeStats.coverage_by_year || {})
-                        .sort(([a], [b]) => parseInt(b) - parseInt(a))
-                        .map(([year, items]) => (
-                          <div key={year} style={{ marginBottom: 16 }}>
-                            <Text strong style={{ fontSize: 14, marginBottom: 8, display: 'block' }}>
-                              {year}年
-                            </Text>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {items.map((item) => (
-                                <Tag
-                                  key={`${item.volume}-${item.issue}`}
-                                  style={{
-                                    backgroundColor: item.count > 0 ? GRAYSCALE_SYSTEM.bg_secondary : '#FAFAFA',
-                                    color: item.count > 0 ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.disabled,
-                                    border: `1px solid ${item.count > 0 ? GRAYSCALE_SYSTEM.border_strong : GRAYSCALE_SYSTEM.border_light}`,
-                                    fontSize: 12,
-                                    padding: '4px 8px',
-                                    opacity: item.count > 0 ? 1 : 0.5,
-                                  }}
-                                >
-                                  No.{item.issue}: {item.count > 0 ? `${item.count}篇` : '无'}
-                                </Tag>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </>
-                )}
-
-                {/* 卷号分布 */}
-                {volumeStats.volumes && volumeStats.volumes.length > 0 && (
-                  <>
-                    <Divider orientation="left">卷号分布</Divider>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {volumeStats.volumes
-                        .sort((a, b) => {
-                          // 尝试数字排序
-                          const aNum = parseInt(a.volume);
-                          const bNum = parseInt(b.volume);
-                          if (!isNaN(aNum) && !isNaN(bNum)) return bNum - aNum;
-                          return a.volume.localeCompare(b.volume);
-                        })
-                        .map((vol) => (
-                          <Tag
-                            key={vol.volume}
-                            style={{
-                              backgroundColor: GRAYSCALE_SYSTEM.bg_secondary,
-                              color: GRAYSCALE_SYSTEM.primary,
-                              border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
-                              fontSize: 12,
-                              padding: '4px 8px',
-                            }}
-                          >
-                            Vol.{vol.volume}: {vol.count} 篇
-                          </Tag>
-                        ))}
-                    </div>
-                  </>
-                )}
-
-                {/* 期号分布 */}
-                {volumeStats.issues && volumeStats.issues.length > 0 && (
-                  <>
-                    <Divider orientation="left">期号分布</Divider>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {volumeStats.issues
-                        .sort((a, b) => {
-                          // 尝试数字排序
-                          const aNum = parseInt(a.issue);
-                          const bNum = parseInt(b.issue);
-                          if (!isNaN(aNum) && !isNaN(bNum)) return bNum - aNum;
-                          return a.issue.localeCompare(b.issue);
-                        })
-                        .map((item) => (
-                          <Tag
-                            key={item.issue}
-                            style={{
-                              backgroundColor: GRAYSCALE_SYSTEM.bg_tertiary,
-                              color: GRAYSCALE_SYSTEM.primary,
-                              border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
-                              fontSize: 12,
-                              padding: '4px 8px',
-                            }}
-                          >
-                            No.{item.issue}: {item.count} 篇
-                          </Tag>
-                        ))}
-                    </div>
-                  </>
-                )}
-              </Card>
-            )}
+            {/* 期卷号统计已移除 - 点击"期卷号"按钮查看浏览记录 */}
 
             {/* 引用详情 */}
             {journalReferences && (
@@ -856,6 +786,165 @@ const JournalsManagement: React.FC = () => {
           </>
         )}
       </Drawer>
+
+      {/* 期卷号浏览记录抽屉 */}
+      <Drawer
+        title={`期卷号浏览记录 - ${selectedJournalForIssues?.name || ''}`}
+        placement="right"
+        width={800}
+        open={isIssuesDrawerVisible}
+        onClose={() => {
+          setIsIssuesDrawerVisible(false);
+          setSelectedJournalForIssues(null);
+          setJournalIssues([]);
+        }}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={handleCreateIssue}
+          >
+            添加记录
+          </Button>
+        </div>
+
+        {isIssuesLoading ? (
+          <div style={{ textAlign: 'center', padding: '50px' }}>加载中...</div>
+        ) : journalIssues.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '50px 0' }}>
+            <BookOutlined style={{ fontSize: 48, color: '#ccc' }} />
+            <div style={{ marginTop: '16px', color: '#999' }}>
+              暂无期卷号记录，点击上方按钮添加
+            </div>
+          </div>
+        ) : (
+          // 按年份分组显示
+          Object.keys(
+            journalIssues.reduce((acc, issue) => {
+              if (!acc[issue.year]) {
+                acc[issue.year] = [];
+              }
+              acc[issue.year].push(issue);
+              return acc;
+            }, {} as Record<number, any[]>)
+          )
+            .sort((a, b) => parseInt(b) - parseInt(a))
+            .map((year) => (
+              <Card
+                key={year}
+                title={`${year}年`}
+                style={{ marginBottom: 16 }}
+              >
+                <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                  {journalIssues
+                    .filter((issue) => issue.year === parseInt(year))
+                    .sort((a, b) => b.issue.localeCompare(a.issue))
+                    .map((issue) => (
+                      <Card
+                        key={issue.id}
+                        size="small"
+                        style={{ backgroundColor: '#fafafa' }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Space size="large">
+                            <Text strong>
+                              Vol.{issue.volume} No.{issue.issue}
+                            </Text>
+                            <Tag color="blue">
+                              {new Date(issue.marked_date).toLocaleDateString()}
+                            </Tag>
+                          </Space>
+                          <Space>
+                            <Button
+                              size="small"
+                              icon={<EditOutlined />}
+                              onClick={() => handleEditIssue(issue)}
+                            >
+                              编辑
+                            </Button>
+                            <Popconfirm
+                              title="确定删除该记录？"
+                              onConfirm={() => handleDeleteIssue(issue.id)}
+                              okText="确定"
+                              cancelText="取消"
+                            >
+                              <Button size="small" danger icon={<DeleteOutlined />}>
+                                删除
+                              </Button>
+                            </Popconfirm>
+                          </Space>
+                        </div>
+                        {issue.notes && (
+                          <div style={{ marginTop: '8px', color: '#666' }}>
+                            <Text type="secondary">{issue.notes}</Text>
+                          </div>
+                        )}
+                      </Card>
+                    ))}
+                </Space>
+              </Card>
+            ))
+        )}
+      </Drawer>
+
+      {/* 期卷号编辑模态框 */}
+      <Modal
+        title={editingIssue ? '编辑期卷号记录' : '添加期卷号记录'}
+        open={isIssuesModalVisible}
+        onCancel={() => setIsIssuesModalVisible(false)}
+        onOk={handleSubmitIssue}
+        width={600}
+      >
+        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+          <Row gutter={16}>
+            <Col span={12}>
+              <div>
+                <Text strong>卷号 *</Text>
+                <Input
+                  placeholder="例如: 1"
+                  value={issueFormData.volume}
+                  onChange={(e) => setIssueFormData({ ...issueFormData, volume: e.target.value })}
+                  style={{ marginTop: '8px' }}
+                />
+              </div>
+            </Col>
+            <Col span={12}>
+              <div>
+                <Text strong>期号 *</Text>
+                <Input
+                  placeholder="例如: 1"
+                  value={issueFormData.issue}
+                  onChange={(e) => setIssueFormData({ ...issueFormData, issue: e.target.value })}
+                  style={{ marginTop: '8px' }}
+                />
+              </div>
+            </Col>
+          </Row>
+
+          <div>
+            <Text strong>年份 *</Text>
+            <Input
+              type="number"
+              placeholder="例如: 2024"
+              value={issueFormData.year}
+              onChange={(e) => setIssueFormData({ ...issueFormData, year: parseInt(e.target.value) })}
+              style={{ marginTop: '8px' }}
+            />
+          </div>
+
+          <div>
+            <Text strong>备注</Text>
+            <TextArea
+              placeholder="可选：添加备注信息"
+              value={issueFormData.notes}
+              onChange={(e) => setIssueFormData({ ...issueFormData, notes: e.target.value })}
+              style={{ marginTop: '8px' }}
+              rows={3}
+            />
+          </div>
+        </Space>
+      </Modal>
               </>
             ),
           },
@@ -904,104 +993,105 @@ const JournalsManagement: React.FC = () => {
                   }
                 />
 
-                {/* 期刊卡片列表（可展开查看论文） */}
+                {/* 期刊卡片列表 */}
                 <TableContainer>
-                  <Collapse
-                    accordion={false}
-                    style={{ backgroundColor: 'transparent' }}
-                    items={filteredJournals.map((journal) => ({
-                    key: journal.id,
-                    label: (
-                      <Card
-                        size="small"
-                        style={{ border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`, backgroundColor: GRAYSCALE_SYSTEM.bg_secondary }}
-                        bodyStyle={{ padding: '8px 12px' }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <Row gutter={[16, 16]}>
+                    {filteredJournals.map((journal) => (
+                      <Col xs={24} sm={12} md={8} lg={6} xl={4} key={journal.id}>
+                        <Card
+                          size="small"
+                          style={{
+                            border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
+                            backgroundColor: GRAYSCALE_SYSTEM.bg_secondary,
+                            height: '100%',
+                            display: 'flex',
+                            flexDirection: 'column'
+                          }}
+                          bodyStyle={{ padding: '12px', flex: 1, display: 'flex', flexDirection: 'column' }}
+                          hoverable
+                        >
                           {/* 期刊名称 */}
-                          <Text strong style={{ fontSize: 14, flexShrink: 0 }}>
-                            {journal.name}
-                          </Text>
+                          <div style={{ marginBottom: '8px' }}>
+                            <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: journal.name }}>
+                              {journal.name}
+                            </Text>
+                          </div>
 
-                          {/* 分隔符 */}
-                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
+                          {/* 标签 */}
+                          <div style={{ marginBottom: '8px', minHeight: '20px' }}>
+                            {(!journal.tags || journal.tags.length === 0) ? (
+                              <Tag color="warning" style={{ margin: 0, fontSize: 11 }}>未分类</Tag>
+                            ) : (
+                              journal.tags.slice(0, 2).map((tag) => (
+                                <Tag key={tag.id} style={{ margin: '0 4px 4px 0', fontSize: 11 }}>
+                                  {tag.name}
+                                </Tag>
+                              ))
+                            )}
+                            {journal.tags.length > 2 && (
+                              <Tag style={{ margin: '0 4px 4px 0', fontSize: 11 }}>+{journal.tags.length - 2}</Tag>
+                            )}
+                          </div>
 
                           {/* 备注（如果有） */}
                           {journal.notes && (
-                            <Text
-                              type="secondary"
-                              style={{ fontSize: 12 }}
-                              ellipsis={{ tooltip: journal.notes }}
-                            >
-                              {journal.notes}
+                            <div style={{ marginBottom: '8px', flex: 1 }}>
+                              <Text
+                                type="secondary"
+                                style={{ fontSize: 11 }}
+                                ellipsis={{ tooltip: journal.notes }}
+                              >
+                                {journal.notes}
+                              </Text>
+                            </div>
+                          )}
+
+                          {/* 底部统计和操作 */}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
+                            <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                              参考{journal.reference_count || 0}
                             </Text>
-                          )}
 
-                          {/* 分隔符 */}
-                          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>|</Text>
-
-                          {/* 标签 */}
-                          {(!journal.tags || journal.tags.length === 0) ? (
-                            <Tag color="warning" style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>未分类</Tag>
-                          ) : (
-                            journal.tags.map((tag) => (
-                              <Tag key={tag.id} style={{ margin: 0, fontSize: 11, flexShrink: 0 }}>
-                                {tag.name}
-                              </Tag>
-                            ))
-                          )}
-
-                          {/* 统计信息 */}
-                          <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary, marginLeft: 'auto', flexShrink: 0 }}>
-                            参考{journal.reference_count || 0} · 论文{journal.paper_count || 0}
-                          </Text>
-
-                          {/* 操作按钮 */}
-                          <Space size={4} style={{ flexShrink: 0 }}>
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<BarChartOutlined />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewStats(journal);
-                              }}
-                            />
-                            <Button
-                              type="link"
-                              size="small"
-                              icon={<EditOutlined />}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEdit(journal);
-                              }}
-                            />
-                            <Popconfirm
-                              title="确定删除该期刊？"
-                              description="如果期刊被引用，将无法删除"
-                              onConfirm={(e) => {
-                                e?.stopPropagation();
-                                handleDelete(journal.id);
-                              }}
-                              okText="确定"
-                              cancelText="取消"
-                            >
+                            <Space size={4}>
                               <Button
                                 type="link"
                                 size="small"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={(e) => e.stopPropagation()}
+                                icon={<BookOutlined />}
+                                onClick={() => handleViewIssues(journal)}
                               />
-                            </Popconfirm>
-                          </Space>
-                        </div>
-                      </Card>
-                    ),
-          children: <JournalPapersTab journalId={journal.id} journalName={journal.name} />,
-        }))}
-      />
-      </TableContainer>
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<BarChartOutlined />}
+                                onClick={() => handleViewStats(journal)}
+                              />
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<EditOutlined />}
+                                onClick={() => handleEdit(journal)}
+                              />
+                              <Popconfirm
+                                title="确定删除该期刊？"
+                                description="如果期刊被引用，将无法删除"
+                                onConfirm={() => handleDelete(journal.id)}
+                                okText="确定"
+                                cancelText="取消"
+                              >
+                                <Button
+                                  type="link"
+                                  size="small"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                />
+                              </Popconfirm>
+                            </Space>
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
+                </TableContainer>
 
       {/* 创建/编辑期刊模态框 */}
       <Modal
@@ -1136,154 +1226,7 @@ const JournalsManagement: React.FC = () => {
               </Descriptions>
             </Card>
 
-            {/* 期卷号统计（v3.6） */}
-            {volumeStats && (
-              <Card
-                title={
-                  <span>
-                    <BookOutlined style={{ marginRight: 8 }} />
-                    期卷号统计
-                  </span>
-                }
-                style={{ marginBottom: 16 }}
-              >
-                <Row gutter={12}>
-                  <Col span={8}>
-                    <Statistic
-                      title="总论文数"
-                      value={volumeStats.total_papers}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Statistic
-                      title="总卷数"
-                      value={volumeStats.total_volumes}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
-                    />
-                  </Col>
-                  <Col span={8}>
-                    <Statistic
-                      title="总期数"
-                      value={volumeStats.total_issues}
-                      valueStyle={{ color: GRAYSCALE_SYSTEM.secondary, fontWeight: 500 }}
-                    />
-                  </Col>
-                </Row>
-
-                <Divider />
-
-                <Descriptions column={2} size="small">
-                  <Descriptions.Item label="最新卷期">
-                    <Text strong>
-                      Vol.{volumeStats.latest_volume || '-'} No.{volumeStats.latest_issue || '-'}
-                    </Text>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="数据库记录">
-                    <Text type="secondary">
-                      Vol.{volumeStats.db_latest_volume || '-'} No.{volumeStats.db_latest_issue || '-'}
-                    </Text>
-                  </Descriptions.Item>
-                </Descriptions>
-
-                {/* 卷期覆盖可视化 */}
-                {Object.keys(volumeStats.coverage_by_year || {}).length > 0 && (
-                  <>
-                    <Divider orientation="left">卷期覆盖情况</Divider>
-                    <div style={{ maxHeight: 400, overflow: 'auto' }}>
-                      {Object.entries(volumeStats.coverage_by_year || {})
-                        .sort(([a], [b]) => parseInt(b) - parseInt(a))
-                        .map(([year, items]) => (
-                          <div key={year} style={{ marginBottom: 16 }}>
-                            <Text strong style={{ fontSize: 14, marginBottom: 8, display: 'block' }}>
-                              {year}年
-                            </Text>
-                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                              {items.map((item) => (
-                                <Tag
-                                  key={`${item.volume}-${item.issue}`}
-                                  style={{
-                                    backgroundColor: item.count > 0 ? GRAYSCALE_SYSTEM.bg_secondary : '#FAFAFA',
-                                    color: item.count > 0 ? GRAYSCALE_SYSTEM.primary : GRAYSCALE_SYSTEM.disabled,
-                                    border: `1px solid ${item.count > 0 ? GRAYSCALE_SYSTEM.border_strong : GRAYSCALE_SYSTEM.border_light}`,
-                                    fontSize: 12,
-                                    padding: '4px 8px',
-                                    opacity: item.count > 0 ? 1 : 0.5,
-                                  }}
-                                >
-                                  No.{item.issue}: {item.count > 0 ? `${item.count}篇` : '无'}
-                                </Tag>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </>
-                )}
-
-                {/* 卷号分布 */}
-                {volumeStats.volumes && volumeStats.volumes.length > 0 && (
-                  <>
-                    <Divider orientation="left">卷号分布</Divider>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {volumeStats.volumes
-                        .sort((a, b) => {
-                          // 尝试数字排序
-                          const aNum = parseInt(a.volume);
-                          const bNum = parseInt(b.volume);
-                          if (!isNaN(aNum) && !isNaN(bNum)) return bNum - aNum;
-                          return a.volume.localeCompare(b.volume);
-                        })
-                        .map((vol) => (
-                          <Tag
-                            key={vol.volume}
-                            style={{
-                              backgroundColor: GRAYSCALE_SYSTEM.bg_secondary,
-                              color: GRAYSCALE_SYSTEM.primary,
-                              border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
-                              fontSize: 12,
-                              padding: '4px 8px',
-                            }}
-                          >
-                            Vol.{vol.volume}: {vol.count} 篇
-                          </Tag>
-                        ))}
-                    </div>
-                  </>
-                )}
-
-                {/* 期号分布 */}
-                {volumeStats.issues && volumeStats.issues.length > 0 && (
-                  <>
-                    <Divider orientation="left">期号分布</Divider>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                      {volumeStats.issues
-                        .sort((a, b) => {
-                          // 尝试数字排序
-                          const aNum = parseInt(a.issue);
-                          const bNum = parseInt(b.issue);
-                          if (!isNaN(aNum) && !isNaN(bNum)) return bNum - aNum;
-                          return a.issue.localeCompare(b.issue);
-                        })
-                        .map((item) => (
-                          <Tag
-                            key={item.issue}
-                            style={{
-                              backgroundColor: GRAYSCALE_SYSTEM.bg_tertiary,
-                              color: GRAYSCALE_SYSTEM.primary,
-                              border: `1px solid ${GRAYSCALE_SYSTEM.border_light}`,
-                              fontSize: 12,
-                              padding: '4px 8px',
-                            }}
-                          >
-                            No.{item.issue}: {item.count} 篇
-                          </Tag>
-                        ))}
-                    </div>
-                  </>
-                )}
-              </Card>
-            )}
+            {/* 期卷号统计已移除 - 点击"期卷号"按钮查看浏览记录 */}
 
             {/* 引用详情 */}
             {journalReferences && (

@@ -161,11 +161,6 @@ const VARIABLE_CONFIG: Record<string, Omit<VariableConfig, 'name'>> = {
     type: 'journal-multiple',
     label: '期刊',
   },
-  // 主题
-  topic: {
-    type: 'text',
-    label: '主题',
-  },
 };
 
 /**
@@ -192,9 +187,26 @@ export const getVariableConfig = (variableName: string): VariableConfig => {
 };
 
 /**
- * 解析变量及其配置
+ * 解析变量及其配置（支持text自动编号）
  */
 export const parseVariablesWithConfig = (content: string): VariableConfig[] => {
   const variableNames = extractVariables(content);
-  return variableNames.map(getVariableConfig);
+
+  // 统计text类型的数量
+  let textCount = 0;
+
+  return variableNames.map(name => {
+    // 特殊处理：如果是名为"text"的变量，进行自动编号
+    if (name === 'text') {
+      textCount++;
+      return {
+        name: `text${textCount}`,
+        type: 'text' as VariableType,
+        label: `文本${textCount}`,
+      };
+    }
+
+    // 其他变量使用原有配置
+    return getVariableConfig(name);
+  });
 };

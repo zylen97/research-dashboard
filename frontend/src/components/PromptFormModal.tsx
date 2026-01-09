@@ -15,7 +15,7 @@ const { Option } = Select;
 // 变量说明列表
 const VARIABLE_HELP = [
   { name: '{journals}', desc: '期刊选择器（手动选择或点击标签快捷填充）' },
-  { name: '{topic}', desc: '主题（50字以内）' },
+  { name: '{text}', desc: '文本（无字数限制，多个text自动编号为text1、text2等）' },
 ];
 
 interface PromptFormModalProps {

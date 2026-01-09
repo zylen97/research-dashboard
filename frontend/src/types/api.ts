@@ -30,7 +30,6 @@ export interface BackupItem {
   logs_count?: number;           // 论文进度数量
   ideas_count?: number;          // Ideas数量
   journals_count?: number;       // 期刊数量
-  papers_count?: number;         // 论文数量
   research_methods_count?: number; // 研究方法数量
   tags_count?: number;           // 标签数量
   audit_logs_count?: number;     // 审计日志数量

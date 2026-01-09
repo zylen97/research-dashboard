@@ -12,11 +12,12 @@ from .database import (
     Idea,
     Tag,
     Journal,
-    Paper,
+    Prompt,
     ResearchMethod,
     project_collaborators,
     idea_responsible_persons,
-    journal_tags
+    journal_tags,
+    prompt_tags
 )
 
 from .schemas import (
@@ -77,19 +78,18 @@ from .schemas import (
     JournalUpdate,
     Journal as JournalSchema,
 
-    # Paper schemas
-    PaperStatus,
-    PaperBase,
-    PaperCreate,
-    PaperUpdate,
-    Paper as PaperSchema,
+    # Prompt schemas
+    PromptBase,
+    PromptCreate,
+    PromptUpdate,
+    Prompt as PromptSchema,
 
 )
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "Paper", "ResearchMethod",
-    "project_collaborators", "idea_responsible_persons", "journal_tags",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "Prompt", "ResearchMethod",
+    "project_collaborators", "idea_responsible_persons", "journal_tags", "prompt_tags",
     "ResearchMethodBase", "ResearchMethodCreate", "ResearchMethodUpdate", "ResearchMethodSchema",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
     "ResearchProjectBase", "ResearchProjectCreate", "ResearchProjectUpdate", "ResearchProjectSchema",
@@ -100,5 +100,5 @@ __all__ = [
     "IdeaBase", "IdeaCreate", "IdeaUpdate", "IdeaSchema",
     "TagBase", "TagCreate", "TagUpdate", "TagSchema",
     "JournalBase", "JournalCreate", "JournalUpdate", "JournalSchema",
-    "PaperStatus", "PaperBase", "PaperCreate", "PaperUpdate", "PaperSchema",
+    "PromptBase", "PromptCreate", "PromptUpdate", "PromptSchema",
 ]

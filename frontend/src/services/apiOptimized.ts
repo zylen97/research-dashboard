@@ -18,19 +18,11 @@ import {
   Tag, TagCreate, TagUpdate
 } from '../types/journals';
 import {
-  Paper, PaperCreate, PaperUpdate,
-  PaperUploadResponse, BatchAnalyzeResponse, SingleAnalyzeResponse,
-  ConvertToIdeaResponse, PapersStatsResponse, PapersQueryParams,
-  PromptTemplate, PromptTemplateCreate, PromptTemplateUpdate,
-  UserConfig, VolumeStats
-} from '../types/papers';
-import {
   Prompt, PromptCreate, PromptUpdate,
   PromptCopyRequest, PromptCopyResponse,
   PromptStats, PromptCategoriesResponse
 } from '../types/prompts';
 import { ResearchMethod, ResearchMethodCreate, ResearchMethodUpdate } from '../types/research-methods';
-import { AIConfig, AIConfigUpdate, AITestRequest, AITestResponse as AIConfigTestResponse } from '../types/ai';
 import { errorInterceptorOptimized } from '../utils/errorHandlerOptimized';
 import { createCRUDApi, createExtendedCRUDApi } from '../utils/apiFactory';
 import { handleListResponse } from '../utils/dataFormatters';
@@ -386,10 +378,6 @@ export const journalApi = createExtendedCRUDApi<
     getJournalStats: (id: number) => Promise<JournalStats>;
     getJournalReferences: (id: number, refType?: 'reference' | 'target') => Promise<JournalReferences>;
     batchImport: (journals: JournalCreate[]) => Promise<JournalBatchImportResponse>;
-    getJournalPapers: (journalId: number, params?: { skip?: number; limit?: number; status?: string; year?: number; search?: string }) => Promise<{ items: Paper[]; total: number; page: number; page_size: number }>;
-    importPapersToJournal: (journalId: number, file: File) => Promise<any>;
-    analyzeJournalPapers: (journalId: number, aiConfig?: any, statusFilter?: string, maxConcurrent?: number) => Promise<any>;
-    batchDeleteJournalPapers: (journalId: number, ids: number[]) => Promise<{ deleted_count: number; errors: string[] }>;
   }
 >(
   '/journals',
@@ -413,41 +401,6 @@ export const journalApi = createExtendedCRUDApi<
 
     batchImport: (journals: JournalCreate[]): Promise<JournalBatchImportResponse> =>
       api.post(`${basePath}/batch-import`, journals),
-
-    // 论文相关方法（整合到期刊）
-    getJournalPapers: async (journalId: number, params?: { skip?: number; limit?: number; status?: string; year?: number; search?: string }): Promise<{ items: Paper[]; total: number; page: number; page_size: number }> => {
-      const response = await api.get(`${basePath}/${journalId}/papers`, { params });
-      const data = response.data || response;
-      if (data && typeof data === 'object' && 'data' in data && 'items' in data.data) {
-        return data.data;
-      }
-      if (data && typeof data === 'object' && 'items' in data) {
-        return data;
-      }
-      return { items: data as Paper[], total: 0, page: 1, page_size: 20 };
-    },
-
-    importPapersToJournal: async (journalId: number, file: File): Promise<any> => {
-      const formData = new FormData();
-      formData.append('file', file);
-      return api.post(`${basePath}/${journalId}/papers/import`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-    },
-
-    analyzeJournalPapers: async (journalId: number, aiConfig?: any, statusFilter: string = 'pending', maxConcurrent: number = 3): Promise<any> => {
-      return api.post(`${basePath}/${journalId}/papers/analyze`, null, {
-        params: {
-          status_filter: statusFilter,
-          max_concurrent: maxConcurrent,
-        },
-        data: aiConfig,
-      });
-    },
-
-    batchDeleteJournalPapers: async (journalId: number, ids: number[]): Promise<{ deleted_count: number; errors: string[] }> => {
-      return api.post(`${basePath}/${journalId}/papers/batch-delete`, { ids });
-    },
   })
 );
 
@@ -497,138 +450,6 @@ export const researchMethodApi = {
   // 获取或创建研究方法（用于下拉选择自动创建）
   getOrCreate: (name: string): Promise<ResearchMethod> =>
     api.post('/research-methods/get-or-create', { name }),
-};
-
-// 论文管理API
-export const paperApi = {
-  // 基础CRUD操作
-  getPapers: async (params?: PapersQueryParams): Promise<{ items: Paper[]; total: number; page: number; page_size: number }> => {
-    const response = await api.get('/papers/', { params });
-    // 后端返回 paginated_response 格式: { success: true, message: "...", data: { items, total, page, page_size } }
-    const data = response.data || response;
-    if (data && typeof data === 'object' && 'data' in data && 'items' in data.data) {
-      return data.data as { items: Paper[]; total: number; page: number; page_size: number };
-    }
-    // 兼容旧格式（如果直接返回items）
-    if (data && typeof data === 'object' && 'items' in data) {
-      return data as { items: Paper[]; total: number; page: number; page_size: number };
-    }
-    // 最终回退
-    return { items: data as Paper[], total: 0, page: 1, page_size: 20 };
-  },
-
-  getPaper: (id: number): Promise<Paper> =>
-    api.get(`/papers/${id}`),
-
-  createPaper: (data: PaperCreate): Promise<Paper> =>
-    api.post('/papers/', data),
-
-  updatePaper: (id: number, data: PaperUpdate): Promise<Paper> =>
-    api.put(`/papers/${id}`, data),
-
-  deletePaper: (id: number): Promise<void> =>
-    api.delete(`/papers/${id}`),
-
-  // Excel导入
-  importFromExcel: (file: File): Promise<PaperUploadResponse> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    return api.post('/papers/import-excel', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
-  },
-
-  // 批量操作
-  batchDelete: (paperIds: number[]): Promise<{ deleted_count: number; errors: string[] }> =>
-    api.post('/papers/batch-delete', paperIds),
-
-  updateStatus: (id: number, newStatus: string): Promise<Paper> =>
-    api.patch(`/papers/${id}/status`, null, { params: { new_status: newStatus } }),
-
-  // AI分析
-  batchAnalyze: (paperIds: number[], maxConcurrent: number = 3): Promise<BatchAnalyzeResponse> =>
-    api.post('/papers/batch-analyze', paperIds, { params: { max_concurrent: maxConcurrent } }),
-
-  analyzePaper: (id: number): Promise<SingleAnalyzeResponse> =>
-    api.post(`/papers/${id}/analyze`),
-
-  // 转换为Idea
-  convertToIdea: (id: number): Promise<ConvertToIdeaResponse> =>
-    api.post(`/papers/${id}/convert-to-idea`),
-
-  // 统计
-  getStats: (): Promise<PapersStatsResponse> =>
-    api.get('/papers/stats/summary'),
-
-  // 增强的批量分析（支持提示词模板）
-  batchAnalyzeWithPrompt: (
-    paperIds: number[],
-    templateName?: string,
-    templateVariables?: { user_profile?: string; research_fields?: string[] },
-    maxConcurrent: number = 3
-  ): Promise<BatchAnalyzeResponse> =>
-    api.post('/papers/batch-analyze-with-prompt', {
-      paper_ids: paperIds,
-      template_name: templateName,
-      template_variables: templateVariables,
-      max_concurrent: maxConcurrent,
-    }),
-};
-
-// 提示词模板管理API
-export const promptApi = {
-  // 获取所有提示词模板
-  getTemplates: (): Promise<{ data: PromptTemplate[] }> =>
-    api.get('/papers/prompts'),
-
-  // 获取单个模板详情
-  getTemplate: (name: string): Promise<{ data: PromptTemplate }> =>
-    api.get(`/papers/prompts/${name}`),
-
-  // 创建新模板
-  createTemplate: (template: PromptTemplateCreate): Promise<{ data: PromptTemplate }> =>
-    api.post('/papers/prompts', template),
-
-  // 更新模板
-  updateTemplate: (name: string, template: PromptTemplateUpdate): Promise<{ data: PromptTemplate }> =>
-    api.put(`/papers/prompts/${name}`, template),
-
-  // 删除模板
-  deleteTemplate: (name: string): Promise<{ message: string }> =>
-    api.delete(`/papers/prompts/${name}`),
-};
-
-// 全局用户配置API
-export const userConfigApi = {
-  // 获取用户配置
-  getConfig: (): Promise<{ data: UserConfig }> =>
-    api.get('/papers/user-config'),
-
-  // 更新用户配置
-  updateConfig: (config: UserConfig): Promise<{ data: UserConfig; message: string }> =>
-    api.put('/papers/user-config', config),
-};
-
-// 期卷号统计API
-export const volumeStatsApi = {
-  // 获取期刊期卷号统计
-  getVolumeStats: (journalId: number): Promise<VolumeStats> =>
-    api.get(`/api/journals/${journalId}/volume-stats`),
-};
-
-// AI配置管理API
-export const aiConfigApi = {
-  // 获取当前AI配置
-  getConfig: (): Promise<AIConfig> =>
-    api.get('/ai-config'),
-
-  // 更新AI配置
-  updateConfig: (config: AIConfigUpdate): Promise<{ success: boolean; message: string; updated_fields: string[] }> =>
-    api.put('/ai-config', config),
-
-  // 测试AI连接
-  testConnection: (request: AITestRequest): Promise<AIConfigTestResponse> =>
-    api.post('/ai-config/test', request),
 };
 
 // 提示词管理API（v4.8）- 用于管理科研提示词

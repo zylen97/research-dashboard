@@ -25,7 +25,6 @@ import {
   MessageOutlined,
   BulbOutlined,
   BookOutlined,
-  FileTextOutlined,
   TagsOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
@@ -231,14 +230,6 @@ const DatabaseBackup: React.FC = () => {
       width: 80,
       render: (count: number) => renderCountTag(count, <ProjectOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.projects_count || 0) - (b.projects_count || 0),
-    },
-    {
-      title: '论文',
-      dataIndex: 'papers_count',
-      key: 'papers',
-      width: 80,
-      render: (count: number) => renderCountTag(count, <FileTextOutlined />),
-      sorter: (a: BackupItem, b: BackupItem) => (a.papers_count || 0) - (b.papers_count || 0),
     },
     {
       title: 'Ideas',
