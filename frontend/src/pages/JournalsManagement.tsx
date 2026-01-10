@@ -436,7 +436,19 @@ const JournalsManagement: React.FC = () => {
                         >
                           {/* 期刊名称 */}
                           <div style={{ marginBottom: '8px' }}>
-                            <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: journal.name }}>
+                            <Text
+                              strong
+                              style={{
+                                fontSize: 13,
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
+                                lineHeight: 1.4,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
                               {journal.name}
                             </Text>
                           </div>
@@ -1012,7 +1024,19 @@ const JournalsManagement: React.FC = () => {
                         >
                           {/* 期刊名称 */}
                           <div style={{ marginBottom: '8px' }}>
-                            <Text strong style={{ fontSize: 13 }} ellipsis={{ tooltip: journal.name }}>
+                            <Text
+                              strong
+                              style={{
+                                fontSize: 13,
+                                whiteSpace: 'normal',
+                                wordBreak: 'break-word',
+                                lineHeight: 1.4,
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                overflow: 'hidden'
+                              }}
+                            >
                               {journal.name}
                             </Text>
                           </div>

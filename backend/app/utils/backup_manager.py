@@ -185,6 +185,13 @@ class BackupManager:
             except sqlite3.OperationalError:
                 audit_logs_count = 0
 
+            # 统计提示词数量
+            try:
+                cursor.execute("SELECT COUNT(*) FROM prompts")
+                prompts_count = cursor.fetchone()[0]
+            except sqlite3.OperationalError:
+                prompts_count = 0
+
             conn.close()
 
             return {
@@ -196,6 +203,7 @@ class BackupManager:
                 "research_methods_count": research_methods_count,
                 "tags_count": tags_count,
                 "audit_logs_count": audit_logs_count,
+                "prompts_count": prompts_count,
             }
         except Exception as e:
             logger.warning(f"无法读取备份数据统计: {e}")
@@ -209,6 +217,7 @@ class BackupManager:
                 "research_methods_count": 0,
                 "tags_count": 0,
                 "audit_logs_count": 0,
+                "prompts_count": 0,
             }
     
     def _cleanup_old_backups(self):

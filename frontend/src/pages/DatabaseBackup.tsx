@@ -13,6 +13,7 @@ import {
   Input,
 } from 'antd';
 import { PageHeader, TableContainer } from '../styles/components';
+import { ResizableTitle } from '../components/research-dashboard';
 import {
   DownloadOutlined,
   CloudUploadOutlined,
@@ -26,18 +27,41 @@ import {
   BulbOutlined,
   BookOutlined,
   TagsOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import type { ColumnsType } from 'antd/es/table';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { backupApi } from '../services/apiOptimized';
 import { withErrorHandler } from '../utils/errorHandlerOptimized';
 import { BackupItem } from '../types';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
 const { Text } = Typography;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  name: 200,
+  size: 90,
+  created: 140,
+  collaborators: 80,
+  projects: 80,
+  ideas: 75,
+  logs: 75,
+  journals: 75,
+  tags: 70,
+  prompts: 75,
+  action: 150,
+};
 
 const DatabaseBackup: React.FC = () => {
   const [restoring, setRestoring] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  // 列宽调整
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'backup-table-columns',
+  });
 
   // 获取备份列表
   const { data: backups = [], isLoading: loadingBackups, refetch: refetchBackups } = useQuery({
@@ -178,25 +202,26 @@ const DatabaseBackup: React.FC = () => {
   );
 
   // 表格列配置
-  const columns: ColumnsType<BackupItem> = [
+  const baseColumns: ColumnsType<BackupItem> = [
     {
       title: '备份名称',
       dataIndex: 'name',
       key: 'name',
-      width: 150,
-      ellipsis: { showTitle: false },
+      width: DEFAULT_COLUMN_WIDTHS.name,
       render: (text: string) => (
-        <Space>
-          <FolderOpenOutlined />
-          <Text strong ellipsis={{ tooltip: text }}>{text}</Text>
-        </Space>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+          <FolderOpenOutlined style={{ marginTop: 2 }} />
+          <Text strong style={{ whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.4 }}>
+            {text}
+          </Text>
+        </div>
       ),
     },
     {
       title: '大小',
       dataIndex: 'sizeFormatted',
       key: 'size',
-      width: 90,
+      width: DEFAULT_COLUMN_WIDTHS.size,
       render: (text: string) => (
         <Tag style={{ backgroundColor: '#E8E8E8', color: '#333333', borderColor: '#CCCCCC' }}>
           {text}
@@ -207,7 +232,7 @@ const DatabaseBackup: React.FC = () => {
       title: '创建时间',
       dataIndex: 'createdFormatted',
       key: 'created',
-      width: 140,
+      width: DEFAULT_COLUMN_WIDTHS.created,
       render: (text: string) => (
         <Space style={{ fontSize: 12 }}>
           <ClockCircleOutlined />
@@ -219,7 +244,7 @@ const DatabaseBackup: React.FC = () => {
       title: '合作者',
       dataIndex: 'collaborators_count',
       key: 'collaborators',
-      width: 80,
+      width: DEFAULT_COLUMN_WIDTHS.collaborators,
       render: (count: number) => renderCountTag(count, <TeamOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.collaborators_count || 0) - (b.collaborators_count || 0),
     },
@@ -227,7 +252,7 @@ const DatabaseBackup: React.FC = () => {
       title: '项目',
       dataIndex: 'projects_count',
       key: 'projects',
-      width: 80,
+      width: DEFAULT_COLUMN_WIDTHS.projects,
       render: (count: number) => renderCountTag(count, <ProjectOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.projects_count || 0) - (b.projects_count || 0),
     },
@@ -235,7 +260,7 @@ const DatabaseBackup: React.FC = () => {
       title: 'Ideas',
       dataIndex: 'ideas_count',
       key: 'ideas',
-      width: 75,
+      width: DEFAULT_COLUMN_WIDTHS.ideas,
       render: (count: number) => renderCountTag(count, <BulbOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.ideas_count || 0) - (b.ideas_count || 0),
     },
@@ -243,7 +268,7 @@ const DatabaseBackup: React.FC = () => {
       title: '日志',
       dataIndex: 'logs_count',
       key: 'logs',
-      width: 75,
+      width: DEFAULT_COLUMN_WIDTHS.logs,
       render: (count: number) => renderCountTag(count, <MessageOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.logs_count || 0) - (b.logs_count || 0),
     },
@@ -251,7 +276,7 @@ const DatabaseBackup: React.FC = () => {
       title: '期刊',
       dataIndex: 'journals_count',
       key: 'journals',
-      width: 75,
+      width: DEFAULT_COLUMN_WIDTHS.journals,
       render: (count: number) => renderCountTag(count, <BookOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.journals_count || 0) - (b.journals_count || 0),
     },
@@ -259,14 +284,22 @@ const DatabaseBackup: React.FC = () => {
       title: '标签',
       dataIndex: 'tags_count',
       key: 'tags',
-      width: 70,
+      width: DEFAULT_COLUMN_WIDTHS.tags,
       render: (count: number) => renderCountTag(count, <TagsOutlined />),
       sorter: (a: BackupItem, b: BackupItem) => (a.tags_count || 0) - (b.tags_count || 0),
     },
     {
+      title: '提示词',
+      dataIndex: 'prompts_count',
+      key: 'prompts',
+      width: DEFAULT_COLUMN_WIDTHS.prompts,
+      render: (count: number) => renderCountTag(count, <FileTextOutlined />),
+      sorter: (a: BackupItem, b: BackupItem) => (a.prompts_count || 0) - (b.prompts_count || 0),
+    },
+    {
       title: '操作',
       key: 'action',
-      width: 150,
+      width: DEFAULT_COLUMN_WIDTHS.action,
       fixed: 'right',
       render: (_, record) => (
         <Space size="middle">
@@ -321,6 +354,8 @@ const DatabaseBackup: React.FC = () => {
     },
   ];
 
+  const columns = enhanceColumns(baseColumns);
+
   const handleRefresh = () => {
     refetchBackups();
   };
@@ -349,7 +384,7 @@ const DatabaseBackup: React.FC = () => {
       />
 
       {/* 备份列表 */}
-      <TableContainer>
+      <TableContainer className="resizable-table">
         {loadingBackups ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>
             <Spin size="large" />
@@ -361,6 +396,11 @@ const DatabaseBackup: React.FC = () => {
             columns={columns}
             dataSource={backups}
             rowKey="id"
+            components={{
+              header: {
+                cell: ResizableTitle,
+              },
+            }}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,

@@ -33,6 +33,7 @@ export interface BackupItem {
   research_methods_count?: number; // 研究方法数量
   tags_count?: number;           // 标签数量
   audit_logs_count?: number;     // 审计日志数量
+  prompts_count?: number;        // 提示词数量
 }
 
 export interface BackupListResponse {
