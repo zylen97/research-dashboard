@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
-from app.routes import research, collaborators, validation, audit, backup, config
+from app.routes import research, collaborators, backup, config
 from app.routes import ideas, journals, tags, research_methods, prompts, journal_issues
 from app.models.database import init_db
 from app.middleware import RateLimitMiddleware, SecurityHeadersMiddleware, RequestValidationMiddleware
@@ -70,8 +70,6 @@ setup_exception_handlers(app)
 # Include routers
 app.include_router(research.router, prefix="/api/research", tags=["research"])
 app.include_router(collaborators.router, prefix="/api/collaborators", tags=["collaborators"])
-app.include_router(validation.router, prefix="/api/validation", tags=["validation"])
-app.include_router(audit.router, prefix="/api/audit", tags=["audit"])
 app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
 app.include_router(config.router, prefix="/api/config", tags=["configuration"])
 app.include_router(ideas.router, prefix="/api/ideas", tags=["ideas"])

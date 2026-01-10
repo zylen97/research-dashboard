@@ -10,30 +10,12 @@ from typing import List, Optional
 from datetime import datetime
 import logging
 
-from ..models import get_db, Journal
-from ..models.database import Base
+from ..models import get_db, Journal, JournalIssue
 from ..utils.response import success_response
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-
-# 定义JournalIssue模型（内联定义，避免循环导入）
-from sqlalchemy import Column, Integer, String, Date, ForeignKey, Text
-
-class JournalIssue(Base):
-    """期刊期卷号浏览记录模型"""
-    __tablename__ = "journal_issues"
-
-    id = Column(Integer, primary_key=True, index=True)
-    journal_id = Column(Integer, ForeignKey('journals.id', ondelete='CASCADE'), nullable=False)
-    volume = Column(String(50), nullable=False, comment="卷号")
-    issue = Column(String(50), nullable=False, comment="期号")
-    year = Column(Integer, nullable=False, comment="年份")
-    marked_date = Column(Date, nullable=False, comment="标记日期")
-    notes = Column(Text, nullable=True, comment="备注")
-    created_at = Column(Date, nullable=False, comment="创建日期")
-    updated_at = Column(Date, nullable=False, comment="更新日期")
 
 
 @router.get("/journals/{journal_id}/issues")

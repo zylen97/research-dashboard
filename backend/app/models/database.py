@@ -254,6 +254,35 @@ class Journal(Base):
         from_attributes = True
 
 
+class JournalIssue(Base):
+    """期刊期卷号浏览记录模型（v5.1）"""
+    __tablename__ = "journal_issues"
+
+    id = Column(Integer, primary_key=True, index=True)
+    journal_id = Column(Integer, ForeignKey('journals.id', ondelete='CASCADE'), nullable=False)
+    volume = Column(String(50), nullable=False, comment="卷号")
+    issue = Column(String(50), nullable=False, comment="期号")
+    year = Column(Integer, nullable=False, comment="年份")
+    marked_date = Column(DateTime, nullable=False, default=datetime.utcnow, comment="标记日期")
+    notes = Column(Text, nullable=True, comment="备注")
+    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="创建日期")
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, comment="更新日期")
+
+    # 关联关系
+    journal = relationship("Journal", backref=backref("issues", cascade="all, delete-orphan"))
+
+    # 唯一约束：同一期刊的卷期组合唯一
+    __table_args__ = (
+        UniqueConstraint('journal_id', 'volume', 'issue', name='uq_journal_volume_issue'),
+        Index('idx_journal_issues_journal_id', 'journal_id'),
+        Index('idx_journal_issues_year', 'year'),
+    )
+
+    # Pydantic 配置
+    class Config:
+        from_attributes = True
+
+
 class Prompt(Base):
     """提示词管理模型（v4.8）"""
     __tablename__ = "prompts"

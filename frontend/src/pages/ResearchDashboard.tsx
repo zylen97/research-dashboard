@@ -173,7 +173,7 @@ const ResearchDashboard: React.FC = () => {
     setIsModalVisible(true);
   };
 
-  // 处理论文进度查看
+  // 处理项目进度查看
   const handleViewLogs = (project: ResearchProject) => {
     setSelectedProject(project);
     setIsCommunicationModalVisible(true);
@@ -494,7 +494,7 @@ const ResearchDashboard: React.FC = () => {
         </Form>
       </Modal>
 
-      {/* 论文进度模态框 */}
+      {/* 项目进度模态框 */}
       <CommunicationLogModal
         visible={isCommunicationModalVisible}
         project={selectedProject}
@@ -504,7 +504,7 @@ const ResearchDashboard: React.FC = () => {
           setSelectedProject(null);
         }}
         onUpdate={() => {
-          // 刷新项目列表以更新最新论文进度
+          // 刷新项目列表以更新最新项目进度
           refetch();
         }}
       />

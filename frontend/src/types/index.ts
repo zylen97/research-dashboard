@@ -61,7 +61,7 @@ export interface ResearchProject {
   created_at: string;
   updated_at: string;
   collaborators: Collaborator[];
-  communication_logs: CommunicationLog[]; // 论文进度记录数组
+  communication_logs: CommunicationLog[]; // 项目进度记录数组
   latest_communication?: string;
   actual_start_date?: string;
   is_todo: boolean; // 是否标记为待办事项
@@ -117,7 +117,7 @@ export interface ConvertToIdeaResponse {
   collaborators_preserved: number;
 }
 
-// 论文进度类型
+// 项目进度类型
 export interface CommunicationLog {
   id: number;
   project_id: number;

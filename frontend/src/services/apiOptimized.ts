@@ -149,7 +149,7 @@ export const researchApi = {
   deleteProject: (id: number) => api.delete(`/research/${id}`),
   delete: (id: number) => api.delete(`/research/${id}`),
 
-  // 论文进度相关
+  // 项目进度相关
   getCommunicationLogs: async (id: number): Promise<CommunicationLog[]> => {
     const response = await api.get(`/research/${id}/logs`);
     return handleListResponse<CommunicationLog>(response, 'API.getCommunicationLogs');

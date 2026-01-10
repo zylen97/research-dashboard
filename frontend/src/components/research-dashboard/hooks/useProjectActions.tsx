@@ -92,12 +92,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 创建论文进度 mutation
+  // 创建项目进度 mutation
   const createLogMutation = useMutation({
     mutationFn: ({ projectId, logData }: { projectId: number; logData: any }) =>
       researchApi.createCommunicationLog(projectId, logData),
     onSuccess: () => {
-      message.success('论文进度创建成功！');
+      message.success('项目进度创建成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -110,12 +110,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 更新论文进度 mutation
+  // 更新项目进度 mutation
   const updateLogMutation = useMutation({
     mutationFn: ({ projectId, logId, logData }: { projectId: number; logId: number; logData: any }) =>
       researchApi.updateCommunicationLog(projectId, logId, logData),
     onSuccess: () => {
-      message.success('论文进度更新成功！');
+      message.success('项目进度更新成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -127,12 +127,12 @@ export const useProjectActions = ({
     },
   });
 
-  // 删除论文进度 mutation
+  // 删除项目进度 mutation
   const deleteLogMutation = useMutation({
     mutationFn: ({ projectId, logId }: { projectId: number; logId: number }) =>
       researchApi.deleteCommunicationLog(projectId, logId),
     onSuccess: () => {
-      message.success('论文进度删除成功！');
+      message.success('项目进度删除成功！');
       // 添加短暂延迟确保后端处理完成，然后刷新数据
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['research-projects'] });
@@ -159,7 +159,7 @@ export const useProjectActions = ({
           <ul style={{ marginLeft: 20 }}>
             <li>
               <span style={{ color: '#ff4d4f' }}>
-                所有相关的论文进度将被永久删除
+                所有相关的项目进度将被永久删除
               </span>
             </li>
             <li>

@@ -21,7 +21,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { promptsApi } from '../services/apiOptimized';
-import { Prompt } from '../types/prompts';
+import { Prompt, PromptCategory } from '../types/prompts';
 import PromptCard from '../components/PromptCard';
 import PromptFormModal from '../components/PromptFormModal';
 import PromptCopyModal from '../components/PromptCopyModal';
@@ -173,6 +173,7 @@ const PromptsManagement: React.FC = () => {
         <PromptFormModal
           visible={formModalVisible}
           prompt={editingPrompt}
+          defaultCategory={selectedCategory as PromptCategory}
           onCancel={() => setFormModalVisible(false)}
           onSuccess={() => {
             setFormModalVisible(false);

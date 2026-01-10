@@ -52,7 +52,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
-  // 获取论文进度记录
+  // 获取项目进度记录
   const fetchLogs = useCallback(async () => {
     if (!project) return;
 
@@ -61,8 +61,8 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
       const data = await researchApi.getCommunicationLogs(project.id);
       setLogs(data);
     } catch (error) {
-      message.error('获取论文进度失败');
-      console.error('获取论文进度失败:', error);
+      message.error('获取项目进度失败');
+      console.error('获取项目进度失败:', error);
     } finally {
       setLoading(false);
     }
@@ -138,12 +138,12 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
 
     try {
       await researchApi.deleteCommunicationLog(project.id, log.id);
-      message.success('删除论文进度成功');
+      message.success('删除项目进度成功');
       fetchLogs();
       onUpdate?.();
     } catch (error) {
-      message.error('删除论文进度失败');
-      console.error('删除论文进度失败:', error);
+      message.error('删除项目进度失败');
+      console.error('删除项目进度失败:', error);
     }
   };
 
@@ -179,7 +179,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
               onClick={() => handleEdit(log)}
             />
             <Popconfirm
-              title="确定要删除这条论文进度吗？"
+              title="确定要删除这条项目进度吗？"
               onConfirm={() => handleDelete(log)}
               okText="删除"
               cancelText="取消"
@@ -218,7 +218,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         title={
           <span>
             <FileTextOutlined style={{ marginRight: 8 }} />
-            {project?.title} - 论文进度
+            {project?.title} - 项目进度
           </span>
         }
         open={visible}
@@ -254,9 +254,9 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
         </div>
       </Modal>
 
-      {/* 添加/编辑论文进度模态框 */}
+      {/* 添加/编辑项目进度模态框 */}
       <Modal
-        title={editingLog ? '编辑论文进度' : '添加论文进度'}
+        title={editingLog ? '编辑项目进度' : '添加项目进度'}
         open={isAddModalVisible}
         onCancel={() => {
           setIsAddModalVisible(false);
@@ -278,7 +278,7 @@ const CommunicationLogModal: React.FC<CommunicationLogModalProps> = ({
           >
             <TextArea
               rows={3}
-              placeholder="请记录论文进度"
+              placeholder="请记录项目进度"
             />
           </Form.Item>
 

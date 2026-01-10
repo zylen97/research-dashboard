@@ -23,6 +23,7 @@ interface PromptFormModalProps {
   prompt: Prompt | null;
   onCancel: () => void;
   onSuccess: () => void;
+  defaultCategory?: PromptCategory;
 }
 
 const PromptFormModal: React.FC<PromptFormModalProps> = ({
@@ -30,6 +31,7 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
   prompt,
   onCancel,
   onSuccess,
+  defaultCategory = 'writing' as PromptCategory,
 }) => {
   const [form] = Form.useForm();
   const isEditing = !!prompt;
@@ -61,7 +63,7 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
     },
   });
 
-  // 当编辑时，回填表单
+  // 当编辑时，回填表单；新建时重置为默认分类
   useEffect(() => {
     if (prompt) {
       form.setFieldsValue({
@@ -70,9 +72,11 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
         category: prompt.category,
       });
     } else {
-      form.resetFields();
+      form.setFieldsValue({
+        category: defaultCategory,
+      });
     }
-  }, [prompt, form]);
+  }, [prompt, form, defaultCategory]);
 
   // 提交表单
   const handleSubmit = async () => {
@@ -108,9 +112,6 @@ const PromptFormModal: React.FC<PromptFormModalProps> = ({
       <Form
         form={form}
         layout="vertical"
-        initialValues={{
-          category: 'writing' as PromptCategory,
-        }}
       >
         {/* 标题 */}
         <Form.Item

@@ -72,7 +72,7 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
     return { is_todo: false, marked_at: null, priority: null, notes: null };
   }, [todoStatusCache]);
 
-  // 按待办状态排序项目：待办项目置顶，然后按论文进度日期倒序
+  // 按待办状态排序项目：待办项目置顶，然后按项目进度日期倒序
   const sortedProjects = useMemo(() => {
     // 状态优先级映射（用于非待办项目排序）- 扩展更多状态（v4.7.1）
     const STATUS_PRIORITY: Record<string, number> = {
@@ -89,7 +89,7 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
       return STATUS_PRIORITY[status] ?? 999;
     };
 
-    // 获取最新论文进度日期，添加日期有效性检查（P2-7）
+    // 获取最新项目进度日期，添加日期有效性检查（P2-7）
     const getLatestCommunicationDate = (project: ResearchProject): Date | null => {
       const logs = project.communication_logs || [];
       if (logs.length === 0) return null;
@@ -138,7 +138,7 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
         return 0;
       }
 
-      // 3. 都不是待办项目时，先按状态优先级排序，再按论文进度日期倒序
+      // 3. 都不是待办项目时，先按状态优先级排序，再按项目进度日期倒序
       // 状态优先级：writing(撰写中) → submitting(投稿中) → published(已发表)
       const aStatusPriority = getStatusPriority(a.status);
       const bStatusPriority = getStatusPriority(b.status);
@@ -146,20 +146,20 @@ export const useProjectData = (filters: ProjectFilters = {}) => {
         return aStatusPriority - bStatusPriority;
       }
 
-      // 4. 状态相同时，按论文进度日期倒序排列
+      // 4. 状态相同时，按项目进度日期倒序排列
       const aLatestDate = getLatestCommunicationDate(a);
       const bLatestDate = getLatestCommunicationDate(b);
 
-      // 有论文进度的项目优先于没有论文进度的项目
+      // 有项目进度的项目优先于没有项目进度的项目
       if (aLatestDate && !bLatestDate) return -1;
       if (!aLatestDate && bLatestDate) return 1;
 
-      // 都有论文进度时，按最新记录日期倒序
+      // 都有项目进度时，按最新记录日期倒序
       if (aLatestDate && bLatestDate) {
         return bLatestDate.getTime() - aLatestDate.getTime();
       }
 
-      // 都没有论文进度时，按创建时间倒序
+      // 都没有项目进度时，按创建时间倒序
       const aCreated = new Date(a.created_at).getTime();
       const bCreated = new Date(b.created_at).getTime();
       // 检查创建日期有效性

@@ -212,13 +212,13 @@ export const createProjectColumns = ({
     },
   }]),
   ...(isMobile ? [] : [{
-    title: '论文进度',
+    title: '项目进度',
     key: 'communication_progress',
     render: (record: ResearchProject) => {
       // 使用communication_logs数组，正确排序获取最新记录
       const logs = record.communication_logs || [];
       if (logs.length > 0) {
-        // 按进度日期排序，获取最新的论文进度记录（带容错）
+        // 按进度日期排序，获取最新的项目进度记录（带容错）
         const sortedLogs = [...logs].sort((a, b) => {
           const dateA = new Date(a.communication_date || a.created_at);
           const dateB = new Date(b.communication_date || b.created_at);
@@ -290,7 +290,7 @@ export const createProjectColumns = ({
             type="text"
             icon={<MessageOutlined />}
             onClick={() => actions.onViewLogs(project)}
-            title="论文进度"
+            title="项目进度"
           />
           <Button
             type="text"
