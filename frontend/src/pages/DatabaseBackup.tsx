@@ -64,7 +64,7 @@ const DatabaseBackup: React.FC = () => {
   });
 
   // 获取备份列表
-  const { data: backups = [], isLoading: loadingBackups, refetch: refetchBackups } = useQuery({
+  const { data: backups = [], isLoading: loadingBackups } = useQuery({
     queryKey: ['backups'],
     queryFn: async () => {
       const response = await backupApi.getBackups();
@@ -356,10 +356,6 @@ const DatabaseBackup: React.FC = () => {
 
   const columns = enhanceColumns(baseColumns);
 
-  const handleRefresh = () => {
-    refetchBackups();
-  };
-
   return (
     <div>
       <PageHeader
@@ -372,12 +368,6 @@ const DatabaseBackup: React.FC = () => {
               loading={createBackupMutation.isPending}
             >
               创建备份
-            </Button>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={handleRefresh}
-            >
-              刷新
             </Button>
           </Space>
         }

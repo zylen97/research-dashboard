@@ -73,7 +73,7 @@ def get_journal_issues(
 @router.post("/journals/{journal_id}/issues")
 def create_journal_issue(
     journal_id: int,
-    volume: str = Query(..., description="卷号"),
+    volume: Optional[str] = Query(None, description="卷号（中文期刊可为空）"),
     issue: str = Query(..., description="期号"),
     year: int = Query(..., description="年份"),
     notes: Optional[str] = Query(None, description="备注"),
@@ -86,24 +86,39 @@ def create_journal_issue(
         if not journal:
             raise HTTPException(status_code=404, detail="期刊不存在")
 
-        # 检查是否已存在相同的期卷号记录
-        existing = db.query(JournalIssue).filter(
-            JournalIssue.journal_id == journal_id,
-            JournalIssue.volume == volume,
-            JournalIssue.issue == issue
-        ).first()
+        # volume为空时使用空字符串
+        volume_value = volume if volume and volume.strip() else ""
 
-        if existing:
-            raise HTTPException(
-                status_code=400,
-                detail=f"该期卷号记录已存在: Vol.{volume} No.{issue}"
-            )
+        # 检查是否已存在相同的期卷号记录
+        # 有卷号时检查卷期组合，无卷号时只检查期号
+        if volume_value:
+            existing = db.query(JournalIssue).filter(
+                JournalIssue.journal_id == journal_id,
+                JournalIssue.volume == volume_value,
+                JournalIssue.issue == issue
+            ).first()
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"该期卷号记录已存在: Vol.{volume_value} No.{issue}"
+                )
+        else:
+            existing = db.query(JournalIssue).filter(
+                JournalIssue.journal_id == journal_id,
+                JournalIssue.volume == "",
+                JournalIssue.issue == issue
+            ).first()
+            if existing:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"该期号记录已存在: No.{issue}"
+                )
 
         # 创建新记录
         today = datetime.now().date()
         new_issue = JournalIssue(
             journal_id=journal_id,
-            volume=volume,
+            volume=volume_value,
             issue=issue,
             year=year,
             marked_date=today,
@@ -120,7 +135,7 @@ def create_journal_issue(
             data={
                 "id": new_issue.id,
                 "journal_id": new_issue.journal_id,
-                "volume": new_issue.volume,
+                "volume": new_issue.volume if new_issue.volume else None,
                 "issue": new_issue.issue,
                 "year": new_issue.year,
                 "marked_date": new_issue.marked_date.isoformat(),
@@ -158,9 +173,9 @@ def update_journal_issue(
         if not issue_record:
             raise HTTPException(status_code=404, detail="期卷号记录不存在")
 
-        # 更新字段
+        # 更新字段（volume为空时使用空字符串）
         if volume is not None:
-            issue_record.volume = volume
+            issue_record.volume = volume if volume and volume.strip() else ""
         if issue is not None:
             issue_record.issue = issue
         if year is not None:
@@ -176,7 +191,7 @@ def update_journal_issue(
         return success_response(
             data={
                 "id": issue_record.id,
-                "volume": issue_record.volume,
+                "volume": issue_record.volume if issue_record.volume else None,
                 "issue": issue_record.issue,
                 "year": issue_record.year,
                 "marked_date": issue_record.marked_date.isoformat(),

@@ -3,7 +3,7 @@
  * 显示单个提示词的卡片 - 紧凑模式
  */
 import React from 'react';
-import { Card, Button, Typography, message } from 'antd';
+import { Card, Button, Typography, message, Popconfirm } from 'antd';
 import {
   CopyOutlined,
   EditOutlined,
@@ -67,14 +67,21 @@ const PromptCard: React.FC<PromptCardProps> = ({
         >
           编辑
         </Button>,
-        <Button
-          size="small"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => onDelete(prompt.id)}
+        <Popconfirm
+          title="确认删除"
+          description="删除后不可恢复"
+          onConfirm={() => onDelete(prompt.id)}
+          okText="确认"
+          cancelText="取消"
         >
-          删除
-        </Button>,
+          <Button
+            size="small"
+            danger
+            icon={<DeleteOutlined />}
+          >
+            删除
+          </Button>
+        </Popconfirm>,
       ]}
     >
       {/* 只显示标题 */}

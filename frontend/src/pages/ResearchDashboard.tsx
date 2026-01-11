@@ -10,7 +10,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  ReloadOutlined,
   CrownOutlined,
   MailOutlined,
   ClearOutlined,
@@ -235,14 +234,6 @@ const ResearchDashboard: React.FC = () => {
       <PageHeader
         actions={
           <div style={{ display: 'flex', gap: '8px' }}>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => refetch()}
-              loading={isLoading}
-              title="刷新数据"
-            >
-              刷新
-            </Button>
             <Button
               type="primary"
               icon={<PlusOutlined />}

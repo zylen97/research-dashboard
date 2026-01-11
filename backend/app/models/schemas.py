@@ -419,6 +419,7 @@ class Journal(JournalBase):
 
     # 统计字段（API返回时动态计算，v4.2简化）
     reference_count: int = Field(default=0, description="作为参考期刊的引用次数")
+    target_count: int = Field(default=0, description="作为投稿期刊的引用次数")
     # paper_count已移除 - Papers功能已删除
 
     class Config:

@@ -66,6 +66,7 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
 
     简化计数设计（v4.2）：
     - 参考：Idea + ResearchProject 中 reference_journal 的合计
+    - 投稿：Idea + ResearchProject 中 target_journal 的合计
 
     Args:
         db: 数据库会话
@@ -94,6 +95,23 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
         .all()
     )
 
+    # ========== 投稿期刊统计 ==========
+    # Idea中的投稿期刊
+    idea_target_counts = (
+        db.query(Idea.target_journal, func.count(Idea.id))
+        .filter(Idea.target_journal.in_(journal_names))
+        .group_by(Idea.target_journal)
+        .all()
+    )
+
+    # ResearchProject中的投稿期刊
+    project_target_counts = (
+        db.query(ResearchProject.target_journal, func.count(ResearchProject.id))
+        .filter(ResearchProject.target_journal.in_(journal_names))
+        .group_by(ResearchProject.target_journal)
+        .all()
+    )
+
     # ========== 获取期刊ID到名称的映射 ==========
     journal_id_to_name = {
         j.id: j.name
@@ -108,11 +126,19 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     for name, count in project_ref_counts:
         ref_counts[name] = ref_counts.get(name, 0) + count
 
+    # 投稿计数
+    target_counts = {}
+    for name, count in idea_target_counts:
+        target_counts[name] = target_counts.get(name, 0) + count
+    for name, count in project_target_counts:
+        target_counts[name] = target_counts.get(name, 0) + count
+
     # ========== 组装结果 ==========
     result = {}
     for name in journal_names:
         result[name] = {
             "reference_count": ref_counts.get(name, 0),
+            "target_count": target_counts.get(name, 0),
         }
 
     return result
@@ -247,8 +273,10 @@ async def get_journals(
         for journal in journals:
             stats = all_stats.get(journal.name, {
                 "reference_count": 0,
+                "target_count": 0,
             })
             journal.reference_count = stats["reference_count"]
+            journal.target_count = stats["target_count"]
 
         return journals
 

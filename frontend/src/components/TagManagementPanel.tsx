@@ -11,8 +11,20 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { tagApi } from '../services/apiOptimized';
 import { Tag as TagType, TagCreate, TagUpdate } from '../types/journals';
 import ValidationPromptModal from './ValidationPromptModal';
+import { ResizableTitle } from './research-dashboard';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
 const { TextArea } = Input;
+
+// 默认列宽配置
+const DEFAULT_COLUMN_WIDTHS = {
+  index: 70,
+  name: 200,
+  description: 300,
+  journal_count: 120,
+  created_at: 180,
+  actions: 150,
+};
 
 export const TagManagementPanel: React.FC = () => {
   const [form] = Form.useForm();
@@ -21,6 +33,12 @@ export const TagManagementPanel: React.FC = () => {
   const [isValidationModalVisible, setIsValidationModalVisible] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const queryClient = useQueryClient();
+
+  // 列宽调整
+  const { enhanceColumns } = useResizableColumns({
+    defaultColumnWidths: DEFAULT_COLUMN_WIDTHS,
+    storageKey: 'tags-table-columns',
+  });
 
   // 查询标签列表
   const { data: tags = [], isLoading } = useQuery<TagType[]>({
@@ -116,18 +134,18 @@ export const TagManagementPanel: React.FC = () => {
   };
 
   // 表格列定义
-  const columns = [
+  const baseColumns = [
     {
       title: '序号',
       key: 'index',
-      width: 70,
+      width: DEFAULT_COLUMN_WIDTHS.index,
       render: (_: any, __: any, index: number) => index + 1,
     },
     {
       title: '标签名称',
       dataIndex: 'name',
       key: 'name',
-      width: 200,
+      width: DEFAULT_COLUMN_WIDTHS.name,
       render: (name: string) => (
         <Tag style={{
           backgroundColor: '#F5F5F5',
@@ -143,13 +161,14 @@ export const TagManagementPanel: React.FC = () => {
       title: '标签描述',
       dataIndex: 'description',
       key: 'description',
+      width: DEFAULT_COLUMN_WIDTHS.description,
       render: (text: string | null) => text || '-',
     },
     {
       title: '使用期刊数',
       dataIndex: 'journal_count',
       key: 'journal_count',
-      width: 120,
+      width: DEFAULT_COLUMN_WIDTHS.journal_count,
       sorter: (a: TagType, b: TagType) => a.journal_count - b.journal_count,
       render: (count: number) => (
         <span style={{ fontWeight: count > 0 ? 'bold' : 'normal' }}>
@@ -161,13 +180,13 @@ export const TagManagementPanel: React.FC = () => {
       title: '创建时间',
       dataIndex: 'created_at',
       key: 'created_at',
-      width: 180,
+      width: DEFAULT_COLUMN_WIDTHS.created_at,
       render: (text: string) => new Date(text).toLocaleString('zh-CN'),
     },
     {
       title: '操作',
       key: 'actions',
-      width: 150,
+      width: DEFAULT_COLUMN_WIDTHS.actions,
       fixed: 'right' as const,
       render: (_: any, record: TagType) => (
         <Space>
@@ -205,6 +224,8 @@ export const TagManagementPanel: React.FC = () => {
     },
   ];
 
+  const columns = enhanceColumns(baseColumns);
+
   return (
     <>
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
@@ -214,10 +235,16 @@ export const TagManagementPanel: React.FC = () => {
       </div>
 
       <Table
+        className="resizable-table"
         columns={columns}
         dataSource={tags}
         rowKey="id"
         loading={isLoading}
+        components={{
+          header: {
+            cell: ResizableTitle,
+          },
+        }}
         pagination={{
           showSizeChanger: true,
           showTotal: (total) => `共 ${total} 个标签`,

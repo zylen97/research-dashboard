@@ -13,7 +13,6 @@ import {
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  ReloadOutlined,
   ProjectOutlined,
 } from '@ant-design/icons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -314,14 +313,6 @@ const CollaboratorManagement: React.FC = () => {
       <PageHeader
         actions={
           <Space>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => refetch()}
-              loading={isLoading}
-              title="刷新数据"
-            >
-              刷新
-            </Button>
             <Button
               type="default"
               icon={<PlusOutlined />}

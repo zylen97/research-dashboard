@@ -260,7 +260,7 @@ class JournalIssue(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     journal_id = Column(Integer, ForeignKey('journals.id', ondelete='CASCADE'), nullable=False)
-    volume = Column(String(50), nullable=False, comment="卷号")
+    volume = Column(String(50), nullable=False, comment="卷号（中文期刊可留空字符串）")
     issue = Column(String(50), nullable=False, comment="期号")
     year = Column(Integer, nullable=False, comment="年份")
     marked_date = Column(DateTime, nullable=False, default=datetime.utcnow, comment="标记日期")
@@ -271,7 +271,7 @@ class JournalIssue(Base):
     # 关联关系
     journal = relationship("Journal", backref=backref("issues", cascade="all, delete-orphan"))
 
-    # 唯一约束：同一期刊的卷期组合唯一
+    # 唯一约束：同一期刊的卷期组合唯一（空卷号时只检查期号）
     __table_args__ = (
         UniqueConstraint('journal_id', 'volume', 'issue', name='uq_journal_volume_issue'),
         Index('idx_journal_issues_journal_id', 'journal_id'),

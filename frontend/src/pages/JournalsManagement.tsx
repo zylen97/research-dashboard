@@ -22,7 +22,6 @@ import {
 } from 'antd';
 import {
   PlusOutlined,
-  ReloadOutlined,
   EditOutlined,
   DeleteOutlined,
   BarChartOutlined,
@@ -98,8 +97,6 @@ const JournalsManagement: React.FC = () => {
   // 数据查询
   const {
     data: journals = [],
-    isLoading,
-    refetch,
   } = useQuery({
     queryKey: ['journals', selectedTagIds, searchText],
     queryFn: () => {
@@ -273,7 +270,7 @@ const JournalsManagement: React.FC = () => {
   const handleEditIssue = (issue: any) => {
     setEditingIssue(issue);
     setIssueFormData({
-      volume: issue.volume,
+      volume: issue.volume || '',
       issue: issue.issue,
       year: issue.year,
       notes: issue.notes || ''
@@ -292,8 +289,9 @@ const JournalsManagement: React.FC = () => {
   };
 
   const handleSubmitIssue = async () => {
-    if (!issueFormData.volume || !issueFormData.issue) {
-      message.warning('请输入卷号和期号');
+    // 中文期刊不需要卷号，只检查期号
+    if (!issueFormData.issue) {
+      message.warning('请输入期号');
       return;
     }
 
@@ -343,13 +341,6 @@ const JournalsManagement: React.FC = () => {
             <Tag style={{ backgroundColor: GRAYSCALE_SYSTEM.bg_secondary, color: GRAYSCALE_SYSTEM.primary, fontWeight: 600 }}>
               {journals.length} 个期刊
             </Tag>
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={() => refetch()}
-              loading={isLoading}
-            >
-              刷新
-            </Button>
             {activeTab !== 'tags' && (
               <Button
                 type="primary"
@@ -484,9 +475,14 @@ const JournalsManagement: React.FC = () => {
 
                           {/* 底部统计和操作 */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                            <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
-                              参考{journal.reference_count || 0}
-                            </Text>
+                            <Space size={8}>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                参考{journal.reference_count || 0}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                研究{journal.target_count || 0}
+                              </Text>
+                            </Space>
 
                             <Space size={4}>
                               <Button
@@ -909,30 +905,45 @@ const JournalsManagement: React.FC = () => {
         width={600}
       >
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <div>
-                <Text strong>卷号 *</Text>
-                <Input
-                  placeholder="例如: 1"
-                  value={issueFormData.volume}
-                  onChange={(e) => setIssueFormData({ ...issueFormData, volume: e.target.value })}
-                  style={{ marginTop: '8px' }}
-                />
-              </div>
-            </Col>
-            <Col span={12}>
-              <div>
-                <Text strong>期号 *</Text>
-                <Input
-                  placeholder="例如: 1"
-                  value={issueFormData.issue}
-                  onChange={(e) => setIssueFormData({ ...issueFormData, issue: e.target.value })}
-                  style={{ marginTop: '8px' }}
-                />
-              </div>
-            </Col>
-          </Row>
+          {/* 卷号字段：中文期刊时隐藏 */}
+          {!isChineseJournal(selectedJournalForIssues?.name || '') && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <div>
+                  <Text strong>卷号 *</Text>
+                  <Input
+                    placeholder="例如: 1"
+                    value={issueFormData.volume}
+                    onChange={(e) => setIssueFormData({ ...issueFormData, volume: e.target.value })}
+                    style={{ marginTop: '8px' }}
+                  />
+                </div>
+              </Col>
+              <Col span={12}>
+                <div>
+                  <Text strong>期号 *</Text>
+                  <Input
+                    placeholder="例如: 1"
+                    value={issueFormData.issue}
+                    onChange={(e) => setIssueFormData({ ...issueFormData, issue: e.target.value })}
+                    style={{ marginTop: '8px' }}
+                  />
+                </div>
+              </Col>
+            </Row>
+          )}
+          {/* 中文期刊只显示期号 */}
+          {isChineseJournal(selectedJournalForIssues?.name || '') && (
+            <div>
+              <Text strong>期号 *</Text>
+              <Input
+                placeholder="例如: 1"
+                value={issueFormData.issue}
+                onChange={(e) => setIssueFormData({ ...issueFormData, issue: e.target.value })}
+                style={{ marginTop: '8px' }}
+              />
+            </div>
+          )}
 
           <div>
             <Text strong>年份 *</Text>
@@ -1072,9 +1083,14 @@ const JournalsManagement: React.FC = () => {
 
                           {/* 底部统计和操作 */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
-                            <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
-                              参考{journal.reference_count || 0}
-                            </Text>
+                            <Space size={8}>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                参考{journal.reference_count || 0}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                研究{journal.target_count || 0}
+                              </Text>
+                            </Space>
 
                             <Space size={4}>
                               <Button
