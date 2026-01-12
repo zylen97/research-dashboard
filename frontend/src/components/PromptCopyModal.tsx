@@ -8,7 +8,7 @@ import { CopyOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 
 import { promptsApi } from '../services/apiOptimized';
-import { parseVariablesWithConfig, VariableConfig } from '../types/prompts';
+import { parseVariablesWithConfig, extractVariables, VariableConfig, PromptCopyRequest } from '../types/prompts';
 import JournalSelectMultiple from './JournalSelectMultiple';
 
 const { TextArea } = Input;
@@ -42,18 +42,27 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
     return prompt ? parseVariablesWithConfig(prompt.content) : [];
   }, [prompt?.content]);
 
-  // 实时计算预览内容
+  // 提取原始变量名（用于映射）
+  const originalVariableNames = React.useMemo(() => {
+    return prompt ? extractVariables(prompt.content) : [];
+  }, [prompt?.content]);
+
+  // 实时计算预览内容（需要将前端变量名映射回原始变量名）
   const previewContent = React.useMemo(() => {
     if (!prompt) return '';
     let content = prompt.content;
-    // 替换已填写的变量
-    Object.entries(formValues).forEach(([key, value]) => {
-      if (value) {
-        content = content.replace(new RegExp(`\\{${key}\\}`, 'g'), value);
+
+    // 将前端变量名映射到原始变量名，然后替换
+    variables.forEach((variable, index) => {
+      const formValue = formValues[variable.name];
+      const originalName = originalVariableNames[index];
+      if (formValue && originalName) {
+        content = content.replace(new RegExp(`\\{${originalName}\\}`, 'g'), formValue);
       }
     });
+
     return content;
-  }, [prompt, formValues]);
+  }, [prompt, formValues, variables, originalVariableNames]);
 
   // 当提示词加载完成时，解析变量并设置表单
   useEffect(() => {
@@ -80,6 +89,35 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
     }
   }, [visible, form]);
 
+  // 降级复制方法
+  const fallbackCopyToClipboard = (text: string): boolean => {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    // 确保textarea在屏幕外但可被选中
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '0';
+    textArea.style.opacity = '0';
+
+    let attached = false;
+    try {
+      document.body.appendChild(textArea);
+      attached = true;
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      return successful;
+    } catch (err) {
+      console.error('Fallback copy failed:', err);
+      return false;
+    } finally {
+      if (attached && textArea.parentNode) {
+        document.body.removeChild(textArea);
+      }
+    }
+  };
+
   // 处理复制
   const handleCopy = async () => {
     if (!prompt || !promptId) return;
@@ -88,37 +126,51 @@ const PromptCopyModal: React.FC<PromptCopyModalProps> = ({
       // 获取表单值
       const values = form.getFieldsValue();
 
-      // 调用复制API
-      const response = await promptsApi.copy(prompt.id, {
-        variables: Object.keys(values).length > 0 ? values : undefined,
+      // 重要：需要把前端的变量名（如text1）映射回原始变量名（如text）
+      const originalVariables: Record<string, string> = {};
+      const allVariableNames = extractVariables(prompt.content);
+
+      variables.forEach((variable, index) => {
+        const formValue = values[variable.name];
+        const originalName = allVariableNames[index];
+        if (formValue && originalName) {
+          originalVariables[originalName] = formValue;
+        }
       });
 
+      // 调用复制API
+      const request: PromptCopyRequest = Object.keys(originalVariables).length > 0
+        ? { variables: originalVariables }
+        : {};
+
+      const response = await promptsApi.copy(prompt.id, request);
       setFinalContent(response.content);
 
       // 复制到剪贴板
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(response.content);
-        message.success('提示词已复制到剪贴板！');
-      } else {
-        // 降级方案
-        const textArea = document.createElement('textarea');
-        textArea.value = response.content;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
-        const successful = document.execCommand('copy');
-        textArea.remove();
-        if (successful) {
-          message.success('提示词已复制到剪贴板！');
+      let copySuccess = false;
+      try {
+        if (navigator.clipboard && window.isSecureContext) {
+          await navigator.clipboard.writeText(response.content);
+          copySuccess = true;
         } else {
-          message.warning('自动复制失败，请手动复制下方内容');
+          // 降级方案：使用传统方法
+          copySuccess = fallbackCopyToClipboard(response.content);
         }
-      }
 
-      setCopied(true);
+        if (copySuccess) {
+          message.success('提示词已复制到剪贴板！');
+          setCopied(true);
+        } else {
+          throw new Error('Copy operation returned false');
+        }
+      } catch (err) {
+        console.error('复制失败:', err);
+        message.error('复制失败，请手动复制下方内容');
+        // 即使复制失败，也显示内容让用户手动复制
+        setCopied(true);
+      }
     } catch (error: any) {
+      console.error('API调用失败:', error);
       message.error(error.response?.data?.detail || '复制失败');
     }
   };
