@@ -28,6 +28,8 @@ import {
   SearchOutlined,
   FileTextOutlined,
   BookOutlined,
+  SortAscendingOutlined,
+  SortDescendingOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journalApi, tagApi } from '../services/apiOptimized';
@@ -86,6 +88,12 @@ const JournalsManagement: React.FC = () => {
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
   const [searchText, setSearchText] = useState<string>('');
 
+  // 排序状态
+  type SortOption = 'name' | 'total_count' | 'issues_count';
+  type SortOrder = 'asc' | 'desc';
+  const [sortBy, setSortBy] = useState<SortOption>('name');  // 默认按名称排序
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');  // 默认升序
+
   const [form] = Form.useForm();
 
   // 查询标签列表
@@ -107,14 +115,40 @@ const JournalsManagement: React.FC = () => {
     },
   });
 
-  // 根据Tab过滤期刊
+  // 根据Tab过滤期刊并排序
   const filteredJournals = useMemo(() => {
     if (activeTab === 'tags') return [];
-    return journals.filter(journal => {
+
+    let result = journals.filter(journal => {
       const isChinese = isChineseJournal(journal.name);
       return activeTab === 'chinese' ? isChinese : !isChinese;
     });
-  }, [journals, activeTab]);
+
+    // 排序逻辑
+    result = [...result].sort((a, b) => {
+      let compareValue = 0;
+
+      switch (sortBy) {
+        case 'name':
+          compareValue = a.name.localeCompare(b.name, 'zh-CN');
+          break;
+        case 'total_count':
+          const aTotal = (a.reference_count || 0) + (a.target_count || 0);
+          const bTotal = (b.reference_count || 0) + (b.target_count || 0);
+          compareValue = aTotal - bTotal;
+          break;
+        case 'issues_count':
+          const aIssues = a.issues_count || 0;
+          const bIssues = b.issues_count || 0;
+          compareValue = aIssues - bIssues;
+          break;
+      }
+
+      return sortOrder === 'asc' ? compareValue : -compareValue;
+    });
+
+    return result;
+  }, [journals, activeTab, sortBy, sortOrder]);
 
   // 期刊统计查询
   const { data: journalStats } = useQuery<JournalStats>({
@@ -404,6 +438,29 @@ const JournalsManagement: React.FC = () => {
                           onChange={(e) => setSearchText(e.target.value)}
                         />
                       </div>
+
+                      <div>
+                        <Text strong style={{ marginRight: 8 }}>
+                          排序：
+                        </Text>
+                        <Select
+                          style={{ width: 120 }}
+                          value={sortBy}
+                          onChange={(value) => setSortBy(value)}
+                          options={[
+                            { label: '名称', value: 'name' },
+                            { label: '引用总数', value: 'total_count' },
+                            { label: '浏览记录', value: 'issues_count' },
+                          ]}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                          style={{ marginLeft: 4 }}
+                        />
+                      </div>
                     </Space>
                   }
                 />
@@ -481,6 +538,9 @@ const JournalsManagement: React.FC = () => {
                               </Text>
                               <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
                                 研究{journal.target_count || 0}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                浏览{journal.issues_count || 0}
                               </Text>
                             </Space>
 
@@ -797,7 +857,7 @@ const JournalsManagement: React.FC = () => {
 
       {/* 期卷号浏览记录抽屉 */}
       <Drawer
-        title={`期卷号浏览记录 - ${selectedJournalForIssues?.name || ''}`}
+        title={`浏览记录 - ${selectedJournalForIssues?.name || ''}`}
         placement="right"
         width={800}
         open={isIssuesDrawerVisible}
@@ -1012,6 +1072,29 @@ const JournalsManagement: React.FC = () => {
                           onChange={(e) => setSearchText(e.target.value)}
                         />
                       </div>
+
+                      <div>
+                        <Text strong style={{ marginRight: 8 }}>
+                          排序：
+                        </Text>
+                        <Select
+                          style={{ width: 120 }}
+                          value={sortBy}
+                          onChange={(value) => setSortBy(value)}
+                          options={[
+                            { label: '名称', value: 'name' },
+                            { label: '引用总数', value: 'total_count' },
+                            { label: '浏览记录', value: 'issues_count' },
+                          ]}
+                        />
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={sortOrder === 'asc' ? <SortAscendingOutlined /> : <SortDescendingOutlined />}
+                          onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                          style={{ marginLeft: 4 }}
+                        />
+                      </div>
                     </Space>
                   }
                 />
@@ -1089,6 +1172,9 @@ const JournalsManagement: React.FC = () => {
                               </Text>
                               <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
                                 研究{journal.target_count || 0}
+                              </Text>
+                              <Text style={{ fontSize: 11, color: GRAYSCALE_SYSTEM.tertiary }}>
+                                浏览{journal.issues_count || 0}
                               </Text>
                             </Space>
 

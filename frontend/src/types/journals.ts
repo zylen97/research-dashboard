@@ -49,6 +49,7 @@ export interface Journal extends JournalBase {
   // 统计字段（动态计算，v4.2简化）
   reference_count: number;      // 作为参考期刊的引用次数
   target_count: number;         // 作为投稿期刊的引用次数
+  issues_count: number;         // 浏览记录数量
 
   // v3.6 期卷号跟踪字段
   latest_volume?: string | null;   // 最新卷号

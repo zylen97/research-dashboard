@@ -11,7 +11,7 @@ from datetime import datetime
 import logging
 
 from ..models import (
-    get_db, Journal, Idea, ResearchProject, Tag, Prompt, journal_tags, prompt_tags,
+    get_db, Journal, JournalIssue, Idea, ResearchProject, Tag, Prompt, journal_tags, prompt_tags,
     JournalCreate, JournalUpdate, JournalSchema
 )
 from ..models.schemas import BatchDeleteRequest
@@ -60,7 +60,7 @@ def calculate_journal_stats(db: Session, journal_name: str) -> Dict[str, int]:
     }
 
 
-def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict[str, Dict[str, int]]:
+def batch_calculate_journal_stats(db: Session, journal_names: List[str], include_issues: bool = False) -> Dict[str, Dict[str, int]]:
     """
     批量计算多个期刊的引用统计（避免N+1查询）
 
@@ -71,6 +71,7 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     Args:
         db: 数据库会话
         journal_names: 期刊名称列表
+        include_issues: 是否计算浏览记录数量（issues_count）
 
     Returns:
         字典，key为期刊名称，value为统计字典
@@ -113,10 +114,24 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
     )
 
     # ========== 获取期刊ID到名称的映射 ==========
-    journal_id_to_name = {
-        j.id: j.name
-        for j in db.query(Journal).filter(Journal.name.in_(journal_names)).all()
-    }
+    journals = db.query(Journal).filter(Journal.name.in_(journal_names)).all()
+    journal_id_to_name = {j.id: j.name for j in journals}
+    journal_name_to_id = {j.name: j.id for j in journals}
+
+    # ========== 浏览记录统计（可选） ==========
+    issues_counts = {}
+    if include_issues and journal_id_to_name:
+        issue_counts_by_id = (
+            db.query(JournalIssue.journal_id, func.count(JournalIssue.id))
+            .filter(JournalIssue.journal_id.in_(list(journal_id_to_name.keys())))
+            .group_by(JournalIssue.journal_id)
+            .all()
+        )
+        # 映射 journal_id -> count，然后转换为 journal_name -> count
+        for journal_id, count in issue_counts_by_id:
+            journal_name = journal_id_to_name.get(journal_id)
+            if journal_name:
+                issues_counts[journal_name] = count
 
     # ========== 转换为字典方便查找 ==========
     # 参考计数
@@ -140,6 +155,9 @@ def batch_calculate_journal_stats(db: Session, journal_names: List[str]) -> Dict
             "reference_count": ref_counts.get(name, 0),
             "target_count": target_counts.get(name, 0),
         }
+        # 添加浏览记录数量（如果启用）
+        if include_issues:
+            result[name]["issues_count"] = issues_counts.get(name, 0)
 
     return result
 
@@ -266,17 +284,19 @@ async def get_journals(
 
         journals = query.offset(skip).limit(limit).all()
 
-        # 批量计算统计信息（避免N+1查询）
+        # 批量计算统计信息（避免N+1查询，包含浏览记录数量）
         journal_names = [j.name for j in journals]
-        all_stats = batch_calculate_journal_stats(db, journal_names)
+        all_stats = batch_calculate_journal_stats(db, journal_names, include_issues=True)
 
         for journal in journals:
             stats = all_stats.get(journal.name, {
                 "reference_count": 0,
                 "target_count": 0,
+                "issues_count": 0,
             })
             journal.reference_count = stats["reference_count"]
             journal.target_count = stats["target_count"]
+            journal.issues_count = stats.get("issues_count", 0)
 
         return journals
 
