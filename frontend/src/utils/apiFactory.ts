@@ -1,9 +1,58 @@
 /**
  * API CRUD 工厂函数 - 减少重复的CRUD代码
+ *
+ * 修复：移除循环导入，创建本地 axios 实例
+ * - 原 import api from '../services/apiOptimized' 导致循环依赖
+ * - apiOptimized.ts 导入 createCRUDApi from apiFactory
+ * - 现在使用本地 axios 实例，与 apiOptimized.ts 保持一致的配置
  */
-import api from '../services/apiOptimized';
+import axios from 'axios';
+import { API_CONFIG } from '../config/api';
+import { ENV } from '../config/environment';
+import { errorInterceptorOptimized } from './errorHandlerOptimized';
 import { PaginationParams } from '../types';
 import { handleListResponse } from './dataFormatters';
+
+// 创建本地 axios 实例（避免循环导入）
+const api = axios.create({
+  baseURL: API_CONFIG.BASE_URL,
+  timeout: API_CONFIG.TIMEOUT,
+  headers: API_CONFIG.HEADERS,
+});
+
+// 添加请求拦截器
+api.interceptors.request.use(
+  (config) => {
+    if (config.url && !config.url.startsWith(ENV.API_PREFIX) && !config.url.startsWith('http')) {
+      config.url = ENV.API_PREFIX + config.url;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+// 添加响应拦截器
+api.interceptors.response.use(
+  (response) => {
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
+
+    const data = response.data;
+
+    if (data && typeof data === 'object' && 'success' in data) {
+      if (!data.success) {
+        const error: any = new Error(data.message || 'API call failed');
+        error.response = data;
+        throw error;
+      }
+      return data.data || data;
+    }
+
+    return data;
+  },
+  errorInterceptorOptimized
+);
 
 export interface CRUDEndpoints<T, CreateDTO, UpdateDTO> {
   getList: (params?: PaginationParams & Record<string, any>) => Promise<T[]>;

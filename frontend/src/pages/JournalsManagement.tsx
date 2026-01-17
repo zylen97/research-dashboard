@@ -203,9 +203,13 @@ const JournalsManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['journals'] });
     },
     onError: (error: any) => {
-      const detail = error.response?.data?.detail;
-      if (typeof detail === 'object' && detail.error) {
-        // 显示详细的引用信息
+      console.error('[Delete Journal] Error occurred:', error);
+
+      // 检查错误对象结构
+      const detail = error?.response?.data?.detail;
+
+      if (typeof detail === 'object' && detail?.error) {
+        // 409 冲突 - 显示详细引用信息
         Modal.error({
           title: detail.error,
           content: (
@@ -229,7 +233,9 @@ const JournalsManagement: React.FC = () => {
           width: 600,
         });
       } else {
-        message.error(detail || '删除期刊失败');
+        // 其他错误 - 显示具体错误信息或通用消息
+        const errorMessage = detail || error?.message || '删除期刊失败';
+        message.error(errorMessage);
       }
     },
   });
@@ -262,7 +268,12 @@ const JournalsManagement: React.FC = () => {
 
   // 处理删除
   const handleDelete = (id: number) => {
-    deleteMutation.mutate(id);
+    console.log('[Delete Journal] Attempting to delete journal:', id);
+    deleteMutation.mutate(id, {
+      onSettled: (data, error, variables, _context) => {
+        console.log('[Delete Journal] Operation settled:', { data, error, variables });
+      }
+    });
   };
 
   // 处理查看统计
@@ -556,6 +567,7 @@ const JournalsManagement: React.FC = () => {
                                 onConfirm={() => handleDelete(journal.id)}
                                 okText="确定"
                                 cancelText="取消"
+                                okButtonProps={{ loading: deleteMutation.isPending }}
                               >
                                 <Button
                                   type="link"
@@ -1180,6 +1192,7 @@ const JournalsManagement: React.FC = () => {
                                 onConfirm={() => handleDelete(journal.id)}
                                 okText="确定"
                                 cancelText="取消"
+                                okButtonProps={{ loading: deleteMutation.isPending }}
                               >
                                 <Button
                                   type="link"
