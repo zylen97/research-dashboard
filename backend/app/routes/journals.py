@@ -606,6 +606,7 @@ async def get_journal_stats(
             "journal": {
                 "id": journal.id,
                 "name": journal.name,
+                "notes": journal.notes,
                 "tags": [{"id": t.id, "name": t.name, "color": t.color} for t in journal.tags]
             },
             "stats": stats,
