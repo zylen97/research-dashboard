@@ -73,6 +73,7 @@ export interface JournalStats {
   journal: {
     id: number;
     name: string;
+    notes?: string | null;
     tags: Array<{
       id: number;
       name: string;

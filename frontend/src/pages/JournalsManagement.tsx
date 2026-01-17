@@ -517,19 +517,6 @@ const JournalsManagement: React.FC = () => {
                             )}
                           </div>
 
-                          {/* 备注（如果有） */}
-                          {journal.notes && (
-                            <div style={{ marginBottom: '8px', flex: 1 }}>
-                              <Text
-                                type="secondary"
-                                style={{ fontSize: 11 }}
-                                ellipsis={{ tooltip: journal.notes }}
-                              >
-                                {journal.notes}
-                              </Text>
-                            </div>
-                          )}
-
                           {/* 底部统计和操作 */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                             <Space size={8}>
@@ -659,6 +646,9 @@ const JournalsManagement: React.FC = () => {
                     </Tag>
                   ))}
                   {(!journalStats.journal.tags || journalStats.journal.tags.length === 0) && '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="备注">
+                  {journalStats.journal.notes || '-'}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
@@ -1151,19 +1141,6 @@ const JournalsManagement: React.FC = () => {
                             )}
                           </div>
 
-                          {/* 备注（如果有） */}
-                          {journal.notes && (
-                            <div style={{ marginBottom: '8px', flex: 1 }}>
-                              <Text
-                                type="secondary"
-                                style={{ fontSize: 11 }}
-                                ellipsis={{ tooltip: journal.notes }}
-                              >
-                                {journal.notes}
-                              </Text>
-                            </div>
-                          )}
-
                           {/* 底部统计和操作 */}
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'auto' }}>
                             <Space size={8}>
@@ -1293,6 +1270,9 @@ const JournalsManagement: React.FC = () => {
                     </Tag>
                   ))}
                   {(!journalStats.journal.tags || journalStats.journal.tags.length === 0) && '-'}
+                </Descriptions.Item>
+                <Descriptions.Item label="备注">
+                  {journalStats.journal.notes || '-'}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
