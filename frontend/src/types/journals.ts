@@ -154,3 +154,17 @@ export interface OnlineFirstTracking {
   notes?: string | null;
   is_today: boolean;
 }
+
+// ===== 检索式生成类型定义 =====
+
+// 检索式类型
+export type QueryType = 'WoS' | 'CNKI';
+
+// 检索式模板
+export interface QueryTemplate {
+  id: string;
+  name: string;
+  journalIds: number[];
+  queryType: QueryType;
+  createdAt: string;
+}

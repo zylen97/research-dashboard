@@ -50,6 +50,7 @@ import { TagManagementPanel } from '../components/TagManagementPanel';
 import { GRAYSCALE_SYSTEM } from '../config/colors';
 import { PageContainer, PageHeader, FilterSection, TableContainer } from '../styles/components';
 import ValidationPromptModal from '../components/ValidationPromptModal';
+import QueryGeneratorPanel from '../components/QueryGeneratorPanel';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -1596,6 +1597,11 @@ const JournalsManagement: React.FC = () => {
             key: 'tags',
             label: '标签管理',
             children: <TagManagementPanel />,
+          },
+          {
+            key: 'query_generator',
+            label: '检索式生成',
+            children: <QueryGeneratorPanel journals={journals} tags={tags} />,
           },
         ]}
       />
