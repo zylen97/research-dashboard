@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint, event
+from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, Float, Boolean, ForeignKey, Table, Index, UniqueConstraint, event, Date
 from sqlalchemy.orm import backref
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -276,6 +276,30 @@ class JournalIssue(Base):
         UniqueConstraint('journal_id', 'volume', 'issue', name='uq_journal_volume_issue'),
         Index('idx_journal_issues_journal_id', 'journal_id'),
         Index('idx_journal_issues_year', 'year'),
+    )
+
+    # Pydantic 配置
+    class Config:
+        from_attributes = True
+
+
+class JournalOnlineFirstTracking(Base):
+    """网络首发追踪历史记录模型（v5.3）"""
+    __tablename__ = "journal_online_first_tracking"
+
+    id = Column(Integer, primary_key=True, index=True)
+    journal_id = Column(Integer, ForeignKey('journals.id', ondelete='CASCADE'), nullable=False, index=True)
+    tracked_date = Column(Date, nullable=False, comment="追踪到的日期（阅读日期）")
+    tracked_at = Column(DateTime, nullable=False, default=datetime.utcnow, comment="记录创建时间")
+    notes = Column(Text, nullable=True, comment="备注")
+
+    # 关联关系
+    journal = relationship("Journal", backref=backref("online_first_tracking", cascade="all, delete-orphan"))
+
+    # 索引优化
+    __table_args__ = (
+        Index('idx_online_first_tracking_journal_id', 'journal_id'),
+        Index('idx_online_first_tracking_tracked_date', 'tracked_date'),
     )
 
     # Pydantic 配置

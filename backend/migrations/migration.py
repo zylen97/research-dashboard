@@ -22,7 +22,7 @@ from migration_utils import setup_migration_logging, find_database_path, backup_
 logger = setup_migration_logging()
 
 # 迁移版本号
-MIGRATION_VERSION = "v5.2_rename_topic_to_text"
+MIGRATION_VERSION = "v5.3_add_online_first_tracking"
 
 def check_if_migration_completed(db_path):
     """检查迁移是否已完成"""
@@ -85,46 +85,70 @@ def run_migration():
 
         logger.info("=" * 70)
         logger.info(f"🚀 开始执行迁移: {MIGRATION_VERSION}")
-        logger.info('🎯 目标: 将提示词中的{topic}变量重命名为{text1}')
+        logger.info('🎯 目标: 创建journal_online_first_tracking表')
         logger.info("=" * 70)
 
         # ===========================================
-        # 🔧 v5.2迁移任务：重命名topic变量为text1
+        # 🔧 v5.3迁移任务：创建网络首发追踪表
         # 变更：
-        # 1. 将所有提示词中的{topic}替换为{text1}
+        # 1. 创建journal_online_first_tracking表
         # ===========================================
 
         # ============================
-        # Step 1: 更新prompts表中的变量
+        # Step 1: 创建journal_online_first_tracking表
         # ============================
-        logger.info("\n📋 Step 1: 更新prompts表中的{topic}为{text1}")
+        logger.info("\n📋 Step 1: 创建journal_online_first_tracking表")
 
         cursor.execute("""
-            UPDATE prompts
-            SET content = REPLACE(content, '{topic}', '{text1}')
-            WHERE content LIKE '%{topic}%'
+            CREATE TABLE IF NOT EXISTS journal_online_first_tracking (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                journal_id INTEGER NOT NULL,
+                tracked_date DATE NOT NULL,
+                tracked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                notes TEXT,
+                FOREIGN KEY (journal_id) REFERENCES journals(id) ON DELETE CASCADE
+            )
         """)
-        affected_rows = cursor.rowcount
-        logger.info(f"   ✅ 已更新 {affected_rows} 条提示词记录")
+        logger.info("   ✅ 表结构创建完成")
 
         # ============================
-        # Step 2: 验证更新结果
+        # Step 2: 创建索引
         # ============================
-        logger.info("\n📋 Step 2: 验证更新结果")
+        logger.info("\n📋 Step 2: 创建索引")
 
-        cursor.execute("SELECT id, title, content FROM prompts WHERE content LIKE '%{text1}%'")
-        updated_prompts = cursor.fetchall()
-        for prompt in updated_prompts:
-            logger.info(f"   - Prompt #{prompt[0]}: {prompt[1]}")
-        logger.info(f"   ✅ 验证完成，共 {len(updated_prompts)} 条提示词包含{{text1}}变量")
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_online_first_tracking_journal_id
+            ON journal_online_first_tracking(journal_id)
+        """)
+        logger.info("   ✅ journal_id索引创建完成")
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_online_first_tracking_tracked_date
+            ON journal_online_first_tracking(tracked_date DESC)
+        """)
+        logger.info("   ✅ tracked_date索引创建完成")
+
+        # ============================
+        # Step 3: 验证表创建
+        # ============================
+        logger.info("\n📋 Step 3: 验证表创建")
+
+        cursor.execute("""
+            SELECT name FROM sqlite_master
+            WHERE type='table' AND name='journal_online_first_tracking'
+        """)
+        if cursor.fetchone():
+            logger.info("   ✅ journal_online_first_tracking表已创建")
+        else:
+            raise Exception("表创建失败")
 
         # 提交事务
         conn.commit()
         mark_migration_completed(db_path)
 
         logger.info("\n" + "=" * 70)
-        logger.info("🎉 v5.2 提示词变量重命名完成！")
-        logger.info("✅ 将{topic}变量重命名为{text1}")
+        logger.info("🎉 v5.3 网络首发追踪表创建完成！")
+        logger.info("✅ journal_online_first_tracking表已创建")
         logger.info("=" * 70)
 
         conn.close()

@@ -30,6 +30,8 @@ import {
   BookOutlined,
   SortAscendingOutlined,
   SortDescendingOutlined,
+  RocketOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { journalApi, tagApi } from '../services/apiOptimized';
@@ -42,6 +44,7 @@ import {
   JournalStats,
   JournalReferences,
   Tag as JournalTag,
+  OnlineFirstTracking,
 } from '../types/journals';
 import { TagManagementPanel } from '../components/TagManagementPanel';
 import { GRAYSCALE_SYSTEM } from '../config/colors';
@@ -83,6 +86,11 @@ const JournalsManagement: React.FC = () => {
     year: new Date().getFullYear(),
     notes: ''
   });
+
+  // 网络首发追踪相关状态
+  const [onlineFirstTracking, setOnlineFirstTracking] = useState<OnlineFirstTracking[]>([]);
+  const [isTrackingLoading, setIsTrackingLoading] = useState(false);
+  const [updateTrackingLoading, setUpdateTrackingLoading] = useState(false);
 
   // 筛选状态
   const [selectedTagIds, setSelectedTagIds] = useState<number[]>([]);
@@ -299,6 +307,45 @@ const JournalsManagement: React.FC = () => {
     setSelectedJournalForIssues(journal);
     setIsIssuesDrawerVisible(true);
     fetchJournalIssues(journal.id);
+    fetchOnlineFirstTracking(journal.id);
+  };
+
+  // 网络首发追踪相关函数
+  const fetchOnlineFirstTracking = async (journalId: number) => {
+    setIsTrackingLoading(true);
+    try {
+      const response = await axios.get(`/api/journals/${journalId}/online-first-tracking`);
+      setOnlineFirstTracking(response.data.data || []);
+    } catch (error) {
+      message.error('获取网络首发追踪记录失败');
+    } finally {
+      setIsTrackingLoading(false);
+    }
+  };
+
+  const handleUpdateTrackingToday = async () => {
+    if (!selectedJournalForIssues) return;
+    setUpdateTrackingLoading(true);
+    try {
+      await axios.post(`/api/journals/${selectedJournalForIssues.id}/online-first-tracking/today`);
+      message.success('追踪记录更新成功');
+      fetchOnlineFirstTracking(selectedJournalForIssues.id);
+    } catch (error) {
+      message.error('更新追踪记录失败');
+    } finally {
+      setUpdateTrackingLoading(false);
+    }
+  };
+
+  const handleDeleteTracking = async (trackingId: number) => {
+    if (!selectedJournalForIssues) return;
+    try {
+      await axios.delete(`/api/journals/${selectedJournalForIssues.id}/online-first-tracking/${trackingId}`);
+      message.success('删除成功');
+      fetchOnlineFirstTracking(selectedJournalForIssues.id);
+    } catch (error) {
+      message.error('删除失败');
+    }
   };
 
   const handleCreateIssue = () => {
@@ -867,6 +914,8 @@ const JournalsManagement: React.FC = () => {
           setIsIssuesDrawerVisible(false);
           setSelectedJournalForIssues(null);
           setJournalIssues([]);
+          setOnlineFirstTracking([]);
+          setUpdateTrackingLoading(false);
         }}
       >
         <div style={{ marginBottom: 16 }}>
@@ -878,6 +927,65 @@ const JournalsManagement: React.FC = () => {
             添加记录
           </Button>
         </div>
+
+        {/* 网络首发追踪 Section */}
+        <Card
+          title={
+            <Space>
+              <RocketOutlined />
+              <span>网络首发追踪</span>
+            </Space>
+          }
+          extra={
+            <Button
+              type="primary"
+              size="small"
+              icon={<CalendarOutlined />}
+              onClick={handleUpdateTrackingToday}
+              loading={updateTrackingLoading}
+            >
+              更新为今天
+            </Button>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          {isTrackingLoading ? (
+            <div style={{ textAlign: 'center', padding: '20px' }}>加载中...</div>
+          ) : onlineFirstTracking.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '20px 0', color: '#999' }}>
+              暂无追踪记录
+            </div>
+          ) : (
+            <List
+              dataSource={onlineFirstTracking}
+              renderItem={(item) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      type="link"
+                      size="small"
+                      danger
+                      onClick={() => handleDeleteTracking(item.id)}
+                    >
+                      删除
+                    </Button>
+                  ]}
+                >
+                  <Space>
+                    <Tag color="blue">
+                      {item.tracked_date}
+                    </Tag>
+                    {item.is_today && <Tag color="green">今天</Tag>}
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      记录于 {new Date(item.tracked_at).toLocaleString('zh-CN')}
+                    </Text>
+                  </Space>
+                </List.Item>
+              )}
+            />
+          )}
+        </Card>
 
         {isIssuesLoading ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>加载中...</div>

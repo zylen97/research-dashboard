@@ -142,3 +142,15 @@ export interface JournalBatchImportResponse {
     error: string;
   }>;
 }
+
+// ===== 网络首发追踪类型定义 =====
+
+// 网络首发追踪记录
+export interface OnlineFirstTracking {
+  id: number;
+  journal_id: number;
+  tracked_date: string;  // YYYY-MM-DD格式
+  tracked_at: string;    // ISO datetime
+  notes?: string | null;
+  is_today: boolean;
+}

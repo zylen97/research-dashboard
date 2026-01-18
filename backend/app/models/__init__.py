@@ -13,6 +13,7 @@ from .database import (
     Tag,
     Journal,
     JournalIssue,
+    JournalOnlineFirstTracking,
     Prompt,
     ResearchMethod,
     project_collaborators,
@@ -89,7 +90,7 @@ from .schemas import (
 
 __all__ = [
     "Base", "engine", "SessionLocal", "get_db", "create_tables",
-    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "JournalIssue", "Prompt", "ResearchMethod",
+    "Collaborator", "ResearchProject", "CommunicationLog", "AuditLog", "SystemConfig", "Idea", "Tag", "Journal", "JournalIssue", "JournalOnlineFirstTracking", "Prompt", "ResearchMethod",
     "project_collaborators", "idea_responsible_persons", "journal_tags", "prompt_tags",
     "ResearchMethodBase", "ResearchMethodCreate", "ResearchMethodUpdate", "ResearchMethodSchema",
     "CollaboratorBase", "CollaboratorCreate", "CollaboratorUpdate", "CollaboratorSchema",
