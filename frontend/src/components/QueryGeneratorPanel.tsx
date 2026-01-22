@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Radio, Input, Select, Space, Typography, Modal, message } from 'antd';
+import { Input, Select, Space, Typography, Modal, message } from 'antd';
 import { SearchOutlined, FilterOutlined } from '@ant-design/icons';
 import type { Journal, Tag as JournalTag, QueryType, QueryTemplate } from '../types/journals';
 import QueryPreview from './QueryPreview';
